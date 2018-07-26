@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules;
+package io.amberdata.ingestion.api.modules.stellar;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
