@@ -4,12 +4,8 @@ import java.util.Arrays;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.Server;
-import org.stellar.sdk.requests.EventListener;
-import org.stellar.sdk.requests.RequestBuilder;
-import org.stellar.sdk.responses.LedgerResponse;
 
 @Component
 public class DemoApplicationRunner implements ApplicationRunner {
