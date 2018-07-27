@@ -1,6 +1,7 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration;
 
-import java.util.Collection;
+import java.time.Duration;
+import java.time.LocalTime;
 import java.util.function.Consumer;
 
 import org.springframework.context.annotation.Configuration;
@@ -11,7 +12,9 @@ import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class LedgerListenerConfiguration {
@@ -29,10 +32,20 @@ public class LedgerListenerConfiguration {
     public void createPipeline () {
         Flux.<LedgerResponse>create(sink -> registerListener(sink::next))
             .map(modelMapper::map)
-            .subscribe(
-                apiClient::publish,
-                System.err::println
-            );
+            .retryWhen(companion -> companion
+                .doOnNext(s -> System.out.println(s + " at " + LocalTime.now()))
+                .zipWith(Flux.range(1, 100), (error, index) -> {
+                    if (index < 100) {
+                        return index;
+                    }
+                    else {
+                        throw Exceptions.propagate(error);
+                    }
+                })
+                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 100)))
+                .doOnNext(s -> System.out.println("retried at " + LocalTime.now()))
+            )
+            .subscribe(apiClient::publish, System.err::println);
     }
 
     @PostConstruct

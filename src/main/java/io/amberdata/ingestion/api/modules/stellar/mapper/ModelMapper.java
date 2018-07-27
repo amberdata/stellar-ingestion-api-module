@@ -1,10 +1,11 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -25,27 +26,31 @@ public class ModelMapper {
     }
 
     public Block map (LedgerResponse ledgerResponse) {
+        return new Block.Builder()
+            .blockchainId(blockChainId)
+            .number(BigInteger.valueOf(ledgerResponse.getSequence()))
+            .hash(ledgerResponse.getHash())
+            .parentHash(ledgerResponse.getPrevHash())
+            //.gasUsed(new BigInteger(ledgerResponse.getFeePool())) causes NumberFormatException because of decimal there
+            .numTransactions(ledgerResponse.getTransactionCount())
+            .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
+            .optionalProperties(blockOptionalProperties(ledgerResponse))
+            .build();
+    }
+
+    private Map<String, Object> blockOptionalProperties (LedgerResponse ledgerResponse) {
         Map<String, Object> optionalProperties = new HashMap<>();
+
         optionalProperties.put("operation_count", ledgerResponse.getOperationCount());
         optionalProperties.put("total_coins", ledgerResponse.getTotalCoins());
         optionalProperties.put("base_fee_in_stroops", ledgerResponse.getBaseFeeInStroops());
         optionalProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
         optionalProperties.put("max_tx_set_size", ledgerResponse.getMaxTxSetSize());
 
-        return new Block.Builder()
-            .blockchainId(blockChainId)
-            .number(BigInteger.valueOf(ledgerResponse.getSequence()))
-            .hash(ledgerResponse.getHash())
-            .parentHash(ledgerResponse.getPrevHash())
-            .gasUsed(new BigInteger(ledgerResponse.getFeePool()))
-            .numTransactions(ledgerResponse.getTransactionCount())
-            .timestamp(Long.valueOf(ledgerResponse.getClosedAt()))
-            .optionalProperties(optionalProperties)
-            .build();
+        return optionalProperties;
     }
 
     public Transaction map (TransactionResponse transactionResponse) {
-        Map<String, Object> optionalProperties = new HashMap<>();
         return new Transaction.Builder()
             .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
@@ -54,32 +59,21 @@ public class ModelMapper {
             .from(transactionResponse.getSourceAccount().getAccountId())
             //.gas(transactionResponse.) which property if max_fee doesn't exist????
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
-            .numLogs(Integer.valueOf(transactionResponse.getCreatedAt()))
-            .optionalProperties(optionalProperties)
+            .numLogs(transactionResponse.getOperationCount())
+            .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
             .build();
     }
 
     public Address map (AccountResponse accountResponse) {
-        Map<String, Object>       optionalProperties = new HashMap<>();
-        List<Map<String, String>> balances           = new ArrayList<>();
-        List<Map<String, String>> signers            = new ArrayList<>();
+        return new Address.Builder()
+            .hash(accountResponse.getKeypair().getAccountId())
+            // need timestamp here
+            .optionalProperties(addressOptionalProperties(accountResponse))
+            .build();
+    }
 
-        for (AccountResponse.Balance balance : accountResponse.getBalances()) {
-            Map<String, String> data = new HashMap<>();
-            data.put("balance", balance.getBalance());
-            data.put("limit", balance.getLimit());
-            data.put("asset_type", balance.getAssetType());
-            data.put("asset_code", balance.getAssetCode());
-            data.put("asset_issuer", balance.getAssetIssuer().getAccountId());
-            balances.add(data);
-        }
-
-        for (AccountResponse.Signer signer : accountResponse.getSigners()) {
-            Map<String, String> data = new HashMap<>();
-            data.put("public_key", signer.getAccountId());
-            data.put("weight", String.valueOf(signer.getWeight()));
-            signers.add(data);
-        }
+    private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
+        Map<String, Object> optionalProperties = new HashMap<>();
 
         optionalProperties.put("sequence", accountResponse.getSequenceNumber());
         optionalProperties.put("subentry_count", accountResponse.getSubentryCount());
@@ -88,12 +82,34 @@ public class ModelMapper {
         optionalProperties.put("threshold_high", accountResponse.getThresholds().getHighThreshold());
         optionalProperties.put("flag_auth_required", accountResponse.getFlags().getAuthRequired());
         optionalProperties.put("flag_auth_revocable", accountResponse.getFlags().getAuthRevocable());
-        optionalProperties.put("balances", balances);
-        optionalProperties.put("signers", signers);
+        optionalProperties.put("balances", Arrays.stream(accountResponse.getBalances())
+            .map(this::balanceProperty)
+            .collect(Collectors.toList()));
+        optionalProperties.put("signers", Arrays.stream(accountResponse.getSigners())
+            .map(this::signerProperty)
+            .collect(Collectors.toList()));
 
-        return new Address.Builder()
-            .hash(accountResponse.getKeypair().getAccountId())
-            .optionalProperties(optionalProperties)
-            .build();
+        return optionalProperties;
+    }
+
+    private Map<String, Object> balanceProperty (AccountResponse.Balance balance) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+
+        optionalProperties.put("balance", balance.getBalance());
+        optionalProperties.put("limit", balance.getLimit());
+        optionalProperties.put("asset_type", balance.getAssetType());
+        optionalProperties.put("asset_code", balance.getAssetCode());
+        optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+
+        return optionalProperties;
+    }
+
+    private Map<String, Object> signerProperty (AccountResponse.Signer signer) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+
+        optionalProperties.put("public_key", signer.getAccountId());
+        optionalProperties.put("weight", String.valueOf(signer.getWeight()));
+
+        return optionalProperties;
     }
 }
