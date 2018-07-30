@@ -6,9 +6,7 @@ import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
 
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
 public class StellarIngestionModuleDemoApplication {
-    public static void main (String[] args) throws InterruptedException {
+    public static void main (String[] args) {
         SpringApplication.run(StellarIngestionModuleDemoApplication.class, args);
-
-        Thread.sleep(60_000);
     }
 }

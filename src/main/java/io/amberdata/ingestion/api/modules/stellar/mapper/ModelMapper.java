@@ -21,7 +21,7 @@ import io.amberdata.domain.Transaction;
 public class ModelMapper {
     private final String blockChainId;
 
-    public ModelMapper (@Value("ingestion.api.blockchainId") String blockChainId) {
+    public ModelMapper (@Value("${ingestion.api.blockchainId}") String blockChainId) {
         this.blockChainId = blockChainId;
     }
 
