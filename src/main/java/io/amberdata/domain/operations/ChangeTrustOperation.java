@@ -6,15 +6,26 @@ import io.amberdata.domain.Asset;
 
 public class ChangeTrustOperation extends Operation {
 
+    private String trusteeAccount;
     private Asset  asset;
     private String limit;
 
     public ChangeTrustOperation (String sourceAccount,
+                                 String trusteeAccount,
                                  Asset asset,
                                  String limit) {
         super(sourceAccount);
+        this.trusteeAccount = trusteeAccount;
         this.asset = asset;
         this.limit = limit;
+    }
+
+    public String getTrusteeAccount () {
+        return trusteeAccount;
+    }
+
+    public void setTrusteeAccount (String trusteeAccount) {
+        this.trusteeAccount = trusteeAccount;
     }
 
     public Asset getAsset () {
@@ -43,19 +54,21 @@ public class ChangeTrustOperation extends Operation {
             return false;
         }
         ChangeTrustOperation that = (ChangeTrustOperation) o;
-        return Objects.equals(asset, that.asset) &&
+        return Objects.equals(trusteeAccount, that.trusteeAccount) &&
+            Objects.equals(asset, that.asset) &&
             Objects.equals(limit, that.limit);
     }
 
     @Override
     public int hashCode () {
-        return Objects.hash(asset, limit);
+        return Objects.hash(trusteeAccount, asset, limit);
     }
 
     @Override
     public String toString () {
         return "ChangeTrustOperation{" +
-            "asset=" + asset +
+            "trusteeAccount='" + trusteeAccount + '\'' +
+            ", asset=" + asset +
             ", limit='" + limit + '\'' +
             '}';
     }

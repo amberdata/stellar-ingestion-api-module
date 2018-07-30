@@ -5,10 +5,10 @@ import java.util.Objects;
 public class Asset {
 
     private AssetType type;
-    private int code;
+    private String code;
     private String issuerAccount;
 
-    public Asset (AssetType type, int code, String issuerAccount) {
+    public Asset (AssetType type, String code, String issuerAccount) {
         this.type = type;
         this.code = code;
         this.issuerAccount = issuerAccount;
@@ -22,11 +22,11 @@ public class Asset {
         this.type = type;
     }
 
-    public int getCode () {
+    public String getCode () {
         return code;
     }
 
-    public void setCode (int code) {
+    public void setCode (String code) {
         this.code = code;
     }
 
@@ -48,8 +48,8 @@ public class Asset {
             return false;
         }
         Asset asset = (Asset) o;
-        return code == asset.code &&
-            type == asset.type &&
+        return type == asset.type &&
+            Objects.equals(code, asset.code) &&
             Objects.equals(issuerAccount, asset.issuerAccount);
     }
 
@@ -71,7 +71,7 @@ public class Asset {
         ASSET_TYPE_NATIVE(0),
         ASSET_TYPE_CREDIT_ALPHANUM4(1),
         ASSET_TYPE_CREDIT_ALPHANUM12(2),
-        ASSET_TYPE_CREDIT_ALPHANUM(3);
+        ASSET_TYPE_UNKNOWN(3);
 
         private int value;
 

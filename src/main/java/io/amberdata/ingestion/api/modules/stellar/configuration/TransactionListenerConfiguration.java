@@ -46,8 +46,10 @@ public class TransactionListenerConfiguration {
     @PostConstruct
     public void createPipeline () {
         Flux.<TransactionResponse>create(sink -> registerListener(sink::next))
-            .map(transactionResponse ->
-                modelMapper.map(transactionResponse, fetchOperationsForTransaction(transactionResponse)))
+            .map(transactionResponse -> {
+                List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
+                return modelMapper.map(transactionResponse, operationResponses);
+            })
             .map(Mono::just)
             .subscribe(
                 transactionMono -> LOG.info("API responded with object {}", transactionMono.block()),
