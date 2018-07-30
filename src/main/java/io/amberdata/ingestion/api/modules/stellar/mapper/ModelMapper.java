@@ -66,10 +66,6 @@ public class ModelMapper {
             .build();
     }
 
-    public Operation map (OperationResponse operationResponse) {
-        operationResponse.
-    }
-
     public Address map (AccountResponse accountResponse) {
         return new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
