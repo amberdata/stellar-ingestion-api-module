@@ -12,10 +12,12 @@ import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Address;
 import io.amberdata.domain.Block;
 import io.amberdata.domain.Transaction;
+import io.amberdata.domain.operations.Operation;
 
 @Component
 public class ModelMapper {
