@@ -1,7 +1,5 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration;
 
-import java.time.Duration;
-import java.time.LocalTime;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
@@ -15,7 +13,6 @@ import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -26,8 +23,6 @@ public class LedgerListenerConfiguration {
     private final IngestionApiClient apiClient;
     private final ModelMapper        modelMapper;
 
-    private Consumer<LedgerResponse> ledgerResponseConsumer;
-
     public LedgerListenerConfiguration (IngestionApiClient apiClient, ModelMapper modelMapper) {
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
@@ -35,7 +30,7 @@ public class LedgerListenerConfiguration {
 
     @PostConstruct
     public void createPipeline () {
-        Flux.<LedgerResponse>create(sink -> registerListener(sink::next))
+        Flux.<LedgerResponse>create(sink -> subscribe(sink::next))
             .map(modelMapper::map)
             .map(apiClient::publish)
             .subscribe(this::storeState, this::handleError);
@@ -51,18 +46,11 @@ public class LedgerListenerConfiguration {
         // TODO
     }
 
-    @PostConstruct
-    public void subscribeOnLedgers () {
+    private void subscribe (Consumer<LedgerResponse> ledgerResponseConsumer) {
         Server server = new Server("https://horizon-testnet.stellar.org");
-//        Server server = new Server("http://localhost:8000");
-
         server
             .ledgers()
             .cursor("now")
-            .stream(ledgerResponse -> ledgerResponseConsumer.accept(ledgerResponse));
-    }
-
-    private void registerListener (Consumer<LedgerResponse> ledgerResponseConsumer) {
-        this.ledgerResponseConsumer = ledgerResponseConsumer;
+            .stream(ledgerResponseConsumer::accept);
     }
 }
