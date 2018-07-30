@@ -4,6 +4,8 @@ import java.time.Duration;
 import java.time.LocalTime;
 import java.util.function.Consumer;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.Server;
 import org.stellar.sdk.responses.LedgerResponse;
@@ -18,6 +20,8 @@ import reactor.core.publisher.Mono;
 
 @Configuration
 public class LedgerListenerConfiguration {
+    private static final Logger LOG = LoggerFactory.getLogger(LedgerListenerConfiguration.class);
+
     private final IngestionApiClient apiClient;
     private final ModelMapper        modelMapper;
 
@@ -32,6 +36,7 @@ public class LedgerListenerConfiguration {
     public void createPipeline () {
         Flux.<LedgerResponse>create(sink -> registerListener(sink::next))
             .map(modelMapper::map)
+            .map(Mono::just)
             .retryWhen(companion -> companion
                 .doOnNext(s -> System.out.println(s + " at " + LocalTime.now()))
                 .zipWith(Flux.range(1, 100), (error, index) -> {
@@ -45,7 +50,11 @@ public class LedgerListenerConfiguration {
                 .flatMap(index -> Mono.delay(Duration.ofMillis(index * 100)))
                 .doOnNext(s -> System.out.println("retried at " + LocalTime.now()))
             )
-            .subscribe(apiClient::publish, System.err::println);
+            .map(apiClient::publish)
+            .subscribe(
+                blockMono -> LOG.info("API responded with object {}", blockMono.block()),
+                System.err::println
+            );
     }
 
     @PostConstruct
