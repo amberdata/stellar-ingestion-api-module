@@ -4,6 +4,7 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -52,7 +53,7 @@ public class ModelMapper {
         return optionalProperties;
     }
 
-    public Transaction map (TransactionResponse transactionResponse) {
+    public Transaction map (TransactionResponse transactionResponse, List<OperationResponse> operationResponse) {
         return new Transaction.Builder()
             .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
