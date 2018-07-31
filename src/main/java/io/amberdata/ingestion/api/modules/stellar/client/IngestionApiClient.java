@@ -13,7 +13,6 @@ import org.springframework.web.reactive.function.client.WebClient;
 import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.configuration.IngestionApiProperties;
 
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -38,7 +37,7 @@ public class IngestionApiClient {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
     }
 
-    public Mono<Block> publish (Block block) {
+    public Block publish (Block block) {
         LOG.info("Going to publish block {}", block);
 
         return webClient
@@ -51,7 +50,7 @@ public class IngestionApiClient {
                 .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable.getMessage()))
                 .zipWith(Flux.range(1, 10), (error, index) -> index)
                 .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
-            );
+            ).block();
     }
 
 //    public Mono<Transaction> publish (Transaction transaction) {

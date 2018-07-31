@@ -40,8 +40,7 @@ public class LedgerListenerConfiguration {
         LOG.error("Fatal error when calling API", throwable);
     }
 
-    private void storeState (Mono<Block> blockMono) {
-        Block block = blockMono.block();
+    private void storeState (Block block) {
         LOG.info("Going to store state for block {}", block);
         // TODO
     }
