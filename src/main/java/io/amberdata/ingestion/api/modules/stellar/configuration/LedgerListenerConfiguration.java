@@ -1,11 +1,16 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration;
 
+import java.io.IOException;
+import java.time.Duration;
 import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.Server;
+import org.stellar.sdk.requests.LedgersRequestBuilder;
 import org.stellar.sdk.responses.LedgerResponse;
 
 import io.amberdata.domain.Block;
@@ -13,6 +18,7 @@ import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -20,24 +26,41 @@ import reactor.core.publisher.Mono;
 public class LedgerListenerConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(LedgerListenerConfiguration.class);
 
+    private final ApplicationContext applicationContext;
     private final IngestionApiClient apiClient;
     private final ModelMapper        modelMapper;
 
-    public LedgerListenerConfiguration (IngestionApiClient apiClient, ModelMapper modelMapper) {
+    public LedgerListenerConfiguration (ApplicationContext applicationContext,
+                                        IngestionApiClient apiClient,
+                                        ModelMapper modelMapper) {
+        this.applicationContext = applicationContext;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
     }
 
     @PostConstruct
     public void createPipeline () {
-        Flux.<LedgerResponse>create(sink -> subscribe(sink::next))
+        Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
+            .retryWhen(companion -> companion
+                .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable))
+                .zipWith(Flux.range(1, Integer.MAX_VALUE), (error, index) -> {
+                    if (index == 10) { // TODO 10 tries is fine / configuration
+                        throw Exceptions.propagate(error);
+                    }
+                    return index;
+                })
+                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
+            )
             .map(modelMapper::map)
             .map(apiClient::publish)
-            .subscribe(this::storeState, this::handleError);
+            .subscribe(this::storeState, this::fatalAppState);
     }
 
-    private void handleError (Throwable throwable) {
+    private void fatalAppState (Throwable throwable) {
         LOG.error("Fatal error when calling API", throwable);
+
+        SpringApplication.exit(applicationContext);
+        System.exit(-1);
     }
 
     private void storeState (Block block) {
@@ -46,10 +69,36 @@ public class LedgerListenerConfiguration {
     }
 
     private void subscribe (Consumer<LedgerResponse> ledgerResponseConsumer) {
-        Server server = new Server("https://horizon-testnet.stellar.org");
-        server
+        String serverUrl = "https://horizon-testnet.stellar.org";
+        Server server    = new Server(serverUrl);
+
+        LOG.info("Connecting to server on {}", serverUrl);
+
+        LedgersRequestBuilder ledgersRequest = server
             .ledgers()
-            .cursor("now")
-            .stream(ledgerResponseConsumer::accept);
+            .cursor("now");
+
+        testServerConnection(server);
+        testRequestCorrectness(ledgersRequest);
+
+        ledgersRequest.stream(ledgerResponseConsumer::accept);
+    }
+
+    private void testServerConnection (Server server) {
+        try {
+            server.root().getProtocolVersion();
+        }
+        catch (IOException e) {
+            throw new RuntimeException("Cannot resolve connection to Horizon server", e);
+        }
+    }
+
+    private void testRequestCorrectness (LedgersRequestBuilder requestBuilder) {
+        try {
+            requestBuilder.execute();
+        }
+        catch (IOException e) {
+            throw new RuntimeException("Request seems to be incorrect", e);
+        }
     }
 }
