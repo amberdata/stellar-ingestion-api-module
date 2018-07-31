@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.Server;
 import org.stellar.sdk.responses.LedgerResponse;
 
+import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
@@ -36,25 +37,18 @@ public class LedgerListenerConfiguration {
     public void createPipeline () {
         Flux.<LedgerResponse>create(sink -> registerListener(sink::next))
             .map(modelMapper::map)
-            .map(Mono::just)
-            .retryWhen(companion -> companion
-                .doOnNext(s -> System.out.println(s + " at " + LocalTime.now()))
-                .zipWith(Flux.range(1, 100), (error, index) -> {
-                    if (index < 100) {
-                        return index;
-                    }
-                    else {
-                        throw Exceptions.propagate(error);
-                    }
-                })
-                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 100)))
-                .doOnNext(s -> System.out.println("retried at " + LocalTime.now()))
-            )
             .map(apiClient::publish)
-            .subscribe(
-                blockMono -> LOG.info("API responded with object {}", blockMono.block()),
-                System.err::println
-            );
+            .subscribe(this::storeState, this::handleError);
+    }
+
+    private void handleError (Throwable throwable) {
+        LOG.error("Fatal error when calling API", throwable);
+    }
+
+    private void storeState (Mono<Block> blockMono) {
+        Block block = blockMono.block();
+        LOG.info("Going to store state for block {}", block);
+        // TODO
     }
 
     @PostConstruct
