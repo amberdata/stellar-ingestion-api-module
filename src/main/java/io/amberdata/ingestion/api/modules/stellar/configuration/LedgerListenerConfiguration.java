@@ -43,18 +43,25 @@ public class LedgerListenerConfiguration {
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .retryWhen(companion -> companion
                 .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable))
-                .zipWith(Flux.range(1, Integer.MAX_VALUE), (error, index) -> {
-                    if (index == 10) { // TODO 10 tries is fine / configuration
-                        throw Exceptions.propagate(error);
-                    }
-                    return index;
-                })
-                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
+                .zipWith(Flux.range(1, Integer.MAX_VALUE), this::retryCountPattern)
+                .flatMap(this::retryBackOffPattern)
             )
             .map(modelMapper::map)
             .map(apiClient::publish)
             .subscribe(this::storeState, this::fatalAppState);
     }
+
+    private Mono<Long> retryBackOffPattern (Integer index) {
+        return Mono.delay(Duration.ofMillis(index * 1000)); // todo configuration
+    }
+
+    private int retryCountPattern (Throwable error, Integer index) {
+        if (index == 10) { // TODO is 10 tries fine? / configuration
+            throw Exceptions.propagate(error);
+        }
+        return index;
+    }
+
 
     private void fatalAppState (Throwable throwable) {
         LOG.error("Fatal error when calling API", throwable);
