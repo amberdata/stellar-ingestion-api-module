@@ -1,23 +1,32 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
 import java.util.Objects;
 
 public class SetOptionsOperation extends Operation {
 
-    private String  inflationDestination;
-    private Integer clearFlags;
-    private Integer setFlags;
-    private Integer masterKeyWeight;
-    private Integer lowThreshold;
-    private Integer mediumThreshold;
-    private Integer highThreshold;
-    private String  homeDomain;
-    private String  signerKey;
-    private Integer signerWeight;
+    private String   inflationDestination;
+    private String[] clearFlags;
+    private String[] setFlags;
+    private Integer  masterKeyWeight;
+    private Integer  lowThreshold;
+    private Integer  mediumThreshold;
+    private Integer  highThreshold;
+    private String   homeDomain;
+    private String   signerKey;
+    private Integer  signerWeight;
 
-    public SetOptionsOperation (String sourceAccount, String inflationDestination, Integer clearFlags, Integer
-        setFlags, Integer masterKeyWeight, Integer lowThreshold, Integer mediumThreshold, Integer highThreshold,
-                                String homeDomain, String signerKey, Integer signerWeight) {
+    public SetOptionsOperation (String sourceAccount,
+                                String inflationDestination,
+                                String[] clearFlags,
+                                String[] setFlags,
+                                Integer masterKeyWeight,
+                                Integer lowThreshold,
+                                Integer mediumThreshold,
+                                Integer highThreshold,
+                                String homeDomain,
+                                String signerKey,
+                                Integer signerWeight) {
         super(sourceAccount);
         this.inflationDestination = inflationDestination;
         this.clearFlags = clearFlags;
@@ -39,19 +48,19 @@ public class SetOptionsOperation extends Operation {
         this.inflationDestination = inflationDestination;
     }
 
-    public Integer getClearFlags () {
+    public String[] getClearFlags () {
         return clearFlags;
     }
 
-    public void setClearFlags (Integer clearFlags) {
+    public void setClearFlags (String[] clearFlags) {
         this.clearFlags = clearFlags;
     }
 
-    public Integer getSetFlags () {
+    public String[] getSetFlags () {
         return setFlags;
     }
 
-    public void setSetFlags (Integer setFlags) {
+    public void setSetFlags (String[] setFlags) {
         this.setFlags = setFlags;
     }
 
@@ -122,8 +131,8 @@ public class SetOptionsOperation extends Operation {
         }
         SetOptionsOperation that = (SetOptionsOperation) o;
         return Objects.equals(inflationDestination, that.inflationDestination) &&
-            Objects.equals(clearFlags, that.clearFlags) &&
-            Objects.equals(setFlags, that.setFlags) &&
+            Arrays.equals(clearFlags, that.clearFlags) &&
+            Arrays.equals(setFlags, that.setFlags) &&
             Objects.equals(masterKeyWeight, that.masterKeyWeight) &&
             Objects.equals(lowThreshold, that.lowThreshold) &&
             Objects.equals(mediumThreshold, that.mediumThreshold) &&
@@ -135,9 +144,10 @@ public class SetOptionsOperation extends Operation {
 
     @Override
     public int hashCode () {
-        return Objects.hash(inflationDestination,
-            clearFlags, setFlags, masterKeyWeight,
-            lowThreshold, mediumThreshold, highThreshold,
-            homeDomain, signerKey, signerWeight);
+        int result = Objects.hash(inflationDestination, masterKeyWeight, lowThreshold, mediumThreshold,
+            highThreshold, homeDomain, signerKey, signerWeight);
+        result = 31 * result + Arrays.hashCode(clearFlags);
+        result = 31 * result + Arrays.hashCode(setFlags);
+        return result;
     }
 }

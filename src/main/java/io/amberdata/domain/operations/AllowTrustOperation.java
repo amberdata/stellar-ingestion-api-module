@@ -2,19 +2,21 @@ package io.amberdata.domain.operations;
 
 import java.util.Objects;
 
+import io.amberdata.domain.Asset;
+
 public class AllowTrustOperation extends Operation {
 
     private String trustor;
-    private String assetCode;
+    private Asset asset;
     private boolean authorize;
 
     public AllowTrustOperation (String sourceAccount,
                                 String trustor,
-                                String assetCode,
+                                Asset asset,
                                 boolean authorize) {
         super(sourceAccount);
         this.trustor = trustor;
-        this.assetCode = assetCode;
+        this.asset = asset;
         this.authorize = authorize;
     }
 
@@ -26,12 +28,12 @@ public class AllowTrustOperation extends Operation {
         this.trustor = trustor;
     }
 
-    public String getAssetCode () {
-        return assetCode;
+    public Asset getAsset () {
+        return asset;
     }
 
-    public void setAssetCode (String assetCode) {
-        this.assetCode = assetCode;
+    public void setAsset (Asset asset) {
+        this.asset = asset;
     }
 
     public boolean isAuthorize () {
@@ -54,19 +56,19 @@ public class AllowTrustOperation extends Operation {
         AllowTrustOperation that = (AllowTrustOperation) o;
         return authorize == that.authorize &&
             Objects.equals(trustor, that.trustor) &&
-            Objects.equals(assetCode, that.assetCode);
+            Objects.equals(asset, that.asset);
     }
 
     @Override
     public int hashCode () {
-        return Objects.hash(trustor, assetCode, authorize);
+        return Objects.hash(trustor, asset, authorize);
     }
 
     @Override
     public String toString () {
         return "AllowTrustOperation{" +
             "trustor='" + trustor + '\'' +
-            ", assetCode='" + assetCode + '\'' +
+            ", asset=" + asset +
             ", authorize=" + authorize +
             '}';
     }

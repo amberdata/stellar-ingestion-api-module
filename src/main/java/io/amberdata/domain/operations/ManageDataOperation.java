@@ -6,11 +6,11 @@ import java.util.Objects;
 public class ManageDataOperation extends Operation {
 
     private String name;
-    private byte[] value;
+    private String value;
 
     public ManageDataOperation (String sourceAccount,
                                 String name,
-                                byte[] value) {
+                                String value) {
         super(sourceAccount);
         this.name = name;
         this.value = value;
@@ -24,11 +24,11 @@ public class ManageDataOperation extends Operation {
         this.name = name;
     }
 
-    public byte[] getValue () {
+    public String getValue () {
         return value;
     }
 
-    public void setValue (byte[] value) {
+    public void setValue (String value) {
         this.value = value;
     }
 
@@ -43,21 +43,19 @@ public class ManageDataOperation extends Operation {
         }
         ManageDataOperation that = (ManageDataOperation) o;
         return Objects.equals(name, that.name) &&
-            Arrays.equals(value, that.value);
+            Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode () {
-        int result = Objects.hash(name);
-        result = 31 * result + Arrays.hashCode(value);
-        return result;
+        return Objects.hash(name, value);
     }
 
     @Override
     public String toString () {
         return "ManageDataOperation{" +
             "name='" + name + '\'' +
-            ", value=" + Arrays.toString(value) +
+            ", value='" + value + '\'' +
             '}';
     }
 }

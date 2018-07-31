@@ -4,9 +4,11 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.AccountResponse;
@@ -18,13 +20,20 @@ import io.amberdata.domain.Address;
 import io.amberdata.domain.Block;
 import io.amberdata.domain.Transaction;
 import io.amberdata.domain.operations.Operation;
+import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapper;
+import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
 
 @Component
 public class ModelMapper {
     private final String blockChainId;
 
-    public ModelMapper (@Value("${ingestion.api.blockchain-id}") String blockChainId) {
+    private final OperationMapperManager operationMapperManager;
+
+    @Autowired
+    public ModelMapper (@Value("${ingestion.api.blockchain-id}") String blockChainId,
+                        OperationMapperManager operationMapperManager) {
         this.blockChainId = blockChainId;
+        this.operationMapperManager = operationMapperManager;
     }
 
     public Block map (LedgerResponse ledgerResponse) {
@@ -52,7 +61,10 @@ public class ModelMapper {
         return optionalProperties;
     }
 
-    public Transaction map (TransactionResponse transactionResponse) {
+    public Transaction map (TransactionResponse transactionResponse, List<OperationResponse> operationResponses) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+        optionalProperties.put("operations", this.map(operationResponses));
+
         return new Transaction.Builder()
             .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
@@ -63,7 +75,14 @@ public class ModelMapper {
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
+            .optionalProperties(optionalProperties)
             .build();
+    }
+
+    public List<Operation> map (List<OperationResponse> operationResponses) {
+        return operationResponses.stream()
+            .map(this.operationMapperManager::map)
+            .collect(Collectors.toList());
     }
 
     public Address map (AccountResponse accountResponse) {
