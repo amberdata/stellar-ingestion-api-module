@@ -14,8 +14,11 @@ import org.stellar.sdk.requests.LedgersRequestBuilder;
 import org.stellar.sdk.responses.LedgerResponse;
 
 import io.amberdata.domain.Block;
+import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.api.modules.stellar.state.EntityState;
+import io.amberdata.ingestion.api.modules.stellar.state.EntityStateRepository;
 
 import javax.annotation.PostConstruct;
 import reactor.core.Exceptions;
@@ -26,14 +29,17 @@ import reactor.core.publisher.Mono;
 public class LedgerListenerConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(LedgerListenerConfiguration.class);
 
-    private final ApplicationContext applicationContext;
-    private final IngestionApiClient apiClient;
-    private final ModelMapper        modelMapper;
+    private final EntityStateRepository entityStateRepository;
+    private final ApplicationContext    applicationContext;
+    private final IngestionApiClient    apiClient;
+    private final ModelMapper           modelMapper;
 
     public LedgerListenerConfiguration (ApplicationContext applicationContext,
+                                        EntityStateRepository entityStateRepository,
                                         IngestionApiClient apiClient,
                                         ModelMapper modelMapper) {
         this.applicationContext = applicationContext;
+        this.entityStateRepository = entityStateRepository;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
     }
@@ -62,17 +68,21 @@ public class LedgerListenerConfiguration {
         return index;
     }
 
-
     private void fatalAppState (Throwable throwable) {
         LOG.error("Fatal error when calling API", throwable);
 
-        SpringApplication.exit(applicationContext);
-        System.exit(-1);
+        StellarIngestionModuleDemoApplication.shutdown();
     }
 
     private void storeState (Block block) {
         LOG.info("Going to store state for block {}", block);
-        // TODO
+
+        entityStateRepository.saveAndFlush(
+            EntityState.from(
+                "block",
+                block.getNumber().toString()
+            )
+        );
     }
 
     private void subscribe (Consumer<LedgerResponse> ledgerResponseConsumer) {
@@ -81,9 +91,14 @@ public class LedgerListenerConfiguration {
 
         LOG.info("Connecting to server on {}", serverUrl);
 
+        String cursorPointer = entityStateRepository
+            .findById("block")
+            .map(EntityState::getLastId)
+            .orElse("now");
+
         LedgersRequestBuilder ledgersRequest = server
             .ledgers()
-            .cursor("now");
+            .cursor(cursorPointer);
 
         testServerConnection(server);
         testRequestCorrectness(ledgersRequest);
