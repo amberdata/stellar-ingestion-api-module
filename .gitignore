@@ -40,3 +40,6 @@ screenlog.0
 
 # PID file
 /application.pid
+
+# State embedded database
+/stellar-ingestion-module-state*
