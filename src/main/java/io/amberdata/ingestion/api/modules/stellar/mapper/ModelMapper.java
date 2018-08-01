@@ -99,21 +99,6 @@ public class ModelMapper {
             .build();
     }
 
-    public Address mapNewContract (CreateAccountOperationResponse operationResponse) {
-        Map<String, Object> balance = new HashMap<>();
-        balance.put("balance", operationResponse.getStartingBalance());
-        balance.put("asset", new Asset(Asset.AssetType.ASSET_TYPE_NATIVE, null, null));
-
-        Map<String, Object> optionalProperties = new HashMap<>();
-        optionalProperties.put("balances", Collections.singletonList(balance));
-
-        return new Address.Builder()
-            .hash(operationResponse.getAccount().getAccountId())
-            .timestamp(isoToEpochMilliseconds(operationResponse.getCreatedAt()))
-            .optionalProperties(optionalProperties)
-            .build();
-    }
-
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
         Map<String, Object> optionalProperties = new HashMap<>();
 
@@ -153,10 +138,5 @@ public class ModelMapper {
         optionalProperties.put("weight", String.valueOf(signer.getWeight()));
 
         return optionalProperties;
-    }
-
-    private long isoToEpochMilliseconds (String time) {
-        LocalDateTime localDateTime = LocalDateTime.parse(time, DateTimeFormatter.ISO_DATE_TIME);
-        return localDateTime.toEpochSecond(ZoneOffset.UTC) * 1000;
     }
 }
