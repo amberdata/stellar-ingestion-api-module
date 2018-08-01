@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.Server;
@@ -30,15 +29,12 @@ public class LedgerListenerConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(LedgerListenerConfiguration.class);
 
     private final EntityStateRepository entityStateRepository;
-    private final ApplicationContext    applicationContext;
     private final IngestionApiClient    apiClient;
     private final ModelMapper           modelMapper;
 
-    public LedgerListenerConfiguration (ApplicationContext applicationContext,
-                                        EntityStateRepository entityStateRepository,
+    public LedgerListenerConfiguration (EntityStateRepository entityStateRepository,
                                         IngestionApiClient apiClient,
                                         ModelMapper modelMapper) {
-        this.applicationContext = applicationContext;
         this.entityStateRepository = entityStateRepository;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
