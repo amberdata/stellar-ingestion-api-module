@@ -1,6 +1,8 @@
 package io.amberdata.domain.operations;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -82,6 +84,11 @@ public class PathPaymentOperation extends Operation {
     @Override
     public List<String> getInvolvedAccounts () {
         return Arrays.asList(getSourceAccount(), this.destinationAccount);
+    }
+
+    @Override
+    public List<Asset> getInvolvedAssets () {
+        return Arrays.asList(sendAsset, destinationAsset);
     }
 
     @Override
