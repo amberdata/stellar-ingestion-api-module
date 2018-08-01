@@ -1,5 +1,7 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import io.amberdata.domain.Asset;
@@ -42,6 +44,11 @@ public class ChangeTrustOperation extends Operation {
 
     public void setLimit (String limit) {
         this.limit = limit;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Arrays.asList(getSourceAccount(), this.trusteeAccount);
     }
 
     @Override

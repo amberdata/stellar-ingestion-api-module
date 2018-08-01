@@ -1,5 +1,7 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import io.amberdata.domain.Asset;
@@ -42,6 +44,11 @@ public class PaymentOperation extends Operation {
 
     public void setAmount (String amount) {
         this.amount = amount;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Arrays.asList(getSourceAccount(), this.destinationAccount);
     }
 
     @Override

@@ -1,6 +1,8 @@
 package io.amberdata.domain.operations;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class ManageDataOperation extends Operation {
@@ -30,6 +32,11 @@ public class ManageDataOperation extends Operation {
 
     public void setValue (String value) {
         this.value = value;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Collections.singletonList(getSourceAccount());
     }
 
     @Override

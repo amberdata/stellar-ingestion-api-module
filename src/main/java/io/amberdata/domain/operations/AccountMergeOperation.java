@@ -1,5 +1,7 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class AccountMergeOperation extends Operation {
@@ -18,6 +20,11 @@ public class AccountMergeOperation extends Operation {
 
     public void setDestination (String destination) {
         this.destination = destination;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Arrays.asList(getSourceAccount(), this.destination);
     }
 
     @Override
