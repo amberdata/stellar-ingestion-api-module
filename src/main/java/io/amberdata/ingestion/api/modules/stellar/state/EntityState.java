@@ -8,7 +8,6 @@ import javax.persistence.Id;
 public class EntityState {
 
     @Id
-    @Column(nullable = false, unique = true)
     private String entityType;
 
     @Column(nullable = false)
