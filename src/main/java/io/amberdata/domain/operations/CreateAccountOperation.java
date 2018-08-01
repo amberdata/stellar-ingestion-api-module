@@ -1,5 +1,7 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 public class CreateAccountOperation extends Operation {
@@ -29,6 +31,11 @@ public class CreateAccountOperation extends Operation {
 
     public void setStartingBalance (String startingBalance) {
         this.startingBalance = startingBalance;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Arrays.asList(getSourceAccount(), this.destinationAccount);
     }
 
     @Override

@@ -1,5 +1,7 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import io.amberdata.domain.Asset;
@@ -42,6 +44,11 @@ public class AllowTrustOperation extends Operation {
 
     public void setAuthorize (boolean authorize) {
         this.authorize = authorize;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Arrays.asList(getSourceAccount(), this.trustor);
     }
 
     @Override

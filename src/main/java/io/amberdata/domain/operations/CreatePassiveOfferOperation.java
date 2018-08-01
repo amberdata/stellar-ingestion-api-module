@@ -1,5 +1,8 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 import io.amberdata.domain.Asset;
@@ -52,6 +55,11 @@ public class CreatePassiveOfferOperation extends Operation {
 
     public void setPrice (String price) {
         this.price = price;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Collections.singletonList(getSourceAccount());
     }
 
     @Override

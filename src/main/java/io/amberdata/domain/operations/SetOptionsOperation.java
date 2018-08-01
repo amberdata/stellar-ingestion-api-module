@@ -1,6 +1,8 @@
 package io.amberdata.domain.operations;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 public class SetOptionsOperation extends Operation {
@@ -118,6 +120,11 @@ public class SetOptionsOperation extends Operation {
 
     public void setSignerWeight (Integer signerWeight) {
         this.signerWeight = signerWeight;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Collections.singletonList(getSourceAccount());
     }
 
     @Override

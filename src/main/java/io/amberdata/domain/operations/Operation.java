@@ -1,5 +1,7 @@
 package io.amberdata.domain.operations;
 
+import java.util.List;
+
 public abstract class Operation {
 
     private String sourceAccount;
@@ -15,4 +17,6 @@ public abstract class Operation {
     public void setSourceAccount (String sourceAccount) {
         this.sourceAccount = sourceAccount;
     }
+
+    public abstract List<String> getInvolvedAccounts ();
 }

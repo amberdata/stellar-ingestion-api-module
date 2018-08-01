@@ -5,33 +5,41 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.Server;
+import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.domain.Address;
+import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
 @Configuration
-public class TransactionListenerConfiguration {
+public class AccountListenerConfiguration {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TransactionListenerConfiguration.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AccountListenerConfiguration.class);
 
     private final IngestionApiClient apiClient;
     private final ModelMapper        modelMapper;
-    private final Server horizonServer;
+    private final Server             horizonServer;
 
     private Consumer<TransactionResponse> transactionResponseConsumer;
 
-    public TransactionListenerConfiguration (IngestionApiClient apiClient,
+    public AccountListenerConfiguration (IngestionApiClient apiClient,
                                              ModelMapper modelMapper,
                                              Server horizonServer) {
         this.apiClient = apiClient;
@@ -44,13 +52,23 @@ public class TransactionListenerConfiguration {
         Flux.<TransactionResponse>create(sink -> registerListener(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return modelMapper.map(transactionResponse, operationResponses);
+                return processAccounts(operationResponses).stream()
+                    .map(modelMapper::map);
             })
             .map(Mono::just)
             .subscribe(
-                transactionMono -> LOG.info("API responded with object {}", transactionMono.block()),
+                addressMono -> LOG.info("API responded with object {}", addressMono.block()),
                 Throwable::printStackTrace
             );
+    }
+
+    private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
+        return modelMapper.map(operationResponses).stream()
+            .map(Operation::getInvolvedAccounts)
+            .flatMap(Collection::stream)
+            .distinct()
+            .map(this::fetchAccountDetails)
+            .collect(Collectors.toList());
     }
 
     @PostConstruct
@@ -71,6 +89,17 @@ public class TransactionListenerConfiguration {
         }
         catch (IOException ex) {
             return Collections.emptyList();
+        }
+    }
+
+    private AccountResponse fetchAccountDetails (String accountId) {
+        try {
+            return horizonServer
+                .accounts()
+                .account(KeyPair.fromAccountId(accountId));
+        }
+        catch (IOException ex) {
+            return null;
         }
     }
 

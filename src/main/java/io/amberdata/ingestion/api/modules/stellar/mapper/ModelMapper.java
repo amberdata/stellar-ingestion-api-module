@@ -20,7 +20,6 @@ import io.amberdata.domain.Address;
 import io.amberdata.domain.Block;
 import io.amberdata.domain.Transaction;
 import io.amberdata.domain.operations.Operation;
-import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapper;
 import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
 
 @Component

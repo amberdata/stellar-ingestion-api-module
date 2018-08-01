@@ -1,5 +1,8 @@
 package io.amberdata.domain.operations;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Objects;
 
 import io.amberdata.domain.Asset;
@@ -64,6 +67,11 @@ public class ManageOfferOperation extends Operation {
 
     public void setOfferId (long offerId) {
         this.offerId = offerId;
+    }
+
+    @Override
+    public List<String> getInvolvedAccounts () {
+        return Collections.singletonList(getSourceAccount());
     }
 
     @Override
