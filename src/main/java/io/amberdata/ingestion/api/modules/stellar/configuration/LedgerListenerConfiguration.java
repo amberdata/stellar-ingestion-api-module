@@ -14,6 +14,7 @@ import org.stellar.sdk.requests.LedgersRequestBuilder;
 import org.stellar.sdk.responses.LedgerResponse;
 
 import io.amberdata.domain.Block;
+import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.EntityState;
@@ -70,8 +71,7 @@ public class LedgerListenerConfiguration {
     private void fatalAppState (Throwable throwable) {
         LOG.error("Fatal error when calling API", throwable);
 
-        SpringApplication.exit(applicationContext);
-        System.exit(-1);
+        StellarIngestionModuleDemoApplication.shutdown();
     }
 
     private void storeState (Block block) {

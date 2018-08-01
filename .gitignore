@@ -37,3 +37,6 @@ bin/
 
 *.log
 screenlog.0
+
+# PID file
+/application.pid
