@@ -27,6 +27,10 @@ public class Asset {
         this.isAuthRevocable = isAuthRevocable;
     }
 
+    public static Asset from (String code, String issuerAccount) {
+        return new Asset(AssetType.ASSET_TYPE_UNKNOWN, code, issuerAccount);
+    }
+
     public AssetType getType () {
         return type;
     }

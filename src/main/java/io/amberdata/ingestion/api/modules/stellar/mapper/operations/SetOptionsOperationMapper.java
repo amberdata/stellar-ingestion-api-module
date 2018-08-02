@@ -1,29 +1,53 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
-import io.amberdata.domain.operations.Operation;
-import io.amberdata.domain.operations.SetOptionsOperation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.amberdata.domain.Asset;
+import io.amberdata.domain.FunctionCall;
 
 public class SetOptionsOperationMapper implements OperationMapper {
 
     @Override
-    public Operation map (OperationResponse operationResponse) {
+    public FunctionCall map (OperationResponse operationResponse) {
         SetOptionsOperationResponse response = (SetOptionsOperationResponse) operationResponse;
 
-        return new SetOptionsOperation(
-            response.getSourceAccount().getAccountId(),
-            response.getInflationDestination().getAccountId(),
-            response.getClearFlags(),
-            response.getSetFlags(),
-            response.getMasterKeyWeight(),
-            response.getLowThreshold(),
-            response.getMedThreshold(),
-            response.getHighThreshold(),
-            response.getHomeDomain(),
-            response.getSigner().getAccountId(),
-            response.getSignerWeight()
-        );
+        return new FunctionCall.Builder()
+            .from(response.getSourceAccount().getAccountId())
+            .to(response.getInflationDestination().getAccountId())
+            .signature(response.getSigner().getAccountId())
+            .meta(getMetaProperties(response))
+            .build();
+    }
+
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        return Collections.emptyList();
+    }
+
+    private String getMetaProperties (SetOptionsOperationResponse response) {
+        Map<String, String> metaMap = new HashMap<>();
+        metaMap.put("clearFlags", String.join("-", response.getClearFlags()));
+        metaMap.put("setFlags", String.join("-", response.getSetFlags()));
+        metaMap.put("masterKeyWeight", response.getMasterKeyWeight().toString());
+        metaMap.put("lowThreshold", response.getLowThreshold().toString());
+        metaMap.put("medThreshold", response.getMedThreshold().toString());
+        metaMap.put("highThreshold", response.getHighThreshold().toString());
+        metaMap.put("homeDomain", response.getHomeDomain());
+        metaMap.put("signerWeight", response.getSignerWeight().toString());
+        try {
+            return new ObjectMapper().writeValueAsString(metaMap);
+        }
+        catch (JsonProcessingException e) {
+            return "{}";
+        }
     }
 }

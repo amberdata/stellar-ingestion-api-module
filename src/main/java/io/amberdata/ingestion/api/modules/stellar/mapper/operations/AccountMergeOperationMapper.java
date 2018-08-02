@@ -1,20 +1,28 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import io.amberdata.domain.operations.AccountMergeOperation;
-import io.amberdata.domain.operations.Operation;
+import io.amberdata.domain.Asset;
+import io.amberdata.domain.FunctionCall;
 
 public class AccountMergeOperationMapper implements OperationMapper {
 
     @Override
-    public Operation map (OperationResponse operationResponse) {
+    public FunctionCall map (OperationResponse operationResponse) {
         AccountMergeOperationResponse response = (AccountMergeOperationResponse) operationResponse;
 
-        return new AccountMergeOperation(
-            response.getAccount().getAccountId(),
-            response.getInto().getAccountId()
-        );
+        return new FunctionCall.Builder()
+            .from(response.getAccount().getAccountId())
+            .to(response.getInto().getAccountId())
+            .build();
+    }
+
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        return Collections.emptyList();
     }
 }

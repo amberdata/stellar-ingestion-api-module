@@ -1,10 +1,18 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
 
-import io.amberdata.domain.operations.Operation;
-import io.amberdata.domain.operations.PaymentOperation;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.amberdata.domain.Asset;
+import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class PaymentOperationMapper implements OperationMapper {
@@ -16,14 +24,37 @@ public class PaymentOperationMapper implements OperationMapper {
     }
 
     @Override
-    public Operation map (OperationResponse operationResponse) {
+    public FunctionCall map (OperationResponse operationResponse) {
         PaymentOperationResponse response = (PaymentOperationResponse) operationResponse;
 
-        return new PaymentOperation(
-            response.getFrom().getAccountId(),
-            response.getTo().getAccountId(),
-            this.assetMapper.map(response.getAsset()),
-            response.getAmount()
-        );
+        Asset asset = this.assetMapper.map(response.getAsset());
+
+        return new FunctionCall.Builder()
+            .from(response.getFrom().getAccountId())
+            .to(response.getTo().getAccountId())
+            .assetType(asset.getCode())
+            .value(response.getAmount())
+            .meta(getMetaProperties(asset))
+            .build();
+    }
+
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        PaymentOperationResponse response = (PaymentOperationResponse) operationResponse;
+
+        Asset asset = assetMapper.map(response.getAsset());
+        return Collections.singletonList(asset);
+    }
+
+    private String getMetaProperties (Asset asset) {
+        Map<String, String> metaMap = new HashMap<>();
+        metaMap.put("stellarAssetType", asset.getType().getName());
+        metaMap.put("assetIssuer", asset.getIssuerAccount());
+        try {
+            return new ObjectMapper().writeValueAsString(metaMap);
+        }
+        catch (JsonProcessingException e) {
+            return "{}";
+        }
     }
 }
