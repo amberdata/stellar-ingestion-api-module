@@ -63,6 +63,11 @@ public class CreatePassiveOfferOperation extends Operation {
     }
 
     @Override
+    public List<Asset> getInvolvedAssets () {
+        return Arrays.asList(selling, buying);
+    }
+
+    @Override
     public boolean equals (Object o) {
         if (this == o) {
             return true;

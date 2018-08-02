@@ -5,6 +5,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import io.amberdata.domain.Asset;
+
 public class ManageDataOperation extends Operation {
 
     private String name;
@@ -37,6 +39,11 @@ public class ManageDataOperation extends Operation {
     @Override
     public List<String> getInvolvedAccounts () {
         return Collections.singletonList(getSourceAccount());
+    }
+
+    @Override
+    public List<Asset> getInvolvedAssets () {
+        return Collections.emptyList();
     }
 
     @Override

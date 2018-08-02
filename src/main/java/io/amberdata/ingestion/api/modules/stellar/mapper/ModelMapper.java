@@ -12,11 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.AccountResponse;
+import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Address;
+import io.amberdata.domain.Asset;
 import io.amberdata.domain.Block;
 import io.amberdata.domain.Transaction;
 import io.amberdata.domain.operations.Operation;
@@ -98,6 +100,17 @@ public class ModelMapper {
             // need timestamp here
             .optionalProperties(addressOptionalProperties(accountResponse))
             .build();
+    }
+
+    public Asset map (AssetResponse assetResponse) {
+        return new Asset(
+            Asset.AssetType.fromName(assetResponse.getAssetType()),
+            assetResponse.getAssetCode(),
+            assetResponse.getAssetIssuer(),
+            assetResponse.getAmount(),
+            assetResponse.getFlags().isAuthRequired(),
+            assetResponse.getFlags().isAuthRevocable()
+        );
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {

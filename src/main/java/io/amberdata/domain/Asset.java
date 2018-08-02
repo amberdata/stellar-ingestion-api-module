@@ -7,11 +7,24 @@ public class Asset {
     private AssetType type;
     private String code;
     private String issuerAccount;
+    private String amount;
+    private boolean isAuthRequired;
+    private boolean isAuthRevocable;
 
     public Asset (AssetType type, String code, String issuerAccount) {
         this.type = type;
         this.code = code;
         this.issuerAccount = issuerAccount;
+    }
+
+    public Asset (AssetType type, String code, String issuerAccount, String amount, boolean isAuthRequired, boolean
+        isAuthRevocable) {
+        this.type = type;
+        this.code = code;
+        this.issuerAccount = issuerAccount;
+        this.amount = amount;
+        this.isAuthRequired = isAuthRequired;
+        this.isAuthRevocable = isAuthRevocable;
     }
 
     public AssetType getType () {
@@ -36,6 +49,30 @@ public class Asset {
 
     public void setIssuerAccount (String issuerAccount) {
         this.issuerAccount = issuerAccount;
+    }
+
+    public String getAmount () {
+        return amount;
+    }
+
+    public void setAmount (String amount) {
+        this.amount = amount;
+    }
+
+    public boolean isAuthRequired () {
+        return isAuthRequired;
+    }
+
+    public void setAuthRequired (boolean authRequired) {
+        isAuthRequired = authRequired;
+    }
+
+    public boolean isAuthRevocable () {
+        return isAuthRevocable;
+    }
+
+    public void setAuthRevocable (boolean authRevocable) {
+        isAuthRevocable = authRevocable;
     }
 
     @Override
@@ -68,19 +105,35 @@ public class Asset {
     }
 
     public enum AssetType {
-        ASSET_TYPE_NATIVE(0),
-        ASSET_TYPE_CREDIT_ALPHANUM4(1),
-        ASSET_TYPE_CREDIT_ALPHANUM12(2),
-        ASSET_TYPE_UNKNOWN(3);
+        ASSET_TYPE_NATIVE(0, "native"),
+        ASSET_TYPE_CREDIT_ALPHANUM4(1, "credit_alphanum4"),
+        ASSET_TYPE_CREDIT_ALPHANUM12(2, "credit_alphanum12"),
+        ASSET_TYPE_UNKNOWN(3, "unknown");
 
         private int value;
+        private String name;
 
-        private AssetType (int value) {
+        AssetType (int value, String name) {
             this.value = value;
+            this.name = name;
+        }
+
+        public static AssetType fromName (String name) {
+            for (AssetType assetType : values()) {
+                if (assetType.getName().equals(name)) {
+                    return assetType;
+                }
+            }
+
+            return AssetType.ASSET_TYPE_UNKNOWN;
         }
 
         public int getValue () {
             return this.value;
+        }
+
+        public String getName () {
+            return name;
         }
     }
 }
