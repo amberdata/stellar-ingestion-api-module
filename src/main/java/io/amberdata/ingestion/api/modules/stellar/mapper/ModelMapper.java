@@ -70,8 +70,10 @@ public class ModelMapper {
         return optionalProperties;
     }
 
-    public Transaction map (TransactionResponse transactionResponse, List<OperationResponse> operationResponses) {
-        return new Transaction.Builder()
+    public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
+                                                       List<OperationResponse> operationResponses) {
+
+        Transaction transaction = new Transaction.Builder()
             .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
@@ -83,6 +85,11 @@ public class ModelMapper {
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
             .functionCalls(this.map(operationResponses))
             .build();
+
+        return BlockchainEntityWithState.from(
+            transaction,
+            ResourceState.from(Resource.TRANSACTION, transactionResponse.getPagingToken())
+        );
     }
 
     public List<FunctionCall> map (List<OperationResponse> operationResponses) {

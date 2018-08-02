@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public final class Transaction {
+public final class Transaction implements BlockchainEntity {
     private String              blockchainId;
     private String              hash;
     private BigInteger          nonce;
