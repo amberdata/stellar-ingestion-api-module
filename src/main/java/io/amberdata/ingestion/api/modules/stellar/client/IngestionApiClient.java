@@ -41,7 +41,7 @@ public class IngestionApiClient {
     public BlockchainEntityWithState<Block> publish (BlockchainEntityWithState<Block> entityWithState) {
         LOG.info("Going to publish block {} to the ingestion API endpoint",  entityWithState.getEntity());
 
-        Block response = webClient
+        webClient
             .post()
             .uri("/blocks")
             .body(BodyInserters.fromObject(entityWithState.getEntity()))
@@ -53,7 +53,7 @@ public class IngestionApiClient {
                 .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
             ).block();
 
-        return BlockchainEntityWithState.from(response, entityWithState.getResourceState());
+        return entityWithState;
     }
 
 //    public Mono<Transaction> publish (Transaction transaction) {
