@@ -93,12 +93,14 @@ public class LedgerListenerConfiguration {
             .map(ResourceState::getPagingToken)
             .orElse("now");
 
+        LOG.info("Ledgers cursor is set to {}", cursorPointer);
+
         LedgersRequestBuilder ledgersRequest = server
             .ledgers()
             .cursor(cursorPointer);
 
         testServerConnection(server);
-        testRequestCorrectness(ledgersRequest);
+        testCursorCorrectness(server, cursorPointer);
 
         ledgersRequest.stream(ledgerResponseConsumer::accept);
     }
@@ -112,12 +114,12 @@ public class LedgerListenerConfiguration {
         }
     }
 
-    private void testRequestCorrectness (LedgersRequestBuilder requestBuilder) {
+    private void testCursorCorrectness (Server server, String cursorPointer) {
         try {
-            requestBuilder.limit(1).execute();
+            server.ledgers().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
-            throw new RuntimeException("Request seems to be incorrect", e);
+            throw new RuntimeException("Failed to test if cursor value is valid", e);
         }
     }
 }
