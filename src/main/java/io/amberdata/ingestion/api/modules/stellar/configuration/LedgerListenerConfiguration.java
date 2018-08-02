@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.Server;
 import org.stellar.sdk.requests.LedgersRequestBuilder;
@@ -16,8 +15,9 @@ import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.api.modules.stellar.state.EntityState;
-import io.amberdata.ingestion.api.modules.stellar.state.EntityStateRepository;
+import io.amberdata.ingestion.api.modules.stellar.state.Resource;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceState;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateRepository;
 
 import javax.annotation.PostConstruct;
 import reactor.core.Exceptions;
@@ -28,14 +28,14 @@ import reactor.core.publisher.Mono;
 public class LedgerListenerConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(LedgerListenerConfiguration.class);
 
-    private final EntityStateRepository entityStateRepository;
-    private final IngestionApiClient    apiClient;
-    private final ModelMapper           modelMapper;
+    private final ResourceStateRepository resourceStateRepository;
+    private final IngestionApiClient      apiClient;
+    private final ModelMapper             modelMapper;
 
-    public LedgerListenerConfiguration (EntityStateRepository entityStateRepository,
+    public LedgerListenerConfiguration (ResourceStateRepository resourceStateRepository,
                                         IngestionApiClient apiClient,
                                         ModelMapper modelMapper) {
-        this.entityStateRepository = entityStateRepository;
+        this.resourceStateRepository = resourceStateRepository;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
     }
@@ -73,9 +73,9 @@ public class LedgerListenerConfiguration {
     private void storeState (Block block) {
         LOG.info("Going to store state for block {}", block);
 
-        entityStateRepository.saveAndFlush(
-            EntityState.from(
-                "block",
+        resourceStateRepository.saveAndFlush(
+            ResourceState.from(
+                Resource.LEDGER,
                 block.getNumber().toString()
             )
         );
@@ -87,9 +87,9 @@ public class LedgerListenerConfiguration {
 
         LOG.info("Connecting to server on {}", serverUrl);
 
-        String cursorPointer = entityStateRepository
-            .findById("block")
-            .map(EntityState::getLastId)
+        String cursorPointer = resourceStateRepository
+            .findById(Resource.LEDGER)
+            .map(ResourceState::getPagingToken)
             .orElse("now");
 
         LedgersRequestBuilder ledgersRequest = server
