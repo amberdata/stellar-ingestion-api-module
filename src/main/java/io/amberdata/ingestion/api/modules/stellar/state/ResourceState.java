@@ -13,7 +13,7 @@ public class ResourceState {
     @Column(nullable = false)
     private String pagingToken;
 
-    private ResourceState () {
+    protected ResourceState () {
     }
 
     private ResourceState (Resource resourceType, String pagingToken) {
@@ -21,8 +21,8 @@ public class ResourceState {
         this.pagingToken = pagingToken;
     }
 
-    public static ResourceState from (Resource entityType, String lastId) {
-        return new ResourceState(entityType, lastId);
+    public static ResourceState from (Resource resourceType, String pagingToken) {
+        return new ResourceState(resourceType, pagingToken);
     }
 
     public Resource getResourceType () {

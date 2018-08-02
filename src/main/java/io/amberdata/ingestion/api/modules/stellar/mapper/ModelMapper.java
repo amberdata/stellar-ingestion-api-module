@@ -21,6 +21,9 @@ import io.amberdata.domain.Block;
 import io.amberdata.domain.Transaction;
 import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
+import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
+import io.amberdata.ingestion.api.modules.stellar.state.Resource;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceState;
 
 @Component
 public class ModelMapper {
@@ -35,8 +38,8 @@ public class ModelMapper {
         this.operationMapperManager = operationMapperManager;
     }
 
-    public Block map (LedgerResponse ledgerResponse) {
-        return new Block.Builder()
+    public BlockchainEntityWithState<Block> map (LedgerResponse ledgerResponse) {
+        Block block = new Block.Builder()
             .blockchainId(blockChainId)
             .number(BigInteger.valueOf(ledgerResponse.getSequence()))
             .hash(ledgerResponse.getHash())
@@ -46,6 +49,11 @@ public class ModelMapper {
             .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
             .optionalProperties(blockOptionalProperties(ledgerResponse))
             .build();
+
+        return BlockchainEntityWithState.from(
+            block,
+            ResourceState.from(Resource.LEDGER, ledgerResponse.getPagingToken())
+        );
     }
 
     private Map<String, Object> blockOptionalProperties (LedgerResponse ledgerResponse) {

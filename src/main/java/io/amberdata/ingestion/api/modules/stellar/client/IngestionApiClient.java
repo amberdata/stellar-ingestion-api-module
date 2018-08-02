@@ -12,6 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.configuration.IngestionApiProperties;
+import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -37,13 +38,13 @@ public class IngestionApiClient {
         httpHeaders.setContentType(MediaType.APPLICATION_JSON);
     }
 
-    public Block publish (Block block) {
-        LOG.info("Going to publish block {}", block);
+    public BlockchainEntityWithState<Block> publish (BlockchainEntityWithState<Block> entityWithState) {
+        LOG.info("Going to publish block {} to the ingestion API endpoint",  entityWithState.getEntity());
 
-        return webClient
+        Block response = webClient
             .post()
             .uri("/blocks")
-            .body(BodyInserters.fromObject(block))
+            .body(BodyInserters.fromObject(entityWithState.getEntity()))
             .retrieve()
             .bodyToMono(Block.class)
             .retryWhen(companion -> companion
@@ -51,6 +52,8 @@ public class IngestionApiClient {
                 .zipWith(Flux.range(1, 10), (error, index) -> index)
                 .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
             ).block();
+
+        return BlockchainEntityWithState.from(response, entityWithState.getResourceState());
     }
 
 //    public Mono<Transaction> publish (Transaction transaction) {

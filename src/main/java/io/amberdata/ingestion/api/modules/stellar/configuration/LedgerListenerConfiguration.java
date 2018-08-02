@@ -15,6 +15,7 @@ import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.Resource;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceState;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateRepository;
@@ -64,21 +65,21 @@ public class LedgerListenerConfiguration {
         return index;
     }
 
+    private void storeState (BlockchainEntityWithState<Block> entityWithState) {
+        LOG.info("Going to store state for entity {}", entityWithState);
+
+        resourceStateRepository.saveAndFlush(
+            ResourceState.from(
+                entityWithState.getResourceState().getResourceType(),
+                entityWithState.getResourceState().getPagingToken()
+            )
+        );
+    }
+
     private void fatalAppState (Throwable throwable) {
         LOG.error("Fatal error when calling API", throwable);
 
         StellarIngestionModuleDemoApplication.shutdown();
-    }
-
-    private void storeState (Block block) {
-        LOG.info("Going to store state for block {}", block);
-
-        resourceStateRepository.saveAndFlush(
-            ResourceState.from(
-                Resource.LEDGER,
-                block.getNumber().toString()
-            )
-        );
     }
 
     private void subscribe (Consumer<LedgerResponse> ledgerResponseConsumer) {
