@@ -5,6 +5,8 @@ import java.time.Duration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
+
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -29,5 +31,11 @@ public class SubscriberErrorsHandler {
             throw Exceptions.propagate(error);
         }
         return index;
+    }
+
+    public static void handleFatalApplicationError (Throwable throwable) {
+        LOG.error("Fatal error when calling API", throwable);
+
+        StellarIngestionModuleDemoApplication.shutdown();
     }
 }

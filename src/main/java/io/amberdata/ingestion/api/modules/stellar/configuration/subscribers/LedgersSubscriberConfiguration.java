@@ -46,13 +46,7 @@ public class LedgersSubscriberConfiguration {
             .retryWhen(SubscriberErrorsHandler::onError)
             .map(modelMapper::map)
             .map(entity -> apiClient.publish("/blocks", entity, Block.class))
-            .subscribe(stateStorage::storeState, this::fatalAppState);
-    }
-
-    private void fatalAppState (Throwable throwable) {
-        LOG.error("Fatal error when calling API", throwable);
-
-        StellarIngestionModuleDemoApplication.shutdown();
+            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {

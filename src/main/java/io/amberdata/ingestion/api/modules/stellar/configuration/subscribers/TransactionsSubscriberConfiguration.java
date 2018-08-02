@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules.stellar.configuration;
+package io.amberdata.ingestion.api.modules.stellar.configuration.subscribers;
 
 import java.io.IOException;
 import java.time.Duration;
@@ -18,6 +18,7 @@ import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
@@ -29,20 +30,20 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 @Configuration
-public class TransactionListenerConfiguration {
-    private static final Logger LOG = LoggerFactory.getLogger(TransactionListenerConfiguration.class);
+public class TransactionsSubscriberConfiguration {
+    private static final Logger LOG = LoggerFactory.getLogger(TransactionsSubscriberConfiguration.class);
 
-    private final ResourceStateRepository resourceStateRepository;
-    private final IngestionApiClient      apiClient;
-    private final ModelMapper             modelMapper;
-    private final Server                  horizonServer;
+    private final ResourceStateStorage stateStorage;
+    private final IngestionApiClient   apiClient;
+    private final ModelMapper          modelMapper;
+    private final Server               horizonServer;
 
-    public TransactionListenerConfiguration (ResourceStateRepository resourceStateRepository,
-                                             IngestionApiClient apiClient,
-                                             ModelMapper modelMapper,
-                                             Server horizonServer) {
+    public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
+                                           IngestionApiClient apiClient,
+                                           ModelMapper modelMapper,
+                                           Server horizonServer) {
 
-        this.resourceStateRepository = resourceStateRepository;
+        this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.horizonServer = horizonServer;
@@ -51,17 +52,13 @@ public class TransactionListenerConfiguration {
     @PostConstruct
     public void createPipeline () {
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
-            .retryWhen(companion -> companion
-                .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable))
-                .zipWith(Flux.range(1, Integer.MAX_VALUE), this::retryCountPattern)
-                .flatMap(this::retryBackOffPattern)
-            )
+            .retryWhen(SubscriberErrorsHandler::onError)
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return modelMapper.map(transactionResponse, operationResponses);
             })
             .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity, Transaction.class))
-            .subscribe(this::storeState, this::fatalAppState);
+            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
@@ -77,39 +74,8 @@ public class TransactionListenerConfiguration {
         }
     }
 
-    private Mono<Long> retryBackOffPattern (Integer index) {
-        return Mono.delay(Duration.ofMillis(index * 1000)); // todo configuration
-    }
-
-    private int retryCountPattern (Throwable error, Integer index) {
-        if (index == 10) { // TODO is 10 tries fine? / configuration
-            throw Exceptions.propagate(error);
-        }
-        return index;
-    }
-
-    private void storeState (BlockchainEntityWithState<Transaction> entityWithState) {
-        LOG.info("Going to store state for entity {}", entityWithState);
-
-        resourceStateRepository.saveAndFlush(
-            ResourceState.from(
-                entityWithState.getResourceState().getResourceType(),
-                entityWithState.getResourceState().getPagingToken()
-            )
-        );
-    }
-
-    private void fatalAppState (Throwable throwable) {
-        LOG.error("Fatal error when calling API", throwable);
-
-        StellarIngestionModuleDemoApplication.shutdown();
-    }
-
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
-        String cursorPointer = resourceStateRepository
-            .findById(Resource.LEDGER)
-            .map(ResourceState::getPagingToken)
-            .orElse("now");
+        String cursorPointer = stateStorage.getCursorPointer(Resource.TRANSACTION);
 
         LOG.info("Transactions cursor is set to {}", cursorPointer);
 

@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import io.amberdata.domain.Block;
+import io.amberdata.domain.BlockchainEntity;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
@@ -19,7 +20,7 @@ public class ResourceStateStorage {
         this.resourceStateRepository = resourceStateRepository;
     }
 
-    public void storeState (BlockchainEntityWithState<Block> entityWithState) {
+    public void storeState (BlockchainEntityWithState entityWithState) {
         LOG.info("Going to store state for entity {}", entityWithState);
 
         resourceStateRepository.saveAndFlush(
