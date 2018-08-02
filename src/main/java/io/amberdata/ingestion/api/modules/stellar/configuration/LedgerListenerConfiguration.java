@@ -6,8 +6,6 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.SpringApplication;
-import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.Server;
 import org.stellar.sdk.requests.LedgersRequestBuilder;
@@ -17,8 +15,10 @@ import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.api.modules.stellar.state.EntityState;
-import io.amberdata.ingestion.api.modules.stellar.state.EntityStateRepository;
+import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
+import io.amberdata.ingestion.api.modules.stellar.state.Resource;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceState;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateRepository;
 
 import javax.annotation.PostConstruct;
 import reactor.core.Exceptions;
@@ -29,17 +29,14 @@ import reactor.core.publisher.Mono;
 public class LedgerListenerConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(LedgerListenerConfiguration.class);
 
-    private final EntityStateRepository entityStateRepository;
-    private final ApplicationContext    applicationContext;
-    private final IngestionApiClient    apiClient;
-    private final ModelMapper           modelMapper;
+    private final ResourceStateRepository resourceStateRepository;
+    private final IngestionApiClient      apiClient;
+    private final ModelMapper             modelMapper;
 
-    public LedgerListenerConfiguration (ApplicationContext applicationContext,
-                                        EntityStateRepository entityStateRepository,
+    public LedgerListenerConfiguration (ResourceStateRepository resourceStateRepository,
                                         IngestionApiClient apiClient,
                                         ModelMapper modelMapper) {
-        this.applicationContext = applicationContext;
-        this.entityStateRepository = entityStateRepository;
+        this.resourceStateRepository = resourceStateRepository;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
     }
@@ -68,21 +65,21 @@ public class LedgerListenerConfiguration {
         return index;
     }
 
+    private void storeState (BlockchainEntityWithState<Block> entityWithState) {
+        LOG.info("Going to store state for entity {}", entityWithState);
+
+        resourceStateRepository.saveAndFlush(
+            ResourceState.from(
+                entityWithState.getResourceState().getResourceType(),
+                entityWithState.getResourceState().getPagingToken()
+            )
+        );
+    }
+
     private void fatalAppState (Throwable throwable) {
         LOG.error("Fatal error when calling API", throwable);
 
         StellarIngestionModuleDemoApplication.shutdown();
-    }
-
-    private void storeState (Block block) {
-        LOG.info("Going to store state for block {}", block);
-
-        entityStateRepository.saveAndFlush(
-            EntityState.from(
-                "block",
-                block.getNumber().toString()
-            )
-        );
     }
 
     private void subscribe (Consumer<LedgerResponse> ledgerResponseConsumer) {
@@ -91,17 +88,19 @@ public class LedgerListenerConfiguration {
 
         LOG.info("Connecting to server on {}", serverUrl);
 
-        String cursorPointer = entityStateRepository
-            .findById("block")
-            .map(EntityState::getLastId)
+        String cursorPointer = resourceStateRepository
+            .findById(Resource.LEDGER)
+            .map(ResourceState::getPagingToken)
             .orElse("now");
+
+        LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
         LedgersRequestBuilder ledgersRequest = server
             .ledgers()
             .cursor(cursorPointer);
 
         testServerConnection(server);
-        testRequestCorrectness(ledgersRequest);
+        testCursorCorrectness(server, cursorPointer);
 
         ledgersRequest.stream(ledgerResponseConsumer::accept);
     }
@@ -115,12 +114,12 @@ public class LedgerListenerConfiguration {
         }
     }
 
-    private void testRequestCorrectness (LedgersRequestBuilder requestBuilder) {
+    private void testCursorCorrectness (Server server, String cursorPointer) {
         try {
-            requestBuilder.execute();
+            server.ledgers().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
-            throw new RuntimeException("Request seems to be incorrect", e);
+            throw new RuntimeException("Failed to test if cursor value is valid", e);
         }
     }
 }

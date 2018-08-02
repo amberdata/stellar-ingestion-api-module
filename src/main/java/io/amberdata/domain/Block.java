@@ -4,7 +4,7 @@ import java.math.BigInteger;
 import java.util.Map;
 import java.util.Objects;
 
-public final class Block {
+public final class Block implements BlockchainEntity {
     private String              blockchainId;
     private BigInteger          number;
     private String              hash;
