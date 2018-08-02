@@ -10,10 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 
-import io.amberdata.domain.Block;
 import io.amberdata.domain.BlockchainEntity;
-import io.amberdata.domain.Transaction;
-import io.amberdata.ingestion.api.modules.stellar.configuration.IngestionApiProperties;
+import io.amberdata.ingestion.api.modules.stellar.configuration.properties.IngestionApiProperties;
 import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
 
 import reactor.core.publisher.Flux;

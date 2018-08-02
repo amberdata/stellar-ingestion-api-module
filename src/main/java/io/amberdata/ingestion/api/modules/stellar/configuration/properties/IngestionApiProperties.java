@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules.stellar.configuration;
+package io.amberdata.ingestion.api.modules.stellar.configuration.properties;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
