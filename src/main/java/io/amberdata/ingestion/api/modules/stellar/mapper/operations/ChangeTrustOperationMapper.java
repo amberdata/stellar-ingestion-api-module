@@ -9,6 +9,7 @@ import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.amberdata.domain.Asset;
@@ -54,7 +55,7 @@ public class ChangeTrustOperationMapper implements OperationMapper {
             return new ObjectMapper().writeValueAsString(metaMap);
         }
         catch (JsonProcessingException e) {
-            return null;
+            return "{}";
         }
     }
 }

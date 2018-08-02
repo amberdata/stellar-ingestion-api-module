@@ -136,6 +136,22 @@ public class FunctionCall {
         return Objects.hash(name, signature, arguments, type, from, to, assetType, value, meta, subFunctions);
     }
 
+    @Override
+    public String toString () {
+        return "FunctionCall{" +
+            "name='" + name + '\'' +
+            ", signature='" + signature + '\'' +
+            ", arguments=" + arguments +
+            ", type='" + type + '\'' +
+            ", from='" + from + '\'' +
+            ", to='" + to + '\'' +
+            ", assetType='" + assetType + '\'' +
+            ", value='" + value + '\'' +
+            ", meta='" + meta + '\'' +
+            ", subFunctions=" + subFunctions +
+            '}';
+    }
+
     public static class Builder {
         private String             name;
         private String             signature;
@@ -230,6 +246,33 @@ public class FunctionCall {
 
         public void setValue (String value) {
             this.value = value;
+        }
+
+        @Override
+        public boolean equals (Object o) {
+            if (this == o) {
+                return true;
+            }
+
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
+            Argument argument = (Argument) o;
+            return Objects.equals(name, argument.name) &&
+                Objects.equals(value, argument.value);
+        }
+
+        @Override
+        public int hashCode () {
+            return Objects.hash(name, value);
+        }
+
+        @Override
+        public String toString () {
+            return "Argument{" +
+                "name='" + name + '\'' +
+                ", value='" + value + '\'' +
+                '}';
         }
     }
 }

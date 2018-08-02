@@ -54,7 +54,7 @@ public class AllowTrustOperationMapper implements OperationMapper {
             return new ObjectMapper().writeValueAsString(metaMap);
         }
         catch (JsonProcessingException e) {
-            return null;
+            return "{}";
         }
     }
 }
