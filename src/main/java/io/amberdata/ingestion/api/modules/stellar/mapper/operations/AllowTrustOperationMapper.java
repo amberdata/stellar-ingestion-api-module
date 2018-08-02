@@ -1,6 +1,8 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
@@ -31,13 +33,23 @@ public class AllowTrustOperationMapper implements OperationMapper {
             .from(response.getTrustee().getAccountId())
             .to(response.getTrustor().getAccountId())
             .assetType(asset.getCode())
-            .meta(getMetaProperties(response))
+            .meta(getMetaProperties(response, asset))
             .build();
     }
 
-    private String getMetaProperties (AllowTrustOperationResponse response) {
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        AllowTrustOperationResponse response = (AllowTrustOperationResponse) operationResponse;
+
+        Asset asset = assetMapper.map(response.getAsset());
+        return Collections.singletonList(asset);
+    }
+
+    private String getMetaProperties (AllowTrustOperationResponse response, Asset asset) {
         Map<String, String> metaMap = new HashMap<>();
         metaMap.put("isAuthorize", String.valueOf(response.isAuthorize()));
+        metaMap.put("stellarAssetType", asset.getType().getName());
+        metaMap.put("assetIssuer", asset.getIssuerAccount());
         try {
             return new ObjectMapper().writeValueAsString(metaMap);
         }

@@ -1,10 +1,12 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
 import java.util.Collections;
+import java.util.List;
 
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 
 public class ManageDataOperationMapper implements OperationMapper {
@@ -21,5 +23,10 @@ public class ManageDataOperationMapper implements OperationMapper {
                 )
             )
             .build();
+    }
+
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        return Collections.emptyList();
     }
 }

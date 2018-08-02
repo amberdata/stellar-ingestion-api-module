@@ -1,6 +1,7 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,8 +19,8 @@ import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
+import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
-import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 @Component
@@ -46,5 +47,10 @@ public class OperationMapperManager {
     public FunctionCall map (OperationResponse operationResponse) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
         return operationMapper.map(operationResponse);
+    }
+
+    public List<Asset> mapAssets (OperationResponse operationResponse) {
+        OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
+        return operationMapper.getAssets(operationResponse);
     }
 }

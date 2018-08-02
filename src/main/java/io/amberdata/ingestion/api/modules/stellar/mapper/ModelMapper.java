@@ -22,7 +22,6 @@ import io.amberdata.domain.Asset;
 import io.amberdata.domain.Block;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.domain.Transaction;
-import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
 import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.Resource;
@@ -89,6 +88,12 @@ public class ModelMapper {
     public List<FunctionCall> map (List<OperationResponse> operationResponses) {
         return operationResponses.stream()
             .map(this.operationMapperManager::map)
+            .collect(Collectors.toList());
+    }
+
+    public List<Asset> mapAssets (List<OperationResponse> operationResponses) {
+        return operationResponses.stream()
+            .flatMap(operationResponse -> this.operationMapperManager.mapAssets(operationResponse).stream())
             .collect(Collectors.toList());
     }
 

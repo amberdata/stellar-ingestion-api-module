@@ -5,7 +5,6 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +20,6 @@ import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Asset;
-import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
@@ -60,9 +58,7 @@ public class AssetListenerConfiguration {
     }
 
     private List<AssetResponse> processAssets (List<OperationResponse> operationResponses) {
-        return modelMapper.map(operationResponses).stream()
-            .map(Operation::getInvolvedAssets)
-            .flatMap(Collection::stream)
+        return modelMapper.mapAssets(operationResponses).stream()
             .distinct()
             .map(this::fetchAsset)
             .filter(Optional::isPresent)

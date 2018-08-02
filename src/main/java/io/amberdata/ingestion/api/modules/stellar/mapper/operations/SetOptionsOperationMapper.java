@@ -1,6 +1,8 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.stellar.sdk.responses.operations.OperationResponse;
@@ -9,6 +11,7 @@ import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 
 public class SetOptionsOperationMapper implements OperationMapper {
@@ -23,6 +26,11 @@ public class SetOptionsOperationMapper implements OperationMapper {
             .signature(response.getSigner().getAccountId())
             .meta(getMetaProperties(response))
             .build();
+    }
+
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        return Collections.emptyList();
     }
 
     private String getMetaProperties (SetOptionsOperationResponse response) {

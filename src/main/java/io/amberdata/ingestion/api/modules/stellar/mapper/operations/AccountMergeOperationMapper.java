@@ -1,11 +1,13 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
-import io.amberdata.domain.operations.AccountMergeOperation;
-import io.amberdata.domain.operations.Operation;
 
 public class AccountMergeOperationMapper implements OperationMapper {
 
@@ -17,5 +19,10 @@ public class AccountMergeOperationMapper implements OperationMapper {
             .from(response.getAccount().getAccountId())
             .to(response.getInto().getAccountId())
             .build();
+    }
+
+    @Override
+    public List<Asset> getAssets (OperationResponse operationResponse) {
+        return Collections.emptyList();
     }
 }
