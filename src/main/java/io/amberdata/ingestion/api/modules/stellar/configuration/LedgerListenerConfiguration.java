@@ -113,7 +113,7 @@ public class LedgerListenerConfiguration {
 
     private void testRequestCorrectness (LedgersRequestBuilder requestBuilder) {
         try {
-            requestBuilder.execute();
+            requestBuilder.limit(1).execute();
         }
         catch (IOException e) {
             throw new RuntimeException("Request seems to be incorrect", e);
