@@ -16,6 +16,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
+import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
@@ -36,17 +37,17 @@ public class TransactionsSubscriberConfiguration {
     private final ResourceStateStorage stateStorage;
     private final IngestionApiClient   apiClient;
     private final ModelMapper          modelMapper;
-    private final Server               horizonServer;
+    private final HorizonServer        server;
 
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
-                                           Server horizonServer) {
+                                           HorizonServer server) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
-        this.horizonServer = horizonServer;
+        this.server = server;
     }
 
     @PostConstruct
@@ -63,7 +64,7 @@ public class TransactionsSubscriberConfiguration {
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
-            return horizonServer
+            return server.horizonServer()
                 .operations()
                 .forTransaction(transactionResponse.getHash())
                 .execute()
@@ -79,28 +80,19 @@ public class TransactionsSubscriberConfiguration {
 
         LOG.info("Transactions cursor is set to {}", cursorPointer);
 
-        TransactionsRequestBuilder requestBuilder = horizonServer
+        TransactionsRequestBuilder requestBuilder = server.horizonServer()
             .transactions()
             .cursor(cursorPointer);
 
-        testServerConnection();
+        server.testConnection();
         testCursorCorrectness(cursorPointer);
 
         requestBuilder.stream(responseConsumer::accept);
     }
 
-    private void testServerConnection () {
-        try {
-            horizonServer.root().getProtocolVersion();
-        }
-        catch (IOException e) {
-            throw new RuntimeException("Cannot resolve connection to Horizon server", e);
-        }
-    }
-
     private void testCursorCorrectness (String cursorPointer) {
         try {
-            horizonServer.transactions().cursor(cursorPointer).limit(1).execute();
+            server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to test if cursor value is valid", e);
