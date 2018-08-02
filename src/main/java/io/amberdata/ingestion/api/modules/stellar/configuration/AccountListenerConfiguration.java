@@ -7,6 +7,7 @@ import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -59,16 +60,14 @@ public class AccountListenerConfiguration {
 
     private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
         return modelMapper.map(operationResponses).stream()
-            .flatMap(e -> {
-                Stream.Builder<String> stream = Stream.builder();
-                if (e.getFrom() != null) {
-                    stream.add(e.getFrom());
-                }
-                if (e.getTo() != null) {
-                    stream.add(e.getTo());
-                }
-                return stream.build();
-            })
+            .flatMap(functionCall ->
+                Stream.of(
+                    Optional.ofNullable(functionCall.getFrom()),
+                    Optional.ofNullable(functionCall.getTo())
+                )
+            )
+            .filter(Optional::isPresent)
+            .map(Optional::get)
             .distinct()
             .map(this::fetchAccountDetails)
             .collect(Collectors.toList());
