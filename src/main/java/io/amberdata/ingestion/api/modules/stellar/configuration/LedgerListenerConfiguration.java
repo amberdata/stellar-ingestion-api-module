@@ -32,13 +32,17 @@ public class LedgerListenerConfiguration {
     private final ResourceStateRepository resourceStateRepository;
     private final IngestionApiClient      apiClient;
     private final ModelMapper             modelMapper;
+    private final Server                  horizonServer;
 
     public LedgerListenerConfiguration (ResourceStateRepository resourceStateRepository,
                                         IngestionApiClient apiClient,
-                                        ModelMapper modelMapper) {
+                                        ModelMapper modelMapper,
+                                        Server horizonServer) {
+
         this.resourceStateRepository = resourceStateRepository;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
+        this.horizonServer = horizonServer;
     }
 
     @PostConstruct
@@ -83,11 +87,6 @@ public class LedgerListenerConfiguration {
     }
 
     private void subscribe (Consumer<LedgerResponse> ledgerResponseConsumer) {
-        String serverUrl = "https://horizon-testnet.stellar.org";
-        Server server    = new Server(serverUrl);
-
-        LOG.info("Connecting to server on {}", serverUrl);
-
         String cursorPointer = resourceStateRepository
             .findById(Resource.LEDGER)
             .map(ResourceState::getPagingToken)
@@ -95,28 +94,28 @@ public class LedgerListenerConfiguration {
 
         LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
-        LedgersRequestBuilder ledgersRequest = server
+        LedgersRequestBuilder ledgersRequest = horizonServer
             .ledgers()
             .cursor(cursorPointer);
 
-        testServerConnection(server);
-        testCursorCorrectness(server, cursorPointer);
+        testServerConnection();
+        testCursorCorrectness(cursorPointer);
 
         ledgersRequest.stream(ledgerResponseConsumer::accept);
     }
 
-    private void testServerConnection (Server server) {
+    private void testServerConnection () {
         try {
-            server.root().getProtocolVersion();
+            horizonServer.root().getProtocolVersion();
         }
         catch (IOException e) {
             throw new RuntimeException("Cannot resolve connection to Horizon server", e);
         }
     }
 
-    private void testCursorCorrectness (Server server, String cursorPointer) {
+    private void testCursorCorrectness (String cursorPointer) {
         try {
-            server.ledgers().cursor(cursorPointer).limit(1).execute();
+            horizonServer.ledgers().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to test if cursor value is valid", e);
