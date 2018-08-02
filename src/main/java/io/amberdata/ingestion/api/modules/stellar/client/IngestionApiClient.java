@@ -39,7 +39,7 @@ public class IngestionApiClient {
     }
 
     public BlockchainEntityWithState<Block> publish (BlockchainEntityWithState<Block> entityWithState) {
-        LOG.info("Going to publish block {} to the ingestion API endpoint",  entityWithState.getEntity());
+        LOG.info("Going to publish {} to the ingestion API endpoint",  entityWithState.getEntity());
 
         webClient
             .post()
