@@ -20,6 +20,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 import io.amberdata.domain.Address;
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.Block;
+import io.amberdata.domain.FunctionCall;
 import io.amberdata.domain.Transaction;
 import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
@@ -71,24 +72,21 @@ public class ModelMapper {
     }
 
     public Transaction map (TransactionResponse transactionResponse, List<OperationResponse> operationResponses) {
-        Map<String, Object> optionalProperties = new HashMap<>();
-        optionalProperties.put("operations", this.map(operationResponses));
-
         return new Transaction.Builder()
             .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
-            //.gas(transactionResponse.) which property if max_fee doesn't exist????
+            //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-            .optionalProperties(optionalProperties)
+            .functionCalls(this.map(operationResponses))
             .build();
     }
 
-    public List<Operation> map (List<OperationResponse> operationResponses) {
+    public List<FunctionCall> map (List<OperationResponse> operationResponses) {
         return operationResponses.stream()
             .map(this.operationMapperManager::map)
             .collect(Collectors.toList());
@@ -97,7 +95,7 @@ public class ModelMapper {
     public Address map (AccountResponse accountResponse) {
         return new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
-            // need timestamp here
+            //todo need timestamp here
             .optionalProperties(addressOptionalProperties(accountResponse))
             .build();
     }

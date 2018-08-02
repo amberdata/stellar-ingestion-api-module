@@ -18,6 +18,7 @@ import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
+import io.amberdata.domain.FunctionCall;
 import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
@@ -42,7 +43,7 @@ public class OperationMapperManager {
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
     }
 
-    public Operation map (OperationResponse operationResponse) {
+    public FunctionCall map (OperationResponse operationResponse) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
         return operationMapper.map(operationResponse);
     }

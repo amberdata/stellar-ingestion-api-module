@@ -1,21 +1,25 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Collections;
+
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import io.amberdata.domain.operations.ManageDataOperation;
-import io.amberdata.domain.operations.Operation;
+import io.amberdata.domain.FunctionCall;
 
 public class ManageDataOperationMapper implements OperationMapper {
 
     @Override
-    public Operation map (OperationResponse operationResponse) {
+    public FunctionCall map (OperationResponse operationResponse) {
         ManageDataOperationResponse response = (ManageDataOperationResponse) operationResponse;
 
-        return new ManageDataOperation(
-            response.getSourceAccount().getAccountId(),
-            response.getName(),
-            response.getValue()
-        );
+        return new FunctionCall.Builder()
+            .from(response.getSourceAccount().getAccountId())
+            .arguments(
+                Collections.singletonList(
+                    FunctionCall.Argument.from(response.getName(), response.getValue())
+                )
+            )
+            .build();
     }
 }

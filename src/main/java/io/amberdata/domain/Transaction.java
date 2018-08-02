@@ -1,6 +1,7 @@
 package io.amberdata.domain;
 
 import java.math.BigInteger;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -14,6 +15,7 @@ public final class Transaction {
     private BigInteger          gasUsed;
     private Integer             numLogs;
     private Long                timestamp;
+    private List<FunctionCall>  functionCalls;
     private Map<String, Object> optionalProperties;
 
     public Transaction (Builder builder) {
@@ -26,6 +28,7 @@ public final class Transaction {
         this.gasUsed            = builder.gasUsed;
         this.numLogs            = builder.numLogs;
         this.timestamp          = builder.timestamp;
+        this.functionCalls      = builder.functionCalls;
         this.optionalProperties = builder.optionalProperties;
     }
 
@@ -101,6 +104,14 @@ public final class Transaction {
         this.timestamp = timestamp;
     }
 
+    public List<FunctionCall> getFunctionCalls () {
+        return functionCalls;
+    }
+
+    public void setFunctionCalls (List<FunctionCall> functionCalls) {
+        this.functionCalls = functionCalls;
+    }
+
     public Map<String, Object> getOptionalProperties () {
         return optionalProperties;
     }
@@ -119,21 +130,12 @@ public final class Transaction {
         }
         Transaction that = (Transaction) o;
         return Objects.equals(blockchainId, that.blockchainId) &&
-            Objects.equals(hash, that.hash) &&
-            Objects.equals(nonce, that.nonce) &&
-            Objects.equals(blockNumber, that.blockNumber) &&
-            Objects.equals(from, that.from) &&
-            Objects.equals(gas, that.gas) &&
-            Objects.equals(gasUsed, that.gasUsed) &&
-            Objects.equals(numLogs, that.numLogs) &&
-            Objects.equals(timestamp, that.timestamp) &&
-            Objects.equals(optionalProperties, that.optionalProperties);
+            Objects.equals(hash, that.hash);
     }
 
     @Override
     public int hashCode () {
-        return Objects.hash(
-            blockchainId, hash, nonce, blockNumber, from, gas, gasUsed, numLogs, timestamp, optionalProperties);
+        return Objects.hash(blockchainId, hash);
     }
 
     @Override
@@ -162,6 +164,7 @@ public final class Transaction {
         private BigInteger          gasUsed;
         private Integer             numLogs;
         private Long                timestamp;
+        private List<FunctionCall>  functionCalls;
         private Map<String, Object> optionalProperties;
 
         public Transaction.Builder blockchainId(String value) {
@@ -209,6 +212,11 @@ public final class Transaction {
             return this;
         }
 
+        public Transaction.Builder functionCalls (List<FunctionCall> functionCalls) {
+            this.functionCalls = functionCalls;
+            return this;
+        }
+
         public Transaction.Builder optionalProperties(Map<String, Object> value) {
             this.optionalProperties = value;
             return this;
@@ -219,4 +227,3 @@ public final class Transaction {
         }
     }
 }
-

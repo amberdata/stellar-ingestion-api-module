@@ -5,11 +5,9 @@ import reactor.core.publisher.Mono;
 
 import javax.annotation.PostConstruct;
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -20,11 +18,8 @@ import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.Server;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.TransactionResponse;
-import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import io.amberdata.domain.Address;
-import io.amberdata.domain.operations.Operation;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 
@@ -40,8 +35,8 @@ public class AccountListenerConfiguration {
     private Consumer<TransactionResponse> transactionResponseConsumer;
 
     public AccountListenerConfiguration (IngestionApiClient apiClient,
-                                             ModelMapper modelMapper,
-                                             Server horizonServer) {
+                                         ModelMapper modelMapper,
+                                         Server horizonServer) {
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.horizonServer = horizonServer;
@@ -64,8 +59,16 @@ public class AccountListenerConfiguration {
 
     private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
         return modelMapper.map(operationResponses).stream()
-            .map(Operation::getInvolvedAccounts)
-            .flatMap(Collection::stream)
+            .flatMap(e -> {
+                Stream.Builder<String> stream = Stream.builder();
+                if (e.getFrom() != null) {
+                    stream.add(e.getFrom());
+                }
+                if (e.getTo() != null) {
+                    stream.add(e.getTo());
+                }
+                return stream.build();
+            })
             .distinct()
             .map(this::fetchAccountDetails)
             .collect(Collectors.toList());
