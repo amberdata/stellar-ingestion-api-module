@@ -12,7 +12,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 
 import io.amberdata.domain.BlockchainEntity;
 import io.amberdata.ingestion.api.modules.stellar.configuration.properties.IngestionApiProperties;
-import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;

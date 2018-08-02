@@ -23,9 +23,9 @@ import io.amberdata.domain.Block;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
-import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
-import io.amberdata.ingestion.api.modules.stellar.state.Resource;
-import io.amberdata.ingestion.api.modules.stellar.state.ResourceState;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
 
 @Component
 public class ModelMapper {

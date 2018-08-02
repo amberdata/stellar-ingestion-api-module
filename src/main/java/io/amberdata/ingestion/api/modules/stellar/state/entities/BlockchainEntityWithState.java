@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules.stellar.state;
+package io.amberdata.ingestion.api.modules.stellar.state.entities;
 
 import io.amberdata.domain.BlockchainEntity;
 

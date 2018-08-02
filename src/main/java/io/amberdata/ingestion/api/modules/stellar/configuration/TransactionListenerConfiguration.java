@@ -18,9 +18,9 @@ import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.api.modules.stellar.state.BlockchainEntityWithState;
-import io.amberdata.ingestion.api.modules.stellar.state.Resource;
-import io.amberdata.ingestion.api.modules.stellar.state.ResourceState;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateRepository;
 
 import javax.annotation.PostConstruct;
