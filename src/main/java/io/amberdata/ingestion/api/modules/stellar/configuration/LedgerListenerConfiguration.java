@@ -50,7 +50,7 @@ public class LedgerListenerConfiguration {
                 .flatMap(this::retryBackOffPattern)
             )
             .map(modelMapper::map)
-            .map(apiClient::publish)
+            .map(mappedEntity -> apiClient.publish("/blocks", mappedEntity, Block.class))
             .subscribe(this::storeState, this::fatalAppState);
     }
 
