@@ -167,47 +167,47 @@ public final class Transaction implements BlockchainEntity {
         private List<FunctionCall>  functionCalls;
         private Map<String, Object> optionalProperties;
 
-        public Transaction.Builder blockchainId(String value) {
+        public Transaction.Builder blockchainId (String value) {
             this.blockchainId = value;
             return this;
         }
 
-        public Transaction.Builder hash(String value) {
+        public Transaction.Builder hash (String value) {
             this.hash = value;
             return this;
         }
 
-        public Transaction.Builder nonce(BigInteger value) {
+        public Transaction.Builder nonce (BigInteger value) {
             this.nonce = value;
             return this;
         }
 
-        public Transaction.Builder blockNumber(BigInteger value) {
+        public Transaction.Builder blockNumber (BigInteger value) {
             this.blockNumber = value;
             return this;
         }
 
-        public Transaction.Builder from(String value) {
+        public Transaction.Builder from (String value) {
             this.from = value;
             return this;
         }
 
-        public Transaction.Builder gas(BigInteger value) {
+        public Transaction.Builder gas (BigInteger value) {
             this.gas = value;
             return this;
         }
 
-        public Transaction.Builder gasUsed(BigInteger value) {
+        public Transaction.Builder gasUsed (BigInteger value) {
             this.gasUsed = value;
             return this;
         }
 
-        public Transaction.Builder numLogs(Integer value) {
+        public Transaction.Builder numLogs (Integer value) {
             this.numLogs = value;
             return this;
         }
 
-        public Transaction.Builder timestamp(Long value) {
+        public Transaction.Builder timestamp (Long value) {
             this.timestamp = value;
             return this;
         }
@@ -217,12 +217,12 @@ public final class Transaction implements BlockchainEntity {
             return this;
         }
 
-        public Transaction.Builder optionalProperties(Map<String, Object> value) {
+        public Transaction.Builder optionalProperties (Map<String, Object> value) {
             this.optionalProperties = value;
             return this;
         }
 
-        public Transaction build() {
+        public Transaction build () {
             return new Transaction(this);
         }
     }

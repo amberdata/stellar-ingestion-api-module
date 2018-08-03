@@ -1,7 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration.subscribers;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -9,26 +8,19 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import org.stellar.sdk.Server;
 import org.stellar.sdk.requests.TransactionsRequestBuilder;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Transaction;
-import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
-import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
-import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
-import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateRepository;
 
 import javax.annotation.PostConstruct;
-import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Configuration
 public class TransactionsSubscriberConfiguration {
@@ -40,9 +32,9 @@ public class TransactionsSubscriberConfiguration {
     private final HorizonServer        server;
 
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
-                                           IngestionApiClient apiClient,
-                                           ModelMapper modelMapper,
-                                           HorizonServer server) {
+                                                IngestionApiClient apiClient,
+                                                ModelMapper modelMapper,
+                                                HorizonServer server) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;

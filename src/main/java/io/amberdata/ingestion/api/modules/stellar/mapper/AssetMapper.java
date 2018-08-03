@@ -10,8 +10,8 @@ public class AssetMapper {
 
     public Asset map (org.stellar.sdk.Asset asset) {
         Asset.AssetType assetType;
-        String code;
-        String issuer;
+        String          code;
+        String          issuer;
 
         switch (asset.getType()) {
             case "native":

@@ -1,16 +1,12 @@
 package io.amberdata.ingestion.api.modules.stellar.client;
 
 import java.io.IOException;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.Server;
-
-import javax.annotation.PostConstruct;
-import reactor.core.Exceptions;
 
 @Component
 public class HorizonServer {

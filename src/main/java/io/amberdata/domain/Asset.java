@@ -5,11 +5,11 @@ import java.util.Objects;
 public class Asset {
 
     private AssetType type;
-    private String code;
-    private String issuerAccount;
-    private String amount;
-    private boolean isAuthRequired;
-    private boolean isAuthRevocable;
+    private String    code;
+    private String    issuerAccount;
+    private String    amount;
+    private boolean   isAuthRequired;
+    private boolean   isAuthRevocable;
 
     public Asset (AssetType type, String code, String issuerAccount) {
         this.type = type;
@@ -114,7 +114,7 @@ public class Asset {
         ASSET_TYPE_CREDIT_ALPHANUM12(2, "credit_alphanum12"),
         ASSET_TYPE_UNKNOWN(3, "unknown");
 
-        private int value;
+        private int    value;
         private String name;
 
         AssetType (int value, String name) {

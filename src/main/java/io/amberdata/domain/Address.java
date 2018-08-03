@@ -10,9 +10,9 @@ public final class Address {
     private Map<String, Object> optionalProperties;
 
     private Address (Builder builder) {
-        this.blockchainId       = builder.blockchainId;
-        this.hash               = builder.hash;
-        this.timestamp          = builder.timestamp;
+        this.blockchainId = builder.blockchainId;
+        this.hash = builder.hash;
+        this.timestamp = builder.timestamp;
         this.optionalProperties = builder.optionalProperties;
     }
 
@@ -99,7 +99,7 @@ public final class Address {
             return this;
         }
 
-        public Address.Builder optionalProperties(Map<String, Object> value) {
+        public Address.Builder optionalProperties (Map<String, Object> value) {
             this.optionalProperties = value;
             return this;
         }

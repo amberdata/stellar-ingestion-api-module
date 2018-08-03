@@ -10,12 +10,11 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
 import org.springframework.boot.context.ApplicationPidFileWriter;
-import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
 
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
 public class StellarIngestionModuleDemoApplication implements CommandLineRunner {
-    
+
     private static CountDownLatch exitLatch;
 
     private final Environment environment;

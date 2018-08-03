@@ -4,8 +4,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import io.amberdata.domain.Block;
-import io.amberdata.domain.BlockchainEntity;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
