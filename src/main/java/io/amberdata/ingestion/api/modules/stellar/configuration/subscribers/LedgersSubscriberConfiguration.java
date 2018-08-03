@@ -6,7 +6,6 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import org.stellar.sdk.requests.LedgersRequestBuilder;
 import org.stellar.sdk.responses.LedgerResponse;
 
 import io.amberdata.domain.Block;
@@ -54,14 +53,13 @@ public class LedgersSubscriberConfiguration {
 
         LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
-        LedgersRequestBuilder ledgersRequest = server.horizonServer()
-            .ledgers()
-            .cursor(cursorPointer);
-
         server.testConnection();
         testCursorCorrectness(cursorPointer);
 
-        ledgersRequest.stream(stellarSdkResponseConsumer::accept);
+        server.horizonServer()
+            .ledgers()
+            .cursor(cursorPointer)
+            .stream(stellarSdkResponseConsumer::accept);
     }
 
     private void testCursorCorrectness (String cursorPointer) {
