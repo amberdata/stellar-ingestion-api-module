@@ -117,14 +117,19 @@ public class ModelMapper {
         );
     }
 
-    public Asset map (AssetResponse assetResponse) {
-        return new Asset(
+    public BlockchainEntityWithState<Asset> map (AssetResponse assetResponse, String pagingToken) {
+        Asset asset = new Asset(
             Asset.AssetType.fromName(assetResponse.getAssetType()),
             assetResponse.getAssetCode(),
             assetResponse.getAssetIssuer(),
             assetResponse.getAmount(),
             assetResponse.getFlags().isAuthRequired(),
             assetResponse.getFlags().isAuthRevocable()
+        );
+
+        return BlockchainEntityWithState.from(
+            asset,
+            ResourceState.from(Resource.ASSET, pagingToken)
         );
     }
 

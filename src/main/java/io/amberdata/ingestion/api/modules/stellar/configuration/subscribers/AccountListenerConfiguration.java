@@ -1,7 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration.subscribers;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -18,8 +17,6 @@ import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Address;
-import io.amberdata.domain.Block;
-import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
@@ -28,7 +25,6 @@ import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Configuration
 public class AccountListenerConfiguration {
