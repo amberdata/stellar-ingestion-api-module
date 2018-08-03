@@ -10,9 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 
@@ -40,7 +37,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : "")
             .signature(response.getSigner() != null ? response.getSigner().getAccountId() : "")
-            .meta(getMetaProperties(response))
+            .optionalProperties(getOptionalProperties(response))
             .build();
     }
 
@@ -49,21 +46,20 @@ public class SetOptionsOperationMapper implements OperationMapper {
         return Collections.emptyList();
     }
 
-    private String getMetaProperties (SetOptionsOperationResponse response) {
-        Map<String, String> metaMap = new HashMap<>();
-        metaMap.put("clearFlags", String.join("-", response.getClearFlags()));
-        metaMap.put("setFlags", String.join("-", response.getSetFlags()));
-        metaMap.put("masterKeyWeight", response.getMasterKeyWeight().toString());
-        metaMap.put("lowThreshold", response.getLowThreshold().toString());
-        metaMap.put("medThreshold", response.getMedThreshold().toString());
-        metaMap.put("highThreshold", response.getHighThreshold().toString());
-        metaMap.put("homeDomain", response.getHomeDomain());
-        metaMap.put("signerWeight", response.getSignerWeight().toString());
-        try {
-            return new ObjectMapper().writeValueAsString(metaMap);
+    private Map<String, Object> getOptionalProperties (SetOptionsOperationResponse response) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+        if (response.getClearFlags() != null && response.getClearFlags().length > 0) {
+            optionalProperties.put("clearFlags", String.join("-", response.getClearFlags()));
         }
-        catch (JsonProcessingException e) {
-            return "{}";
+        if (response.getSetFlags() != null && response.getSetFlags().length > 0) {
+            optionalProperties.put("setFlags", String.join("-", response.getSetFlags()));
         }
+        optionalProperties.put("masterKeyWeight", response.getMasterKeyWeight());
+        optionalProperties.put("lowThreshold", response.getLowThreshold());
+        optionalProperties.put("medThreshold", response.getMedThreshold());
+        optionalProperties.put("highThreshold", response.getHighThreshold());
+        optionalProperties.put("homeDomain", response.getHomeDomain());
+        optionalProperties.put("signerWeight", response.getSignerWeight());
+        return optionalProperties;
     }
 }

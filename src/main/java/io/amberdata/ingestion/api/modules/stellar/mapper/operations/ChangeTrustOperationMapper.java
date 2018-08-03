@@ -49,7 +49,7 @@ public class ChangeTrustOperationMapper implements OperationMapper {
             .from(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
             .to(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
             .assetType(asset.getCode())
-            .meta(getMetaProperties(response, asset))
+            .optionalProperties(getOptionalProperties(response, asset))
             .build();
     }
 
@@ -61,16 +61,11 @@ public class ChangeTrustOperationMapper implements OperationMapper {
         return Collections.singletonList(asset);
     }
 
-    private String getMetaProperties (ChangeTrustOperationResponse response, Asset asset) {
-        Map<String, String> metaMap = new HashMap<>();
-        metaMap.put("limit", response.getLimit());
-        metaMap.put("stellarAssetType", asset.getType().getName());
-        metaMap.put("assetIssuer", asset.getIssuerAccount());
-        try {
-            return new ObjectMapper().writeValueAsString(metaMap);
-        }
-        catch (JsonProcessingException e) {
-            return "{}";
-        }
+    private Map<String, Object> getOptionalProperties (ChangeTrustOperationResponse response, Asset asset) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+        optionalProperties.put("limit", response.getLimit());
+        optionalProperties.put("stellarAssetType", asset.getType().getName());
+        optionalProperties.put("assetIssuer", asset.getIssuerAccount());
+        return optionalProperties;
     }
 }
