@@ -89,19 +89,23 @@ public class AssetListenerConfiguration {
 
     private Optional<AssetResponse> fetchAsset (Asset asset) {
         try {
-            return Optional.of(
-                server.horizonServer()
-                    .assets()
-                    .assetCode(asset.getCode())
-                    .assetIssuer(asset.getIssuerAccount())
-                    .execute()
-                    .getRecords()
-                    .get(0)
-            );
+            List<AssetResponse> records = server
+                .horizonServer()
+                .assets()
+                .assetCode(asset.getCode())
+                .assetIssuer(asset.getIssuerAccount())
+                .execute()
+                .getRecords();
+
+            if (records.size() > 0) {
+                return Optional.of(records.get(0));
+            }
         }
         catch (IOException ex) {
-            return Optional.empty();
+            LOG.error("Error during fetching an asset: " + asset.getCode());
         }
+
+        return Optional.empty();
     }
 
     private void registerListener (Consumer<TransactionResponse> transactionResponseConsumer) {
