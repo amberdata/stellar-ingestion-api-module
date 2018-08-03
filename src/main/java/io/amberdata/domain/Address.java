@@ -3,7 +3,7 @@ package io.amberdata.domain;
 import java.util.Map;
 import java.util.Objects;
 
-public final class Address {
+public final class Address implements BlockchainEntity {
     private String              blockchainId;
     private String              hash;
     private Long                timestamp; // TODO get it somewhere from Stellar

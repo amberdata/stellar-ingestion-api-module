@@ -1,6 +1,7 @@
-package io.amberdata.ingestion.api.modules.stellar.configuration;
+package io.amberdata.ingestion.api.modules.stellar.configuration.subscribers;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -16,9 +17,14 @@ import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.domain.Address;
+import io.amberdata.domain.Block;
+import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -29,15 +35,17 @@ public class AccountListenerConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccountListenerConfiguration.class);
 
-    private final IngestionApiClient apiClient;
-    private final ModelMapper        modelMapper;
-    private final HorizonServer      server;
+    private final ResourceStateStorage stateStorage;
+    private final IngestionApiClient   apiClient;
+    private final ModelMapper          modelMapper;
+    private final HorizonServer        server;
 
-    private Consumer<TransactionResponse> transactionResponseConsumer;
-
-    public AccountListenerConfiguration (IngestionApiClient apiClient,
+    public AccountListenerConfiguration (ResourceStateStorage stateStorage,
+                                         IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
                                          HorizonServer server) {
+
+        this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
@@ -45,17 +53,15 @@ public class AccountListenerConfiguration {
 
     @PostConstruct
     public void createPipeline () {
-        Flux.<TransactionResponse>create(sink -> registerListener(sink::next))
+        Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAccounts(operationResponses).stream()
-                    .map(modelMapper::map);
+                    .map(accountResponse -> modelMapper.map(accountResponse, transactionResponse.getPagingToken()))
+                    .collect(Collectors.toList());
             })
-            .map(Mono::just)
-            .subscribe(
-                addressMono -> LOG.info("API responded with object {}", addressMono.block()),
-                Throwable::printStackTrace
-            );
+            .map(entities -> apiClient.publish("/addresses", entities, Address.class))
+            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
@@ -73,12 +79,18 @@ public class AccountListenerConfiguration {
             .collect(Collectors.toList());
     }
 
-    @PostConstruct
-    public void subscribeOnTransactions () {
+    private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
+        String cursorPointer = stateStorage.getCursorPointer(Resource.ACCOUNT);
+
+        LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
+
+        server.testConnection();
+        testCursorCorrectness(cursorPointer);
+
         server.horizonServer()
             .transactions()
-            .cursor("now")
-            .stream(transactionResponse -> transactionResponseConsumer.accept(transactionResponse));
+            .cursor(cursorPointer)
+            .stream(stellarSdkResponseConsumer::accept);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
@@ -105,7 +117,12 @@ public class AccountListenerConfiguration {
         }
     }
 
-    private void registerListener (Consumer<TransactionResponse> transactionResponseConsumer) {
-        this.transactionResponseConsumer = transactionResponseConsumer;
+    private void testCursorCorrectness (String cursorPointer) {
+        try {
+            server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
+        }
+        catch (IOException e) {
+            throw new HorizonServer.IncorrectRequestException("Failed to test if cursor value is valid", e);
+        }
     }
 }
