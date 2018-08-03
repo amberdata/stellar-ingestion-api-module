@@ -15,7 +15,7 @@ public class HorizonServer {
     private final Server horizonServer;
 
     public HorizonServer (@Value("${stellar.horizon.server}") String serverUrl) {
-        LOG.info("Horizon horizonServer URL {}", serverUrl);
+        LOG.info("Horizon server URL {}", serverUrl);
 
         this.horizonServer = new Server(serverUrl);
     }
