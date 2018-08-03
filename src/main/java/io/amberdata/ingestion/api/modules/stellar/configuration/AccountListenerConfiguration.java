@@ -1,9 +1,5 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -16,13 +12,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.KeyPair;
-import org.stellar.sdk.Server;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+
+import javax.annotation.PostConstruct;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class AccountListenerConfiguration {
@@ -31,16 +31,16 @@ public class AccountListenerConfiguration {
 
     private final IngestionApiClient apiClient;
     private final ModelMapper        modelMapper;
-    private final Server             horizonServer;
+    private final HorizonServer      server;
 
     private Consumer<TransactionResponse> transactionResponseConsumer;
 
     public AccountListenerConfiguration (IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
-                                         Server horizonServer) {
+                                         HorizonServer server) {
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
-        this.horizonServer = horizonServer;
+        this.server = server;
     }
 
     @PostConstruct
@@ -75,7 +75,7 @@ public class AccountListenerConfiguration {
 
     @PostConstruct
     public void subscribeOnTransactions () {
-        horizonServer
+        server.horizonServer()
             .transactions()
             .cursor("now")
             .stream(transactionResponse -> transactionResponseConsumer.accept(transactionResponse));
@@ -83,7 +83,7 @@ public class AccountListenerConfiguration {
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
-            return horizonServer
+            return server.horizonServer()
                 .operations()
                 .forTransaction(transactionResponse.getHash())
                 .execute()
@@ -96,7 +96,7 @@ public class AccountListenerConfiguration {
 
     private AccountResponse fetchAccountDetails (String accountId) {
         try {
-            return horizonServer
+            return server.horizonServer()
                 .accounts()
                 .account(KeyPair.fromAccountId(accountId));
         }

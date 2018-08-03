@@ -1,9 +1,5 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration;
 
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
-
-import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -14,14 +10,18 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import org.stellar.sdk.Server;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Asset;
+import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+
+import javax.annotation.PostConstruct;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 @Configuration
 public class AssetListenerConfiguration {
@@ -30,16 +30,16 @@ public class AssetListenerConfiguration {
 
     private final IngestionApiClient apiClient;
     private final ModelMapper        modelMapper;
-    private final Server             horizonServer;
+    private final HorizonServer      server;
 
     private Consumer<TransactionResponse> transactionResponseConsumer;
 
     public AssetListenerConfiguration (IngestionApiClient apiClient,
                                        ModelMapper modelMapper,
-                                       Server horizonServer) {
+                                       HorizonServer server) {
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
-        this.horizonServer = horizonServer;
+        this.server = server;
     }
 
     @PostConstruct
@@ -68,7 +68,7 @@ public class AssetListenerConfiguration {
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
-            return horizonServer
+            return server.horizonServer()
                 .operations()
                 .forTransaction(transactionResponse.getHash())
                 .execute()
@@ -81,7 +81,7 @@ public class AssetListenerConfiguration {
 
     @PostConstruct
     public void subscribeOnTransactions () {
-        horizonServer
+        server.horizonServer()
             .transactions()
             .cursor("now")
             .stream(transactionResponse -> transactionResponseConsumer.accept(transactionResponse));
@@ -90,7 +90,7 @@ public class AssetListenerConfiguration {
     private Optional<AssetResponse> fetchAsset (Asset asset) {
         try {
             return Optional.of(
-                horizonServer
+                server.horizonServer()
                     .assets()
                     .assetCode(asset.getCode())
                     .assetIssuer(asset.getIssuerAccount())
