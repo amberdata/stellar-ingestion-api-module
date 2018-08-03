@@ -17,6 +17,7 @@ import io.amberdata.domain.BlockchainEntity;
 import io.amberdata.ingestion.api.modules.stellar.configuration.properties.IngestionApiProperties;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 
+import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
@@ -58,11 +59,18 @@ public class IngestionApiClient {
             .bodyToMono(entityClass)
             .retryWhen(companion -> companion
                 .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable.getMessage()))
-                .zipWith(Flux.range(1, 10), (error, index) -> index)
-                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
+                .zipWith(Flux.range(1, Integer.MAX_VALUE), this::handleError)
+                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 100)))
             ).block();
 
         return entities.get(entities.size() - 1);
+    }
+
+    private int handleError (Throwable error, int retryIndex) {
+        if (retryIndex < 100) { // todo make this configurable - number of retries before the app gives up
+            return retryIndex + 1;
+        }
+        throw Exceptions.propagate(error);
     }
 
     public <T extends BlockchainEntity> BlockchainEntityWithState<T> publish (String endpointUri,
