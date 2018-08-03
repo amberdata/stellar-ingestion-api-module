@@ -17,7 +17,7 @@ public class SubscriberErrorsHandler {
 
     public static Flux<Long> onError (Flux<Throwable> companion) {
         return companion
-            .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable))
+            .doOnNext(throwable -> LOG.error("Subscriber error occurred. Going to retry", throwable))
             .zipWith(Flux.range(1, Integer.MAX_VALUE), SubscriberErrorsHandler::retryCountPattern)
             .flatMap(SubscriberErrorsHandler::retryBackOffPattern);
     }
@@ -27,6 +27,7 @@ public class SubscriberErrorsHandler {
     }
 
     private static int retryCountPattern (Throwable error, Integer index) {
+        LOG.info("Retrying to recover after {}: {} times", error.getMessage(), index);
         if (index == 10) { // TODO is 10 tries fine? / configuration
             throw Exceptions.propagate(error);
         }
