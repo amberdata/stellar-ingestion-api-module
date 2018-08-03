@@ -5,11 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.amberdata.domain.Asset;
@@ -17,6 +18,8 @@ import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class ChangeTrustOperationMapper implements OperationMapper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ChangeTrustOperationMapper.class);
 
     private AssetMapper assetMapper;
 
@@ -28,11 +31,23 @@ public class ChangeTrustOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         ChangeTrustOperationResponse response = (ChangeTrustOperationResponse) operationResponse;
 
+        if (response.getAsset() == null) {
+            LOG.warn("Asset in ChangeTrustOperationResponse is null");
+        }
+
+        if (response.getTrustor() == null) {
+            LOG.warn("Trustor account in ChangeTrustOperationResponse is null");
+        }
+
+        if (response.getTrustee() == null) {
+            LOG.warn("Trustee account in ChangeTrustOperationResponse is null");
+        }
+
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getTrustor().getAccountId())
-            .to(response.getTrustee().getAccountId())
+            .from(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
+            .to(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
             .assetType(asset.getCode())
             .meta(getMetaProperties(response, asset))
             .build();

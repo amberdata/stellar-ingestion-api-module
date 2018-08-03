@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -17,6 +19,8 @@ import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class CreatePassiveOfferOperationMapper implements OperationMapper {
 
+    private static final Logger LOG = LoggerFactory.getLogger(CreatePassiveOfferOperationMapper.class);
+
     private AssetMapper assetMapper;
 
     public CreatePassiveOfferOperationMapper (AssetMapper assetMapper) {
@@ -27,8 +31,12 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         CreatePassiveOfferOperationResponse response = (CreatePassiveOfferOperationResponse) operationResponse;
 
+        if (response.getSourceAccount() == null) {
+            LOG.warn("Source account in CreatePassiveOfferOperationResponse is null");
+        }
+
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount().getAccountId())
+            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .value(response.getAmount())
             .meta(getMetaProperties(response))
             .build();

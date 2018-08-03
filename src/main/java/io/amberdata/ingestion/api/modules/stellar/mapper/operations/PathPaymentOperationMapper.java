@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 
@@ -17,6 +19,8 @@ import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class PathPaymentOperationMapper implements OperationMapper {
 
+    private static final Logger LOG = LoggerFactory.getLogger(PathPaymentOperationMapper.class);
+
     private AssetMapper assetMapper;
 
     public PathPaymentOperationMapper (AssetMapper assetMapper) {
@@ -27,11 +31,23 @@ public class PathPaymentOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         PathPaymentOperationResponse response = (PathPaymentOperationResponse) operationResponse;
 
+        if (response.getAsset() == null) {
+            LOG.warn("Asset in PathPaymentOperationResponse is null");
+        }
+
+        if (response.getFrom() == null) {
+            LOG.warn("Source account in PathPaymentOperationResponse is null");
+        }
+
+        if (response.getTo() == null) {
+            LOG.warn("Destination account in PathPaymentOperationResponse is null");
+        }
+
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getFrom().getAccountId())
-            .to(response.getTo().getAccountId())
+            .from(response.getFrom() != null ? response.getFrom().getAccountId() : "")
+            .to(response.getTo() != null ? response.getTo().getAccountId() : "")
             .assetType(asset.getCode())
             .value(response.getAmount())
             .meta(getMetaProperties(response, asset))
