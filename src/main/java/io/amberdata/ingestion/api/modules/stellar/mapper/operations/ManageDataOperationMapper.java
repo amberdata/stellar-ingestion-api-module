@@ -24,7 +24,7 @@ public class ManageDataOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)
+            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .arguments(
                 Collections.singletonList(
                     FunctionCall.Argument.from(response.getName(), response.getValue())

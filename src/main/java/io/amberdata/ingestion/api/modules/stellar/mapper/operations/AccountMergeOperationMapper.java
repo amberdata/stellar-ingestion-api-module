@@ -28,8 +28,8 @@ public class AccountMergeOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getAccount() != null ? response.getAccount().getAccountId() : null)
-            .to(response.getInto() != null ? response.getInto().getAccountId() : null)
+            .from(response.getAccount() != null ? response.getAccount().getAccountId() : "")
+            .to(response.getInto() != null ? response.getInto().getAccountId() : "")
             .build();
     }
 

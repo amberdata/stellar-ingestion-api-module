@@ -37,9 +37,9 @@ public class SetOptionsOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)
-            .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : null)
-            .signature(response.getSigner() != null ? response.getSigner().getAccountId() : null)
+            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : "")
+            .signature(response.getSigner() != null ? response.getSigner().getAccountId() : "")
             .meta(getMetaProperties(response))
             .build();
     }

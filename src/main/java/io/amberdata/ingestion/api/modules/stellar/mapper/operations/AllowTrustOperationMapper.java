@@ -46,8 +46,8 @@ public class AllowTrustOperationMapper implements OperationMapper {
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getTrustee() != null ? response.getTrustee().getAccountId() : null)
-            .to(response.getTrustor() != null ? response.getTrustor().getAccountId() : null)
+            .from(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
+            .to(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
             .assetType(asset.getCode())
             .meta(getMetaProperties(response, asset))
             .build();

@@ -46,8 +46,8 @@ public class PathPaymentOperationMapper implements OperationMapper {
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getFrom() != null ? response.getFrom().getAccountId() : null)
-            .to(response.getTo() != null ? response.getTo().getAccountId() : null)
+            .from(response.getFrom() != null ? response.getFrom().getAccountId() : "")
+            .to(response.getTo() != null ? response.getTo().getAccountId() : "")
             .assetType(asset.getCode())
             .value(response.getAmount())
             .meta(getMetaProperties(response, asset))

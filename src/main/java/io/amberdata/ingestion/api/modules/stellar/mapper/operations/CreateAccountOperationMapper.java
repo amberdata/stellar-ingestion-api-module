@@ -28,8 +28,8 @@ public class CreateAccountOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getFunder() != null ? response.getFunder().getAccountId() : null)
-            .to(response.getAccount() != null ? response.getAccount().getAccountId() : null)
+            .from(response.getFunder() != null ? response.getFunder().getAccountId() : "")
+            .to(response.getAccount() != null ? response.getAccount().getAccountId() : "")
             .value(response.getStartingBalance())
             .build();
     }

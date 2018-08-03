@@ -168,7 +168,7 @@ public class ModelMapper {
             if (balance.getAssetIssuer() == null) {
                 LOG.warn("AssetIssuer in mapping balance property is null");
             }
-            if (balance.getAssetIssuer() != null) {
+            else {
                 optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
             }
         }

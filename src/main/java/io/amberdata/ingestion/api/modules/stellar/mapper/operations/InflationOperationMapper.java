@@ -24,7 +24,7 @@ public class InflationOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)
+            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .build();
     }
 

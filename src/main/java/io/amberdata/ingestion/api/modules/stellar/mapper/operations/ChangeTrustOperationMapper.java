@@ -46,8 +46,8 @@ public class ChangeTrustOperationMapper implements OperationMapper {
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getTrustor() != null ? response.getTrustor().getAccountId() : null)
-            .to(response.getTrustee() != null ? response.getTrustee().getAccountId() : null)
+            .from(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
+            .to(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
             .assetType(asset.getCode())
             .meta(getMetaProperties(response, asset))
             .build();

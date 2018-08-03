@@ -36,7 +36,7 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)
+            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .value(response.getAmount())
             .meta(getMetaProperties(response))
             .build();
