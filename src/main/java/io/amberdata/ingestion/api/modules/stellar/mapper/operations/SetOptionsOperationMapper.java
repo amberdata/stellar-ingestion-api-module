@@ -5,34 +5,36 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 
 public class SetOptionsOperationMapper implements OperationMapper {
 
+    private static final Logger LOG = LoggerFactory.getLogger(SetOptionsOperationMapper.class);
+
     @Override
     public FunctionCall map (OperationResponse operationResponse) {
         SetOptionsOperationResponse response = (SetOptionsOperationResponse) operationResponse;
 
-        Preconditions.checkNotNull(
-            response.getSourceAccount(),
-            "Source account in SetOptionsOperationResponse is null"
-        );
-        Preconditions.checkNotNull(
-            response.getInflationDestination(),
-            "Inflation destination account in SetOptionsOperationResponse is null"
-        );
-        Preconditions.checkNotNull(
-            response.getSigner(),
-            "Signer account in SetOptionsOperationResponse is null"
-        );
+        if (response.getSourceAccount() == null) {
+            LOG.warn("Source account in SetOptionsOperationResponse is null");
+        }
+
+        if (response.getInflationDestination() == null) {
+            LOG.warn("Inflation destination account in SetOptionsOperationResponse is null");
+        }
+
+        if (response.getSigner() == null) {
+            LOG.warn("Signer account in SetOptionsOperationResponse is null");
+        }
 
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)

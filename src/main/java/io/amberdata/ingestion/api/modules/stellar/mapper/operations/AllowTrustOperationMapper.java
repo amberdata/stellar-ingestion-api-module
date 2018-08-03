@@ -5,18 +5,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class AllowTrustOperationMapper implements OperationMapper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AllowTrustOperationMapper.class);
 
     private AssetMapper assetMapper;
 
@@ -28,9 +31,17 @@ public class AllowTrustOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         AllowTrustOperationResponse response = (AllowTrustOperationResponse) operationResponse;
 
-        Preconditions.checkNotNull(response.getAsset(), "Asset in AllowTrustOperationResponse is null");
-        Preconditions.checkNotNull(response.getTrustee(), "Trustee account in AllowTrustOperationResponse is null");
-        Preconditions.checkNotNull(response.getTrustor(), "Trustor account in AllowTrustOperationResponse is null");
+        if (response.getAsset() == null) {
+            LOG.warn("Asset in AllowTrustOperationResponse is null");
+        }
+
+        if (response.getTrustee() == null) {
+            LOG.warn("Trustee account in AllowTrustOperationResponse is null");
+        }
+
+        if (response.getTrustor() == null) {
+            LOG.warn("Trustor account in AllowTrustOperationResponse is null");
+        }
 
         Asset asset = assetMapper.map(response.getAsset());
 

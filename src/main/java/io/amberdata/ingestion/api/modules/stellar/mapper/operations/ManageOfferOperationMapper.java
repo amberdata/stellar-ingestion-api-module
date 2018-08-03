@@ -5,19 +5,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class ManageOfferOperationMapper implements OperationMapper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ManageOfferOperationMapper.class);
 
     private AssetMapper assetMapper;
 
@@ -29,10 +31,9 @@ public class ManageOfferOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
 
-        Preconditions.checkNotNull(
-            response.getSourceAccount(),
-            "Source account in ManageOfferOperationResponse is null"
-        );
+        if (response.getSourceAccount() == null) {
+            LOG.warn("Source account in ManageOfferOperationResponse is null");
+        }
 
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)

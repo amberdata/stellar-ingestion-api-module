@@ -5,18 +5,21 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 public class PathPaymentOperationMapper implements OperationMapper {
+
+    private static final Logger LOG = LoggerFactory.getLogger(PathPaymentOperationMapper.class);
 
     private AssetMapper assetMapper;
 
@@ -28,9 +31,17 @@ public class PathPaymentOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         PathPaymentOperationResponse response = (PathPaymentOperationResponse) operationResponse;
 
-        Preconditions.checkNotNull(response.getAsset(), "Asset in PathPaymentOperationResponse is null");
-        Preconditions.checkNotNull(response.getFrom(), "Source account in PathPaymentOperationResponse is null");
-        Preconditions.checkNotNull(response.getTo(), "Destination account in PathPaymentOperationResponse is null");
+        if (response.getAsset() == null) {
+            LOG.warn("Asset in PathPaymentOperationResponse is null");
+        }
+
+        if (response.getFrom() == null) {
+            LOG.warn("Source account in PathPaymentOperationResponse is null");
+        }
+
+        if (response.getTo() == null) {
+            LOG.warn("Destination account in PathPaymentOperationResponse is null");
+        }
 
         Asset asset = assetMapper.map(response.getAsset());
 

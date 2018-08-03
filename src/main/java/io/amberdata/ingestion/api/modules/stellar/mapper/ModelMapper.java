@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -16,8 +18,6 @@ import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
-
-import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Address;
 import io.amberdata.domain.Asset;
@@ -31,6 +31,8 @@ import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
 
 @Component
 public class ModelMapper {
+    private static final Logger LOG = LoggerFactory.getLogger(ModelMapper.class);
+
     private final String blockChainId;
 
     private final OperationMapperManager operationMapperManager;
@@ -163,7 +165,9 @@ public class ModelMapper {
         optionalProperties.put("asset_type", balance.getAssetType());
         if (!balance.getAssetType().equals("native")) {
             optionalProperties.put("asset_code", balance.getAssetCode());
-            Preconditions.checkNotNull(balance.getAssetIssuer(), "AssetIssuer in mapping balance property is null");
+            if (balance.getAssetIssuer() == null) {
+                LOG.warn("AssetIssuer in mapping balance property is null");
+            }
             if (balance.getAssetIssuer() != null) {
                 optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
             }
