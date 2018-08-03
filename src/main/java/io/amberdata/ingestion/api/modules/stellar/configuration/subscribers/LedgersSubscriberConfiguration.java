@@ -5,6 +5,7 @@ import java.util.function.Consumer;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.responses.LedgerResponse;
 
@@ -19,6 +20,7 @@ import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
 
 @Configuration
+@ConditionalOnProperty(prefix = "stellar", name="subscribe-on-ledgers")
 public class LedgersSubscriberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(LedgersSubscriberConfiguration.class);
 
@@ -40,6 +42,8 @@ public class LedgersSubscriberConfiguration {
 
     @PostConstruct
     public void createPipeline () {
+        LOG.info("Going to subscribe on Stellar Ledgers stream");
+
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .retryWhen(SubscriberErrorsHandler::onError)
             .map(modelMapper::map)
