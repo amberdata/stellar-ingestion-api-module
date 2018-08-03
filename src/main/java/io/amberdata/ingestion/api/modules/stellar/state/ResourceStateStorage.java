@@ -19,12 +19,17 @@ public class ResourceStateStorage {
     }
 
     public void storeState (BlockchainEntityWithState entityWithState) {
-        LOG.info("Going to store state for entity {}", entityWithState);
+        ResourceState resourceState = entityWithState.getResourceState();
+
+        LOG.info("Going to store state for {} with paging token {}",
+            resourceState.getResourceType(),
+            resourceState.getPagingToken()
+        );
 
         resourceStateRepository.saveAndFlush(
             ResourceState.from(
-                entityWithState.getResourceState().getResourceType(),
-                entityWithState.getResourceState().getPagingToken()
+                resourceState.getResourceType(),
+                resourceState.getPagingToken()
             )
         );
     }

@@ -6,18 +6,16 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
-import org.stellar.sdk.KeyPair;
-import org.stellar.sdk.responses.AccountResponse;
+import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import io.amberdata.domain.Address;
+import io.amberdata.domain.Asset;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
@@ -28,17 +26,17 @@ import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
 
 @Configuration
-@ConditionalOnProperty(prefix = "stellar", name="subscribe-on-accounts")
-public class AccountListenerConfiguration {
+@ConditionalOnProperty(prefix = "stellar", name="subscribe-on-assets")
+public class AssetSubscriberConfiguration {
 
-    private static final Logger LOG = LoggerFactory.getLogger(AccountListenerConfiguration.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AssetSubscriberConfiguration.class);
 
     private final ResourceStateStorage stateStorage;
     private final IngestionApiClient   apiClient;
     private final ModelMapper          modelMapper;
     private final HorizonServer        server;
 
-    public AccountListenerConfiguration (ResourceStateStorage stateStorage,
+    public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
                                          HorizonServer server) {
@@ -51,46 +49,26 @@ public class AccountListenerConfiguration {
 
     @PostConstruct
     public void createPipeline () {
-        LOG.info("Going to subscribe on Stellar Accounts stream through Transactions stream");
+        LOG.info("Going to subscribe on Stellar Assets stream through Transactions stream");
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAccounts(operationResponses).stream()
-                    .map(accountResponse -> modelMapper.map(accountResponse, transactionResponse.getPagingToken()))
+                return processAssets(operationResponses).stream()
+                    .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/addresses", entities, Address.class))
+            .map(entities -> apiClient.publish("/tokens", entities, Asset.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
-    private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
-        return modelMapper.map(operationResponses).stream()
-            .flatMap(functionCall ->
-                Stream.of(
-                    Optional.ofNullable(functionCall.getFrom()),
-                    Optional.ofNullable(functionCall.getTo())
-                )
-            )
+    private List<AssetResponse> processAssets (List<OperationResponse> operationResponses) {
+        return modelMapper.mapAssets(operationResponses).stream()
+            .distinct()
+            .map(this::fetchAsset)
             .filter(Optional::isPresent)
             .map(Optional::get)
-            .distinct()
-            .map(this::fetchAccountDetails)
             .collect(Collectors.toList());
-    }
-
-    private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getCursorPointer(Resource.ACCOUNT);
-
-        LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
-
-        server.testConnection();
-        testCursorCorrectness(cursorPointer);
-
-        server.horizonServer()
-            .transactions()
-            .cursor(cursorPointer)
-            .stream(stellarSdkResponseConsumer::accept);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
@@ -106,15 +84,39 @@ public class AccountListenerConfiguration {
         }
     }
 
-    private AccountResponse fetchAccountDetails (String accountId) {
+    private Optional<AssetResponse> fetchAsset (Asset asset) {
         try {
-            return server.horizonServer()
-                .accounts()
-                .account(KeyPair.fromAccountId(accountId));
+            List<AssetResponse> records = server
+                .horizonServer()
+                .assets()
+                .assetCode(asset.getCode())
+                .assetIssuer(asset.getIssuerAccount())
+                .execute()
+                .getRecords();
+
+            if (records.size() > 0) {
+                return Optional.of(records.get(0));
+            }
         }
         catch (IOException ex) {
-            return null;
+            LOG.error("Error during fetching an asset: " + asset.getCode());
         }
+
+        return Optional.empty();
+    }
+
+    private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
+        String cursorPointer = stateStorage.getCursorPointer(Resource.ASSET);
+
+        LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
+
+        server.testConnection();
+        testCursorCorrectness(cursorPointer);
+
+        server.horizonServer()
+            .transactions()
+            .cursor(cursorPointer)
+            .stream(stellarSdkResponseConsumer::accept);
     }
 
     private void testCursorCorrectness (String cursorPointer) {

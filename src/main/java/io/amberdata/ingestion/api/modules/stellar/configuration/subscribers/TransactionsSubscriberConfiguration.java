@@ -49,6 +49,7 @@ public class TransactionsSubscriberConfiguration {
 
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
             .retryWhen(SubscriberErrorsHandler::onError)
+            .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return modelMapper.map(transactionResponse, operationResponses);
