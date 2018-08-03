@@ -10,6 +10,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
@@ -27,8 +28,13 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         CreatePassiveOfferOperationResponse response = (CreatePassiveOfferOperationResponse) operationResponse;
 
+        Preconditions.checkNotNull(
+            response.getSourceAccount(),
+            "Source account in CreatePassiveOfferOperationResponse is null"
+        );
+
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount().getAccountId())
+            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : null)
             .value(response.getAmount())
             .meta(getMetaProperties(response))
             .build();

@@ -16,8 +16,8 @@ public class AssetMapper {
         switch (asset.getType()) {
             case "native":
                 assetType = Asset.AssetType.ASSET_TYPE_NATIVE;
-                code = null;
-                issuer = null;
+                code = "";
+                issuer = "";
                 break;
             case "credit_alphanum4":
                 assetType = Asset.AssetType.ASSET_TYPE_CREDIT_ALPHANUM4;
@@ -31,8 +31,8 @@ public class AssetMapper {
                 break;
             default:
                 assetType = Asset.AssetType.ASSET_TYPE_UNKNOWN;
-                code = null;
-                issuer = null;
+                code = "";
+                issuer = "";
         }
 
         return new Asset(assetType, code, issuer);

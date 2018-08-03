@@ -10,6 +10,7 @@ import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
@@ -27,11 +28,15 @@ public class PathPaymentOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         PathPaymentOperationResponse response = (PathPaymentOperationResponse) operationResponse;
 
+        Preconditions.checkNotNull(response.getAsset(), "Asset in PathPaymentOperationResponse is null");
+        Preconditions.checkNotNull(response.getFrom(), "Source account in PathPaymentOperationResponse is null");
+        Preconditions.checkNotNull(response.getTo(), "Destination account in PathPaymentOperationResponse is null");
+
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getFrom().getAccountId())
-            .to(response.getTo().getAccountId())
+            .from(response.getFrom() != null ? response.getFrom().getAccountId() : null)
+            .to(response.getTo() != null ? response.getTo().getAccountId() : null)
             .assetType(asset.getCode())
             .value(response.getAmount())
             .meta(getMetaProperties(response, asset))

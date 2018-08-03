@@ -10,6 +10,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
@@ -27,11 +28,15 @@ public class AllowTrustOperationMapper implements OperationMapper {
     public FunctionCall map (OperationResponse operationResponse) {
         AllowTrustOperationResponse response = (AllowTrustOperationResponse) operationResponse;
 
+        Preconditions.checkNotNull(response.getAsset(), "Asset in AllowTrustOperationResponse is null");
+        Preconditions.checkNotNull(response.getTrustee(), "Trustee account in AllowTrustOperationResponse is null");
+        Preconditions.checkNotNull(response.getTrustor(), "Trustor account in AllowTrustOperationResponse is null");
+
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getTrustee().getAccountId())
-            .to(response.getTrustor().getAccountId())
+            .from(response.getTrustee() != null ? response.getTrustee().getAccountId() : null)
+            .to(response.getTrustor() != null ? response.getTrustor().getAccountId() : null)
             .assetType(asset.getCode())
             .meta(getMetaProperties(response, asset))
             .build();

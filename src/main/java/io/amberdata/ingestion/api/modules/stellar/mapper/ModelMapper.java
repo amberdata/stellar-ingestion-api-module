@@ -17,6 +17,8 @@ import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import com.google.common.base.Preconditions;
+
 import io.amberdata.domain.Address;
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.Block;
@@ -161,7 +163,10 @@ public class ModelMapper {
         optionalProperties.put("asset_type", balance.getAssetType());
         if (!balance.getAssetType().equals("native")) {
             optionalProperties.put("asset_code", balance.getAssetCode());
-            optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+            Preconditions.checkNotNull(balance.getAssetIssuer(), "AssetIssuer in mapping balance property is null");
+            if (balance.getAssetIssuer() != null) {
+                optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+            }
         }
 
         return optionalProperties;
