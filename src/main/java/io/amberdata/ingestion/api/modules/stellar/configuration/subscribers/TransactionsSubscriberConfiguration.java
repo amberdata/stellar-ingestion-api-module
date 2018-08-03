@@ -8,7 +8,6 @@ import java.util.function.Consumer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Configuration;
-import org.stellar.sdk.requests.TransactionsRequestBuilder;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -50,6 +49,7 @@ public class TransactionsSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return modelMapper.map(transactionResponse, operationResponses);
             })
+            .buffer(10)
             .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity, Transaction.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
@@ -72,14 +72,13 @@ public class TransactionsSubscriberConfiguration {
 
         LOG.info("Transactions cursor is set to {}", cursorPointer);
 
-        TransactionsRequestBuilder requestBuilder = server.horizonServer()
-            .transactions()
-            .cursor(cursorPointer);
-
         server.testConnection();
         testCursorCorrectness(cursorPointer);
 
-        requestBuilder.stream(responseConsumer::accept);
+        server.horizonServer()
+            .transactions()
+            .cursor(cursorPointer)
+            .stream(responseConsumer::accept);
     }
 
     private void testCursorCorrectness (String cursorPointer) {

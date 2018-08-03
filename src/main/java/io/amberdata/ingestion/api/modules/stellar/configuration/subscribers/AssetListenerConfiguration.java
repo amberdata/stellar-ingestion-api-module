@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules.stellar.configuration;
+package io.amberdata.ingestion.api.modules.stellar.configuration.subscribers;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -18,25 +18,28 @@ import io.amberdata.domain.Asset;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 
 @Configuration
 public class AssetListenerConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(AssetListenerConfiguration.class);
 
-    private final IngestionApiClient apiClient;
-    private final ModelMapper        modelMapper;
-    private final HorizonServer      server;
+    private final ResourceStateStorage stateStorage;
+    private final IngestionApiClient   apiClient;
+    private final ModelMapper          modelMapper;
+    private final HorizonServer        server;
 
-    private Consumer<TransactionResponse> transactionResponseConsumer;
-
-    public AssetListenerConfiguration (IngestionApiClient apiClient,
+    public AssetListenerConfiguration (ResourceStateStorage stateStorage,
+                                       IngestionApiClient apiClient,
                                        ModelMapper modelMapper,
                                        HorizonServer server) {
+
+        this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
@@ -44,17 +47,15 @@ public class AssetListenerConfiguration {
 
     @PostConstruct
     public void createPipeline () {
-        Flux.<TransactionResponse>create(sink -> registerListener(sink::next))
+        Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAssets(operationResponses).stream()
-                    .map(modelMapper::map);
+                    .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
+                    .collect(Collectors.toList());
             })
-            .map(Mono::just)
-            .subscribe(
-                assetMono -> LOG.info("API responded with object {}", assetMono.block()),
-                Throwable::printStackTrace
-            );
+            .map(entities -> apiClient.publish("/tokens", entities, Asset.class))
+            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private List<AssetResponse> processAssets (List<OperationResponse> operationResponses) {
@@ -79,14 +80,6 @@ public class AssetListenerConfiguration {
         }
     }
 
-    @PostConstruct
-    public void subscribeOnTransactions () {
-        server.horizonServer()
-            .transactions()
-            .cursor("now")
-            .stream(transactionResponse -> transactionResponseConsumer.accept(transactionResponse));
-    }
-
     private Optional<AssetResponse> fetchAsset (Asset asset) {
         try {
             List<AssetResponse> records = server
@@ -108,7 +101,26 @@ public class AssetListenerConfiguration {
         return Optional.empty();
     }
 
-    private void registerListener (Consumer<TransactionResponse> transactionResponseConsumer) {
-        this.transactionResponseConsumer = transactionResponseConsumer;
+    private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
+        String cursorPointer = stateStorage.getCursorPointer(Resource.ASSET);
+
+        LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
+
+        server.testConnection();
+        testCursorCorrectness(cursorPointer);
+
+        server.horizonServer()
+            .transactions()
+            .cursor(cursorPointer)
+            .stream(stellarSdkResponseConsumer::accept);
+    }
+
+    private void testCursorCorrectness (String cursorPointer) {
+        try {
+            server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
+        }
+        catch (IOException e) {
+            throw new HorizonServer.IncorrectRequestException("Failed to test if cursor value is valid", e);
+        }
     }
 }
