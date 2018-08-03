@@ -48,14 +48,17 @@ public class PathPaymentOperationMapper implements OperationMapper {
     }
 
     private String getMetaProperties (PathPaymentOperationResponse response, Asset asset) {
-        Asset sourceAsset = assetMapper.map(response.getSourceAsset());
+        // commented out due to a bug in sdk (causes npe - no code for native asset)
+        // Asset sourceAsset = assetMapper.map(response.getSourceAsset());
 
         Map<String, String> metaMap = new HashMap<>();
         metaMap.put("stellarAssetType", asset.getType().getName());
         metaMap.put("assetIssuer", asset.getIssuerAccount());
-        metaMap.put("sourceAsset", sourceAsset.getCode());
-        metaMap.put("stellarSourceAssetType", sourceAsset.getType().getName());
-        metaMap.put("sourceAssetIssuer", sourceAsset.getIssuerAccount());
+
+        // commented out due to a bug in sdk (causes npe - no code for native asset)
+        // metaMap.put("sourceAsset", sourceAsset.getCode());
+        // metaMap.put("stellarSourceAssetType", sourceAsset.getType().getName());
+        // metaMap.put("sourceAssetIssuer", sourceAsset.getIssuerAccount());
         metaMap.put("sourceMax", response.getSourceMax());
         try {
             return new ObjectMapper().writeValueAsString(metaMap);
