@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
@@ -25,6 +26,7 @@ import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
 
 @Configuration
+@ConditionalOnProperty(prefix = "stellar", name="subscribe-on-assets")
 public class AssetListenerConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(AssetListenerConfiguration.class);
@@ -47,6 +49,8 @@ public class AssetListenerConfiguration {
 
     @PostConstruct
     public void createPipeline () {
+        LOG.info("Going to subscribe on Stellar Assets stream through Transactions stream");
+
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);

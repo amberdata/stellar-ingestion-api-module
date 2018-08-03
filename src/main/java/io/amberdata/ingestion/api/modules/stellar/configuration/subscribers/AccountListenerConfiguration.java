@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.AccountResponse;
@@ -27,6 +28,7 @@ import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
 
 @Configuration
+@ConditionalOnProperty(prefix = "stellar", name="subscribe-on-accounts")
 public class AccountListenerConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccountListenerConfiguration.class);
@@ -49,6 +51,8 @@ public class AccountListenerConfiguration {
 
     @PostConstruct
     public void createPipeline () {
+        LOG.info("Going to subscribe on Stellar Accounts stream through Transactions stream");
+
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
