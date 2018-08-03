@@ -38,7 +38,7 @@ public class ManageOfferOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .value(response.getAmount())
-            .meta(getMetaProperties(response))
+            .optionalProperties(getOptionalProperties(response))
             .build();
     }
 
@@ -51,24 +51,19 @@ public class ManageOfferOperationMapper implements OperationMapper {
         return Arrays.asList(selling, buying);
     }
 
-    private String getMetaProperties (ManageOfferOperationResponse response) {
+    private Map<String, Object> getOptionalProperties (ManageOfferOperationResponse response) {
         Asset selling = assetMapper.map(response.getSellingAsset());
         Asset buying  = assetMapper.map(response.getBuyingAsset());
 
-        Map<String, String> metaMap = new HashMap<>();
-        metaMap.put("sellingAsset", selling.getCode());
-        metaMap.put("stellarSellingAssetType", selling.getType().getName());
-        metaMap.put("sellingAssetIssuer", selling.getIssuerAccount());
-        metaMap.put("buyingAsset", buying.getCode());
-        metaMap.put("stellarBuyingAssetType", buying.getType().getName());
-        metaMap.put("buyingAssetIssuer", buying.getIssuerAccount());
-        metaMap.put("price", response.getPrice());
-        metaMap.put("offerId", response.getOfferId().toString());
-        try {
-            return new ObjectMapper().writeValueAsString(metaMap);
-        }
-        catch (JsonProcessingException e) {
-            return "{}";
-        }
+        Map<String, Object> optionalProperties = new HashMap<>();
+        optionalProperties.put("sellingAsset", selling.getCode());
+        optionalProperties.put("stellarSellingAssetType", selling.getType().getName());
+        optionalProperties.put("sellingAssetIssuer", selling.getIssuerAccount());
+        optionalProperties.put("buyingAsset", buying.getCode());
+        optionalProperties.put("stellarBuyingAssetType", buying.getType().getName());
+        optionalProperties.put("buyingAssetIssuer", buying.getIssuerAccount());
+        optionalProperties.put("price", response.getPrice());
+        optionalProperties.put("offerId", response.getOfferId());
+        return optionalProperties;
     }
 }

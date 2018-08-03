@@ -10,9 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
@@ -49,7 +46,7 @@ public class AllowTrustOperationMapper implements OperationMapper {
             .from(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
             .to(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
             .assetType(asset.getCode())
-            .meta(getMetaProperties(response, asset))
+            .optionalProperties(getOptionalProperties(response, asset))
             .build();
     }
 
@@ -61,16 +58,11 @@ public class AllowTrustOperationMapper implements OperationMapper {
         return Collections.singletonList(asset);
     }
 
-    private String getMetaProperties (AllowTrustOperationResponse response, Asset asset) {
-        Map<String, String> metaMap = new HashMap<>();
-        metaMap.put("isAuthorize", String.valueOf(response.isAuthorize()));
-        metaMap.put("stellarAssetType", asset.getType().getName());
-        metaMap.put("assetIssuer", asset.getIssuerAccount());
-        try {
-            return new ObjectMapper().writeValueAsString(metaMap);
-        }
-        catch (JsonProcessingException e) {
-            return "{}";
-        }
+    private Map<String, Object> getOptionalProperties (AllowTrustOperationResponse response, Asset asset) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+        optionalProperties.put("isAuthorize", String.valueOf(response.isAuthorize()));
+        optionalProperties.put("stellarAssetType", asset.getType().getName());
+        optionalProperties.put("assetIssuer", asset.getIssuerAccount());
+        return optionalProperties;
     }
 }

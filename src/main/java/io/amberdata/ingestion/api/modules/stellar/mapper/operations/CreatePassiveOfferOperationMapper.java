@@ -10,9 +10,6 @@ import org.slf4j.LoggerFactory;
 import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
@@ -38,7 +35,7 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .value(response.getAmount())
-            .meta(getMetaProperties(response))
+            .optionalProperties(getOptionalProperties(response))
             .build();
     }
 
@@ -51,23 +48,18 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
         return Arrays.asList(selling, buying);
     }
 
-    private String getMetaProperties (CreatePassiveOfferOperationResponse response) {
+    private Map<String, Object> getOptionalProperties (CreatePassiveOfferOperationResponse response) {
         Asset selling = assetMapper.map(response.getSellingAsset());
         Asset buying = assetMapper.map(response.getBuyingAsset());
 
-        Map<String, String> metaMap = new HashMap<>();
-        metaMap.put("sellingAsset", selling.getCode());
-        metaMap.put("stellarSellingAssetType", selling.getType().getName());
-        metaMap.put("sellingAssetIssuer", selling.getIssuerAccount());
-        metaMap.put("buyingAsset", buying.getCode());
-        metaMap.put("stellarBuyingAssetType", buying.getType().getName());
-        metaMap.put("buyingAssetIssuer", buying.getIssuerAccount());
-        metaMap.put("price", response.getPrice());
-        try {
-            return new ObjectMapper().writeValueAsString(metaMap);
-        }
-        catch (JsonProcessingException e) {
-            return "{}";
-        }
+        Map<String, Object> optionalProperties = new HashMap<>();
+        optionalProperties.put("sellingAsset", selling.getCode());
+        optionalProperties.put("stellarSellingAssetType", selling.getType().getName());
+        optionalProperties.put("sellingAssetIssuer", selling.getIssuerAccount());
+        optionalProperties.put("buyingAsset", buying.getCode());
+        optionalProperties.put("stellarBuyingAssetType", buying.getType().getName());
+        optionalProperties.put("buyingAssetIssuer", buying.getIssuerAccount());
+        optionalProperties.put("price", response.getPrice());
+        return optionalProperties;
     }
 }

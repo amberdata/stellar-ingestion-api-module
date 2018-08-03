@@ -50,7 +50,7 @@ public class PaymentOperationMapper implements OperationMapper {
             .to(response.getTo() != null ? response.getTo().getAccountId() : "")
             .assetType(asset.getCode())
             .value(response.getAmount())
-            .meta(getMetaProperties(asset))
+            .optionalProperties(getOptionalProperties(asset))
             .build();
     }
 
@@ -62,15 +62,10 @@ public class PaymentOperationMapper implements OperationMapper {
         return Collections.singletonList(asset);
     }
 
-    private String getMetaProperties (Asset asset) {
-        Map<String, String> metaMap = new HashMap<>();
-        metaMap.put("stellarAssetType", asset.getType().getName());
-        metaMap.put("assetIssuer", asset.getIssuerAccount());
-        try {
-            return new ObjectMapper().writeValueAsString(metaMap);
-        }
-        catch (JsonProcessingException e) {
-            return "{}";
-        }
+    private Map<String, Object> getOptionalProperties (Asset asset) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+        optionalProperties.put("stellarAssetType", asset.getType().getName());
+        optionalProperties.put("assetIssuer", asset.getIssuerAccount());
+        return optionalProperties;
     }
 }

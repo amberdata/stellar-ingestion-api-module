@@ -1,20 +1,22 @@
 package io.amberdata.domain;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class FunctionCall {
 
-    private String             name;
-    private String             signature;
-    private List<Argument>     arguments;
-    private String             type;
-    private String             from;
-    private String             to;
-    private String             assetType;
-    private String             value;
-    private String             meta;
-    private List<FunctionCall> subFunctions;
+    private String              name;
+    private String              signature;
+    private List<Argument>      arguments;
+    private String              type;
+    private String              from;
+    private String              to;
+    private String              assetType;
+    private String              value;
+    private String              meta;
+    private List<FunctionCall>  subFunctions;
+    private Map<String, Object> optionalProperties;
 
     private FunctionCall (Builder builder) {
         this.name = builder.name;
@@ -27,6 +29,7 @@ public class FunctionCall {
         this.value = builder.value;
         this.meta = builder.meta;
         this.subFunctions = builder.subFunctions;
+        this.optionalProperties = builder.optionalProperties;
     }
 
     public String getName () {
@@ -109,6 +112,14 @@ public class FunctionCall {
         this.subFunctions = subFunctions;
     }
 
+    public Map<String, Object> getOptionalProperties () {
+        return optionalProperties;
+    }
+
+    public void setOptionalProperties (Map<String, Object> optionalProperties) {
+        this.optionalProperties = optionalProperties;
+    }
+
     @Override
     public boolean equals (Object o) {
         if (this == o) {
@@ -128,12 +139,25 @@ public class FunctionCall {
             Objects.equals(assetType, that.assetType) &&
             Objects.equals(value, that.value) &&
             Objects.equals(meta, that.meta) &&
-            Objects.equals(subFunctions, that.subFunctions);
+            Objects.equals(subFunctions, that.subFunctions) &&
+            Objects.equals(optionalProperties, that.optionalProperties);
     }
 
     @Override
     public int hashCode () {
-        return Objects.hash(name, signature, arguments, type, from, to, assetType, value, meta, subFunctions);
+        return Objects.hash(
+            name,
+            signature,
+            arguments,
+            type,
+            from,
+            to,
+            assetType,
+            value,
+            meta,
+            subFunctions,
+            optionalProperties
+        );
     }
 
     @Override
@@ -149,6 +173,7 @@ public class FunctionCall {
             ", value='" + value + '\'' +
             ", meta='" + meta + '\'' +
             ", subFunctions=" + subFunctions +
+            ", optionalProperties=" + optionalProperties +
             '}';
     }
 
@@ -163,6 +188,7 @@ public class FunctionCall {
         private String             value;
         private String             meta;
         private List<FunctionCall> subFunctions;
+        private Map<String, Object> optionalProperties;
 
         public FunctionCall.Builder name (String name) {
             this.name = name;
@@ -211,6 +237,11 @@ public class FunctionCall {
 
         public FunctionCall.Builder subFunctions (List<FunctionCall> subFunctions) {
             this.subFunctions = subFunctions;
+            return this;
+        }
+
+        public FunctionCall.Builder optionalProperties (Map<String, Object> optionalProperties) {
+            this.optionalProperties = optionalProperties;
             return this;
         }
 
