@@ -44,7 +44,8 @@ public class LedgersSubscriberConfiguration {
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .retryWhen(SubscriberErrorsHandler::onError)
             .map(modelMapper::map)
-            .map(entity -> apiClient.publish("/blocks", entity, Block.class))
+            .buffer(10)
+            .map(entities -> apiClient.publish("/blocks", entities, Block.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 

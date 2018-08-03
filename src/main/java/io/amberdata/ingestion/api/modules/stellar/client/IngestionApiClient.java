@@ -1,6 +1,9 @@
 package io.amberdata.ingestion.api.modules.stellar.client;
 
 import java.time.Duration;
+import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,22 +42,35 @@ public class IngestionApiClient {
     }
 
     public <T extends BlockchainEntity> BlockchainEntityWithState<T> publish (String endpointUri,
-                                                     BlockchainEntityWithState<T> entityWithState,
+                                                     List<BlockchainEntityWithState<T>> entities,
                                                      Class<T> entityClass) {
-        LOG.info("Going to publish {} to the ingestion API endpoint {}",  entityWithState.getEntity(), endpointUri);
+
+        LOG.info("Going to publish {} to the ingestion API endpoint {}",
+            String.join(",", entities.stream().map(Object::toString).collect(Collectors.toList())),
+            endpointUri);
 
         webClient
             .post()
             .uri(endpointUri)
-            .body(BodyInserters.fromObject(entityWithState.getEntity()))
+            .accept(MediaType.APPLICATION_JSON)
+            .body(BodyInserters.fromObject(entities))
             .retrieve()
-            .bodyToMono(entityClass)
+            .bodyToFlux(entityClass)
             .retryWhen(companion -> companion
                 .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable.getMessage()))
                 .zipWith(Flux.range(1, 10), (error, index) -> index)
                 .flatMap(index -> Mono.delay(Duration.ofMillis(index * 1000)))
-            ).block();
+            ).blockLast();
 
-        return entityWithState;
+        return entities.get(entities.size() - 1);
+    }
+
+    public <T extends BlockchainEntity> BlockchainEntityWithState<T> publish (String endpointUri,
+                                                                              BlockchainEntityWithState<T> entityWithState,
+                                                                              Class<T> entityClass) {
+
+        LOG.info("Going to publish {} to the ingestion API endpoint {}",  entityWithState.getEntity(), endpointUri);
+
+        return publish(endpointUri, Collections.singletonList(entityWithState), entityClass);
     }
 }
