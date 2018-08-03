@@ -159,8 +159,10 @@ public class ModelMapper {
         optionalProperties.put("balance", balance.getBalance());
         optionalProperties.put("limit", balance.getLimit());
         optionalProperties.put("asset_type", balance.getAssetType());
-        optionalProperties.put("asset_code", balance.getAssetCode());
-        optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+        if (!balance.getAssetType().equals("native")) {
+            optionalProperties.put("asset_code", balance.getAssetCode());
+            optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+        }
 
         return optionalProperties;
     }
