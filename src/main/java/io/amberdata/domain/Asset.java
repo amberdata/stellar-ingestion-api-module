@@ -11,24 +11,13 @@ public class Asset implements BlockchainEntity {
     private boolean   isAuthRequired;
     private boolean   isAuthRevocable;
 
-    public Asset (AssetType type, String code, String issuerAccount) {
-        this.type = type;
-        this.code = code;
-        this.issuerAccount = issuerAccount;
-    }
-
-    public Asset (AssetType type, String code, String issuerAccount, String amount, boolean isAuthRequired, boolean
-        isAuthRevocable) {
-        this.type = type;
-        this.code = code;
-        this.issuerAccount = issuerAccount;
-        this.amount = amount;
-        this.isAuthRequired = isAuthRequired;
-        this.isAuthRevocable = isAuthRevocable;
-    }
-
-    public static Asset from (String code, String issuerAccount) {
-        return new Asset(AssetType.ASSET_TYPE_UNKNOWN, code, issuerAccount);
+    private Asset (Builder builder) {
+        this.type = builder.type;
+        this.code = builder.code;
+        this.issuerAccount = builder.issuerAccount;
+        this.amount = builder.amount;
+        this.isAuthRequired = builder.isAuthRequired;
+        this.isAuthRevocable = builder.isAuthRevocable;
     }
 
     public AssetType getType () {
@@ -106,6 +95,49 @@ public class Asset implements BlockchainEntity {
             ", code=" + code +
             ", issuerAccount='" + issuerAccount + '\'' +
             '}';
+    }
+
+    public static class Builder {
+        private AssetType type;
+        private String    code;
+        private String    issuerAccount;
+        private String    amount;
+        private boolean   isAuthRequired;
+        private boolean   isAuthRevocable;
+
+        public Builder type (AssetType value) {
+            this.type = value;
+            return this;
+        }
+
+        public Builder code (String value) {
+            this.code = value;
+            return this;
+        }
+
+        public Builder issuerAccount (String value) {
+            this.issuerAccount = value;
+            return this;
+        }
+
+        public Builder amount (String value) {
+            this.amount = value;
+            return this;
+        }
+
+        public Builder isAuthRequired (boolean value) {
+            this.isAuthRequired = value;
+            return this;
+        }
+
+        public Builder isAuthRevocable (boolean value) {
+            this.isAuthRevocable = value;
+            return this;
+        }
+
+        public Asset build () {
+            return new Asset(this);
+        }
     }
 
     public enum AssetType {
