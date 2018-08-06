@@ -65,7 +65,7 @@ public class AccountSubscriberConfiguration {
     }
 
     private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
-        return modelMapper.map(operationResponses).stream()
+        return modelMapper.map(operationResponses, null).stream()
             .flatMap(functionCall ->
                 Stream.of(
                     Optional.ofNullable(functionCall.getFrom()),

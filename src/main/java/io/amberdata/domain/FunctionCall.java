@@ -17,6 +17,9 @@ public class FunctionCall {
     private String              meta;
     private List<FunctionCall>  subFunctions;
     private Map<String, Object> optionalProperties;
+    private Long                blockNumber;
+    private String              transactionHash;
+    private String              timestamp;
 
     private FunctionCall (Builder builder) {
         this.name = builder.name;
@@ -30,6 +33,9 @@ public class FunctionCall {
         this.meta = builder.meta;
         this.subFunctions = builder.subFunctions;
         this.optionalProperties = builder.optionalProperties;
+        this.blockNumber = builder.blockNumber;
+        this.transactionHash = builder.transactionHash;
+        this.timestamp = builder.timestamp;
     }
 
     public String getName () {
@@ -120,6 +126,30 @@ public class FunctionCall {
         this.optionalProperties = optionalProperties;
     }
 
+    public Long getBlockNumber () {
+        return blockNumber;
+    }
+
+    public void setBlockNumber (Long blockNumber) {
+        this.blockNumber = blockNumber;
+    }
+
+    public String getTransactionHash () {
+        return transactionHash;
+    }
+
+    public void setTransactionHash (String transactionHash) {
+        this.transactionHash = transactionHash;
+    }
+
+    public String getTimestamp () {
+        return timestamp;
+    }
+
+    public void setTimestamp (String timestamp) {
+        this.timestamp = timestamp;
+    }
+
     @Override
     public boolean equals (Object o) {
         if (this == o) {
@@ -140,7 +170,10 @@ public class FunctionCall {
             Objects.equals(value, that.value) &&
             Objects.equals(meta, that.meta) &&
             Objects.equals(subFunctions, that.subFunctions) &&
-            Objects.equals(optionalProperties, that.optionalProperties);
+            Objects.equals(optionalProperties, that.optionalProperties) &&
+            Objects.equals(blockNumber, that.blockNumber) &&
+            Objects.equals(transactionHash, that.transactionHash) &&
+            Objects.equals(timestamp, that.timestamp);
     }
 
     @Override
@@ -156,7 +189,10 @@ public class FunctionCall {
             value,
             meta,
             subFunctions,
-            optionalProperties
+            optionalProperties,
+            blockNumber,
+            transactionHash,
+            timestamp
         );
     }
 
@@ -174,21 +210,27 @@ public class FunctionCall {
             ", meta='" + meta + '\'' +
             ", subFunctions=" + subFunctions +
             ", optionalProperties=" + optionalProperties +
+            ", blockNumber='" + blockNumber + '\'' +
+            ", transactionHash='" + transactionHash + '\'' +
+            ", timestamp='" + timestamp + '\'' +
             '}';
     }
 
     public static class Builder {
-        private String             name;
-        private String             signature;
-        private List<Argument>     arguments;
-        private String             type;
-        private String             from;
-        private String             to;
-        private String             assetType;
-        private String             value;
-        private String             meta;
-        private List<FunctionCall> subFunctions;
+        private String              name;
+        private String              signature;
+        private List<Argument>      arguments;
+        private String              type;
+        private String              from;
+        private String              to;
+        private String              assetType;
+        private String              value;
+        private String              meta;
+        private List<FunctionCall>  subFunctions;
         private Map<String, Object> optionalProperties;
+        private Long                blockNumber;
+        private String              transactionHash;
+        private String              timestamp;
 
         public FunctionCall.Builder name (String name) {
             this.name = name;
@@ -242,6 +284,21 @@ public class FunctionCall {
 
         public FunctionCall.Builder optionalProperties (Map<String, Object> optionalProperties) {
             this.optionalProperties = optionalProperties;
+            return this;
+        }
+
+        public FunctionCall.Builder blockNumber (Long value) {
+            this.blockNumber = value;
+            return this;
+        }
+
+        public FunctionCall.Builder transactionHash (String value) {
+            this.transactionHash = value;
+            return this;
+        }
+
+        public FunctionCall.Builder timestamp (String value) {
+            this.timestamp = value;
             return this;
         }
 
