@@ -44,9 +44,15 @@ public class OperationMapperManager {
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
     }
 
-    public FunctionCall map (OperationResponse operationResponse) {
+    public FunctionCall map (OperationResponse operationResponse, Long ledger) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
-        return operationMapper.map(operationResponse);
+
+        FunctionCall    functionCall    = operationMapper.map(operationResponse);
+        functionCall.setBlockNumber(ledger);
+        functionCall.setTransactionHash(operationResponse.getTransactionHash());
+        functionCall.setTimestamp(operationResponse.getCreatedAt());
+
+        return functionCall;
     }
 
     public List<Asset> mapAssets (OperationResponse operationResponse) {

@@ -87,7 +87,7 @@ public class ModelMapper {
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-            .functionCalls(this.map(operationResponses))
+            .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
             .build();
 
         return BlockchainEntityWithState.from(
@@ -96,9 +96,9 @@ public class ModelMapper {
         );
     }
 
-    public List<FunctionCall> map (List<OperationResponse> operationResponses) {
+    public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {
         return operationResponses.stream()
-            .map(this.operationMapperManager::map)
+            .map(operationResponse -> this.operationMapperManager.map(operationResponse, ledger))
             .collect(Collectors.toList());
     }
 
