@@ -35,6 +35,10 @@ public class AssetMapper {
                 issuer = "";
         }
 
-        return new Asset(assetType, code, issuer);
+        return new Asset.Builder()
+            .type(assetType)
+            .code(code)
+            .issuerAccount(issuer)
+            .build();
     }
 }
