@@ -4,29 +4,48 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.AccountResponse;
+import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Address;
+import io.amberdata.domain.Asset;
 import io.amberdata.domain.Block;
+import io.amberdata.domain.FunctionCall;
 import io.amberdata.domain.Transaction;
+import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
 
 @Component
 public class ModelMapper {
+    private static final Logger LOG = LoggerFactory.getLogger(ModelMapper.class);
+
     private final String blockChainId;
 
-    public ModelMapper (@Value("${ingestion.api.blockchain-id}") String blockChainId) {
+    private final OperationMapperManager operationMapperManager;
+
+    @Autowired
+    public ModelMapper (@Value("${ingestion.api.blockchain-id}") String blockChainId,
+                        OperationMapperManager operationMapperManager) {
         this.blockChainId = blockChainId;
+        this.operationMapperManager = operationMapperManager;
     }
 
-    public Block map (LedgerResponse ledgerResponse) {
-        return new Block.Builder()
+    public BlockchainEntityWithState<Block> map (LedgerResponse ledgerResponse) {
+        Block block = new Block.Builder()
             .blockchainId(blockChainId)
             .number(BigInteger.valueOf(ledgerResponse.getSequence()))
             .hash(ledgerResponse.getHash())
@@ -36,6 +55,11 @@ public class ModelMapper {
             .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
             .optionalProperties(blockOptionalProperties(ledgerResponse))
             .build();
+
+        return BlockchainEntityWithState.from(
+            block,
+            ResourceState.from(Resource.LEDGER, ledgerResponse.getPagingToken())
+        );
     }
 
     private Map<String, Object> blockOptionalProperties (LedgerResponse ledgerResponse) {
@@ -50,26 +74,69 @@ public class ModelMapper {
         return optionalProperties;
     }
 
-    public Transaction map (TransactionResponse transactionResponse) {
-        return new Transaction.Builder()
+    public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
+                                                       List<OperationResponse> operationResponses) {
+
+        Transaction transaction = new Transaction.Builder()
             .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
-            //.gas(transactionResponse.) which property if max_fee doesn't exist????
+            //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
+            .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
             .build();
+
+        return BlockchainEntityWithState.from(
+            transaction,
+            ResourceState.from(Resource.TRANSACTION, transactionResponse.getPagingToken())
+        );
     }
 
-    public Address map (AccountResponse accountResponse) {
-        return new Address.Builder()
+    public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {
+        return operationResponses.stream()
+            .map(operationResponse -> this.operationMapperManager.map(operationResponse, ledger))
+            .collect(Collectors.toList());
+    }
+
+    public List<Asset> mapAssets (List<OperationResponse> operationResponses) {
+        return operationResponses.stream()
+            .flatMap(operationResponse -> this.operationMapperManager.mapAssets(operationResponse).stream())
+            .collect(Collectors.toList());
+    }
+
+    public BlockchainEntityWithState<Address> map (AccountResponse accountResponse,
+                                                   String pagingToken,
+                                                   String timestamp) {
+        Address address = new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
-            // need timestamp here
+            .timestamp(Instant.parse(timestamp).toEpochMilli())
             .optionalProperties(addressOptionalProperties(accountResponse))
             .build();
+
+        return BlockchainEntityWithState.from(
+            address,
+            ResourceState.from(Resource.ACCOUNT, pagingToken)
+        );
+    }
+
+    public BlockchainEntityWithState<Asset> map (AssetResponse assetResponse, String pagingToken) {
+        Asset asset = new Asset.Builder()
+            .type(Asset.AssetType.fromName(assetResponse.getAssetType()))
+            .code(assetResponse.getAssetCode())
+            .issuerAccount(assetResponse.getAssetIssuer())
+            .amount(assetResponse.getAmount())
+            .isAuthRequired(assetResponse.getFlags().isAuthRequired())
+            .isAuthRevocable(assetResponse.getFlags().isAuthRevocable())
+            .build();
+
+        return BlockchainEntityWithState.from(
+            asset,
+            ResourceState.from(Resource.ASSET, pagingToken)
+        );
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
@@ -98,8 +165,15 @@ public class ModelMapper {
         optionalProperties.put("balance", balance.getBalance());
         optionalProperties.put("limit", balance.getLimit());
         optionalProperties.put("asset_type", balance.getAssetType());
-        optionalProperties.put("asset_code", balance.getAssetCode());
-        optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+        if (!balance.getAssetType().equals("native")) {
+            optionalProperties.put("asset_code", balance.getAssetCode());
+            if (balance.getAssetIssuer() == null) {
+                LOG.warn("AssetIssuer in mapping balance property is null");
+            }
+            else {
+                optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+            }
+        }
 
         return optionalProperties;
     }

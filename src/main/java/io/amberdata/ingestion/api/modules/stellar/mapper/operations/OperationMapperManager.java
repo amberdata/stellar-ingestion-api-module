@@ -1,0 +1,62 @@
+package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
+import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
+import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
+import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
+import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
+import org.stellar.sdk.responses.operations.InflationOperationResponse;
+import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
+import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
+import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
+import org.stellar.sdk.responses.operations.PaymentOperationResponse;
+import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
+
+import io.amberdata.domain.Asset;
+import io.amberdata.domain.FunctionCall;
+import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
+
+@Component
+public class OperationMapperManager {
+
+    private Map<Class<? extends OperationResponse>, OperationMapper> responsesMap;
+
+    @Autowired
+    public OperationMapperManager (AssetMapper assetMapper) {
+        responsesMap = new HashMap<>();
+        responsesMap.put(CreateAccountOperationResponse.class, new CreateAccountOperationMapper());
+        responsesMap.put(PaymentOperationResponse.class, new PaymentOperationMapper(assetMapper));
+        responsesMap.put(PathPaymentOperationResponse.class, new PathPaymentOperationMapper(assetMapper));
+        responsesMap.put(ManageOfferOperationResponse.class, new ManageOfferOperationMapper(assetMapper));
+        responsesMap.put(CreatePassiveOfferOperationResponse.class, new CreatePassiveOfferOperationMapper(assetMapper));
+        responsesMap.put(SetOptionsOperationResponse.class, new SetOptionsOperationMapper());
+        responsesMap.put(ChangeTrustOperationResponse.class, new ChangeTrustOperationMapper(assetMapper));
+        responsesMap.put(AllowTrustOperationResponse.class, new AllowTrustOperationMapper(assetMapper));
+        responsesMap.put(AccountMergeOperationResponse.class, new AccountMergeOperationMapper());
+        responsesMap.put(InflationOperationResponse.class, new InflationOperationMapper());
+        responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
+    }
+
+    public FunctionCall map (OperationResponse operationResponse, Long ledger) {
+        OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
+
+        FunctionCall    functionCall    = operationMapper.map(operationResponse);
+        functionCall.setBlockNumber(ledger);
+        functionCall.setTransactionHash(operationResponse.getTransactionHash());
+        functionCall.setTimestamp(operationResponse.getCreatedAt());
+
+        return functionCall;
+    }
+
+    public List<Asset> mapAssets (OperationResponse operationResponse) {
+        OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
+        return operationMapper.getAssets(operationResponse);
+    }
+}

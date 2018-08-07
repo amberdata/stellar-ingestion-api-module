@@ -4,7 +4,7 @@ import java.math.BigInteger;
 import java.util.Map;
 import java.util.Objects;
 
-public final class Block {
+public final class Block implements BlockchainEntity {
     private String              blockchainId;
     private BigInteger          number;
     private String              hash;
@@ -15,13 +15,13 @@ public final class Block {
     private Map<String, Object> optionalProperties;
 
     private Block (Builder builder) {
-        this.blockchainId       = builder.blockchainId;
-        this.number             = builder.number;
-        this.hash               = builder.hash;
-        this.parentHash         = builder.parentHash;
-        this.gasUsed            = builder.gasUsed;
-        this.timestamp          = builder.timestamp;
-        this.numTransactions    = builder.numTransactions;
+        this.blockchainId = builder.blockchainId;
+        this.number = builder.number;
+        this.hash = builder.hash;
+        this.parentHash = builder.parentHash;
+        this.gasUsed = builder.gasUsed;
+        this.timestamp = builder.timestamp;
+        this.numTransactions = builder.numTransactions;
         this.optionalProperties = builder.optionalProperties;
     }
 
@@ -138,47 +138,47 @@ public final class Block {
         private Integer             numTransactions;
         private Map<String, Object> optionalProperties;
 
-        public Block.Builder blockchainId(String value) {
+        public Block.Builder blockchainId (String value) {
             this.blockchainId = value;
             return this;
         }
 
-        public Block.Builder number(BigInteger value) {
+        public Block.Builder number (BigInteger value) {
             this.number = value;
             return this;
         }
 
-        public Block.Builder hash(String value) {
+        public Block.Builder hash (String value) {
             this.hash = value;
             return this;
         }
 
-        public Block.Builder parentHash(String value) {
+        public Block.Builder parentHash (String value) {
             this.parentHash = value;
             return this;
         }
 
-        public Block.Builder gasUsed(BigInteger value) {
+        public Block.Builder gasUsed (BigInteger value) {
             this.gasUsed = value;
             return this;
         }
 
-        public Block.Builder timestamp(Long value) {
+        public Block.Builder timestamp (Long value) {
             this.timestamp = value;
             return this;
         }
 
-        public Block.Builder numTransactions(Integer value) {
+        public Block.Builder numTransactions (Integer value) {
             this.numTransactions = value;
             return this;
         }
 
-        public Block.Builder optionalProperties(Map<String, Object> value) {
+        public Block.Builder optionalProperties (Map<String, Object> value) {
             this.optionalProperties = value;
             return this;
         }
 
-        public Block build() {
+        public Block build () {
             return new Block(this);
         }
     }

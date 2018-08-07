@@ -3,16 +3,16 @@ package io.amberdata.domain;
 import java.util.Map;
 import java.util.Objects;
 
-public final class Address {
+public final class Address implements BlockchainEntity {
     private String              blockchainId;
     private String              hash;
-    private Long                timestamp; // TODO get it somewhere from Stellar
+    private Long                timestamp;
     private Map<String, Object> optionalProperties;
 
     private Address (Builder builder) {
-        this.blockchainId       = builder.blockchainId;
-        this.hash               = builder.hash;
-        this.timestamp          = builder.timestamp;
+        this.blockchainId = builder.blockchainId;
+        this.hash = builder.hash;
+        this.timestamp = builder.timestamp;
         this.optionalProperties = builder.optionalProperties;
     }
 
@@ -99,7 +99,7 @@ public final class Address {
             return this;
         }
 
-        public Address.Builder optionalProperties(Map<String, Object> value) {
+        public Address.Builder optionalProperties (Map<String, Object> value) {
             this.optionalProperties = value;
             return this;
         }
