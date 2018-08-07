@@ -2,7 +2,7 @@ package io.amberdata.domain;
 
 import java.util.Objects;
 
-public class Asset implements BlockchainEntity {
+public class Asset {
     private AssetType type;
     private String    code;
     private String    issuerAccount;
