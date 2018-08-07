@@ -108,10 +108,12 @@ public class ModelMapper {
             .collect(Collectors.toList());
     }
 
-    public BlockchainEntityWithState<Address> map (AccountResponse accountResponse, String pagingToken) {
+    public BlockchainEntityWithState<Address> map (AccountResponse accountResponse,
+                                                   String pagingToken,
+                                                   String timestamp) {
         Address address = new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
-            //todo need timestamp here
+            .timestamp(timestamp)
             .optionalProperties(addressOptionalProperties(accountResponse))
             .build();
 

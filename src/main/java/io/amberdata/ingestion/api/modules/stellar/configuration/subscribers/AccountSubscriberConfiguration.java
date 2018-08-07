@@ -22,6 +22,7 @@ import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
+import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
 
 import javax.annotation.PostConstruct;
@@ -56,27 +57,36 @@ public class AccountSubscriberConfiguration {
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAccounts(operationResponses).stream()
-                    .map(accountResponse -> modelMapper.map(accountResponse, transactionResponse.getPagingToken()))
-                    .collect(Collectors.toList());
+                return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
             })
             .map(entities -> apiClient.publish("/addresses", entities, Address.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
-    private List<AccountResponse> processAccounts (List<OperationResponse> operationResponses) {
+    private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,
+                                                                        TransactionResponse transactionResponse) {
         return modelMapper.map(operationResponses, null).stream()
             .flatMap(functionCall ->
                 Stream.of(
-                    Optional.ofNullable(functionCall.getFrom()),
-                    Optional.ofNullable(functionCall.getTo())
+                    Optional.ofNullable(
+                        functionCall.getFrom() == null ?
+                            AccountWithTime.from(functionCall.getFrom(), functionCall.getTimestamp()) : null),
+                    Optional.ofNullable(
+                        functionCall.getTo() == null ?
+                            AccountWithTime.from(functionCall.getTo(), functionCall.getTimestamp()) : null)
                 )
             )
             .filter(Optional::isPresent)
             .map(Optional::get)
             .distinct()
-            .map(this::fetchAccountDetails)
-            .collect(Collectors.toList());
+            .map(accountWithTime -> {
+                AccountResponse accountResponse = this.fetchAccountDetails(accountWithTime.getName());
+                return modelMapper.map(
+                    accountResponse,
+                    transactionResponse.getPagingToken(),
+                    accountWithTime.getTimestamp()
+                );
+            });
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
