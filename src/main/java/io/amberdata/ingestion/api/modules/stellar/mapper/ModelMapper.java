@@ -11,7 +11,6 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.AssetResponse;
@@ -33,20 +32,15 @@ import io.amberdata.ingestion.api.modules.stellar.state.entities.ResourceState;
 public class ModelMapper {
     private static final Logger LOG = LoggerFactory.getLogger(ModelMapper.class);
 
-    private final String blockChainId;
-
     private final OperationMapperManager operationMapperManager;
 
     @Autowired
-    public ModelMapper (@Value("${ingestion.api.blockchain-id}") String blockChainId,
-                        OperationMapperManager operationMapperManager) {
-        this.blockChainId = blockChainId;
+    public ModelMapper (OperationMapperManager operationMapperManager) {
         this.operationMapperManager = operationMapperManager;
     }
 
     public BlockchainEntityWithState<Block> map (LedgerResponse ledgerResponse) {
         Block block = new Block.Builder()
-            .blockchainId(blockChainId)
             .number(BigInteger.valueOf(ledgerResponse.getSequence()))
             .hash(ledgerResponse.getHash())
             .parentHash(ledgerResponse.getPrevHash())
@@ -78,7 +72,6 @@ public class ModelMapper {
                                                        List<OperationResponse> operationResponses) {
 
         Transaction transaction = new Transaction.Builder()
-            .blockchainId(blockChainId)
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))

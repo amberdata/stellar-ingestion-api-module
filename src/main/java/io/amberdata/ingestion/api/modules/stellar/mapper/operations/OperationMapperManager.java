@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,7 +51,7 @@ public class OperationMapperManager {
         FunctionCall    functionCall    = operationMapper.map(operationResponse);
         functionCall.setBlockNumber(ledger);
         functionCall.setTransactionHash(operationResponse.getTransactionHash());
-        functionCall.setTimestamp(operationResponse.getCreatedAt());
+        functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
 
         return functionCall;
     }
