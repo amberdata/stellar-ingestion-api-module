@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.InflationOperation;
 import org.stellar.sdk.responses.operations.InflationOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -25,6 +26,7 @@ public class InflationOperationMapper implements OperationMapper {
 
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .type(InflationOperation.class.getSimpleName())
             .build();
     }
 

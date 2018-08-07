@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.AccountMergeOperation;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -30,6 +31,7 @@ public class AccountMergeOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getAccount() != null ? response.getAccount().getAccountId() : "")
             .to(response.getInto() != null ? response.getInto().getAccountId() : "")
+            .type(AccountMergeOperation.class.getSimpleName())
             .build();
     }
 

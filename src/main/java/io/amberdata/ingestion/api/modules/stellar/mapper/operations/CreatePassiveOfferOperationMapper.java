@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.CreatePassiveOfferOperation;
 import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -34,6 +35,7 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
 
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .type(CreatePassiveOfferOperation.class.getSimpleName())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(response))
             .build();

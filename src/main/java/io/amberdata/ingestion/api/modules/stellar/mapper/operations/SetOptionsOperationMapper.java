@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.SetOptionsOperation;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
@@ -36,6 +37,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : "")
+            .type(SetOptionsOperation.class.getSimpleName())
             .signature(response.getSigner() != null ? response.getSigner().getAccountId() : "")
             .optionalProperties(getOptionalProperties(response))
             .build();

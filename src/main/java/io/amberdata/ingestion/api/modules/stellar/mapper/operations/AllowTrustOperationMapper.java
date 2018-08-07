@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.AllowTrustOperation;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -45,6 +46,7 @@ public class AllowTrustOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
             .to(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
+            .type(AllowTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .optionalProperties(getOptionalProperties(response, asset))
             .build();

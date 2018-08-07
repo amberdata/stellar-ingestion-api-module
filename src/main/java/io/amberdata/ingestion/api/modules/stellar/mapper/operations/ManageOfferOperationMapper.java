@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.ManageOfferOperation;
 import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -37,6 +38,7 @@ public class ManageOfferOperationMapper implements OperationMapper {
 
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .type(ManageOfferOperation.class.getSimpleName())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(response))
             .build();
