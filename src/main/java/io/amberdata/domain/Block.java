@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class Block implements BlockchainEntity {
-    private String              blockchainId;
     private BigInteger          number;
     private String              hash;
     private String              parentHash;
@@ -15,7 +14,6 @@ public final class Block implements BlockchainEntity {
     private Map<String, Object> optionalProperties;
 
     private Block (Builder builder) {
-        this.blockchainId = builder.blockchainId;
         this.number = builder.number;
         this.hash = builder.hash;
         this.parentHash = builder.parentHash;
@@ -23,14 +21,6 @@ public final class Block implements BlockchainEntity {
         this.timestamp = builder.timestamp;
         this.numTransactions = builder.numTransactions;
         this.optionalProperties = builder.optionalProperties;
-    }
-
-    public String getBlockchainId () {
-        return blockchainId;
-    }
-
-    public void setBlockchainId (String blockchainId) {
-        this.blockchainId = blockchainId;
     }
 
     public BigInteger getNumber () {
@@ -98,8 +88,7 @@ public final class Block implements BlockchainEntity {
             return false;
         }
         Block block = (Block) o;
-        return Objects.equals(blockchainId, block.blockchainId) &&
-            Objects.equals(number, block.number) &&
+        return Objects.equals(number, block.number) &&
             Objects.equals(hash, block.hash) &&
             Objects.equals(parentHash, block.parentHash) &&
             Objects.equals(gasUsed, block.gasUsed) &&
@@ -110,15 +99,13 @@ public final class Block implements BlockchainEntity {
 
     @Override
     public int hashCode () {
-        return Objects.hash(
-            blockchainId, number, hash, parentHash, gasUsed, timestamp, numTransactions, optionalProperties);
+        return Objects.hash(number, hash, parentHash, gasUsed, timestamp, numTransactions, optionalProperties);
     }
 
     @Override
     public String toString () {
         return "Block{" +
-            "blockchainId='" + blockchainId + '\'' +
-            ", number=" + number +
+            "number=" + number +
             ", hash='" + hash + '\'' +
             ", parentHash='" + parentHash + '\'' +
             ", gasUsed=" + gasUsed +
@@ -129,7 +116,6 @@ public final class Block implements BlockchainEntity {
     }
 
     public static class Builder {
-        private String              blockchainId;
         private BigInteger          number;
         private String              hash;
         private String              parentHash;
@@ -137,11 +123,6 @@ public final class Block implements BlockchainEntity {
         private Long                timestamp;
         private Integer             numTransactions;
         private Map<String, Object> optionalProperties;
-
-        public Block.Builder blockchainId (String value) {
-            this.blockchainId = value;
-            return this;
-        }
 
         public Block.Builder number (BigInteger value) {
             this.number = value;

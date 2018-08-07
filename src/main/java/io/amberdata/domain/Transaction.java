@@ -6,7 +6,6 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class Transaction implements BlockchainEntity {
-    private String              blockchainId;
     private String              hash;
     private BigInteger          nonce;
     private BigInteger          blockNumber;
@@ -19,7 +18,6 @@ public final class Transaction implements BlockchainEntity {
     private Map<String, Object> optionalProperties;
 
     public Transaction (Builder builder) {
-        this.blockchainId       = builder.blockchainId;
         this.hash               = builder.hash;
         this.nonce              = builder.nonce;
         this.blockNumber        = builder.blockNumber;
@@ -30,14 +28,6 @@ public final class Transaction implements BlockchainEntity {
         this.timestamp          = builder.timestamp;
         this.functionCalls      = builder.functionCalls;
         this.optionalProperties = builder.optionalProperties;
-    }
-
-    public String getBlockchainId () {
-        return blockchainId;
-    }
-
-    public void setBlockchainId (String blockchainId) {
-        this.blockchainId = blockchainId;
     }
 
     public String getHash () {
@@ -129,20 +119,18 @@ public final class Transaction implements BlockchainEntity {
             return false;
         }
         Transaction that = (Transaction) o;
-        return Objects.equals(blockchainId, that.blockchainId) &&
-            Objects.equals(hash, that.hash);
+        return Objects.equals(hash, that.hash);
     }
 
     @Override
     public int hashCode () {
-        return Objects.hash(blockchainId, hash);
+        return Objects.hash(hash);
     }
 
     @Override
     public String toString () {
         return "Transaction{" +
-            "blockchainId='" + blockchainId + '\'' +
-            ", hash='" + hash + '\'' +
+            "hash='" + hash + '\'' +
             ", nonce=" + nonce +
             ", blockNumber=" + blockNumber +
             ", from='" + from + '\'' +
@@ -155,7 +143,6 @@ public final class Transaction implements BlockchainEntity {
     }
 
     public static class Builder {
-        private String              blockchainId;
         private String              hash;
         private BigInteger          nonce;
         private BigInteger          blockNumber;
@@ -166,11 +153,6 @@ public final class Transaction implements BlockchainEntity {
         private Long                timestamp;
         private List<FunctionCall>  functionCalls;
         private Map<String, Object> optionalProperties;
-
-        public Transaction.Builder blockchainId (String value) {
-            this.blockchainId = value;
-            return this;
-        }
 
         public Transaction.Builder hash (String value) {
             this.hash = value;

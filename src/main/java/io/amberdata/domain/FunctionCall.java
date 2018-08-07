@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Objects;
 
 public class FunctionCall {
-
     private String              name;
     private String              signature;
     private List<Argument>      arguments;
@@ -19,7 +18,7 @@ public class FunctionCall {
     private Map<String, Object> optionalProperties;
     private Long                blockNumber;
     private String              transactionHash;
-    private String              timestamp;
+    private Long                timestamp;
 
     private FunctionCall (Builder builder) {
         this.name = builder.name;
@@ -142,11 +141,11 @@ public class FunctionCall {
         this.transactionHash = transactionHash;
     }
 
-    public String getTimestamp () {
+    public Long getTimestamp () {
         return timestamp;
     }
 
-    public void setTimestamp (String timestamp) {
+    public void setTimestamp (Long timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -230,7 +229,7 @@ public class FunctionCall {
         private Map<String, Object> optionalProperties;
         private Long                blockNumber;
         private String              transactionHash;
-        private String              timestamp;
+        private Long                timestamp;
 
         public FunctionCall.Builder name (String name) {
             this.name = name;
@@ -297,7 +296,7 @@ public class FunctionCall {
             return this;
         }
 
-        public FunctionCall.Builder timestamp (String value) {
+        public FunctionCall.Builder timestamp (Long value) {
             this.timestamp = value;
             return this;
         }

@@ -4,24 +4,14 @@ import java.util.Map;
 import java.util.Objects;
 
 public final class Address implements BlockchainEntity {
-    private String              blockchainId;
     private String              hash;
     private Long                timestamp;
     private Map<String, Object> optionalProperties;
 
     private Address (Builder builder) {
-        this.blockchainId = builder.blockchainId;
         this.hash = builder.hash;
         this.timestamp = builder.timestamp;
         this.optionalProperties = builder.optionalProperties;
-    }
-
-    public String getBlockchainId () {
-        return blockchainId;
-    }
-
-    public void setBlockchainId (String blockchainId) {
-        this.blockchainId = blockchainId;
     }
 
     public String getHash () {
@@ -57,37 +47,29 @@ public final class Address implements BlockchainEntity {
             return false;
         }
         Address address = (Address) o;
-        return Objects.equals(blockchainId, address.blockchainId) &&
-            Objects.equals(hash, address.hash) &&
+        return Objects.equals(hash, address.hash) &&
             Objects.equals(timestamp, address.timestamp) &&
             Objects.equals(optionalProperties, address.optionalProperties);
     }
 
     @Override
     public int hashCode () {
-        return Objects.hash(blockchainId, hash, timestamp, optionalProperties);
+        return Objects.hash(hash, timestamp, optionalProperties);
     }
 
     @Override
     public String toString () {
         return "Address{" +
-            "blockchainId='" + blockchainId + '\'' +
-            ", hash='" + hash + '\'' +
+            "hash='" + hash + '\'' +
             ", timestamp=" + timestamp +
             ", optionalProperties=" + optionalProperties +
             '}';
     }
 
     public static class Builder {
-        private String              blockchainId;
         private String              hash;
         private Long                timestamp;
         private Map<String, Object> optionalProperties;
-
-        public Address.Builder blockchainId (String value) {
-            this.blockchainId = value;
-            return this;
-        }
 
         public Address.Builder hash (String value) {
             this.hash = value;
