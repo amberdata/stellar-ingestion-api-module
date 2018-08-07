@@ -6,7 +6,7 @@ import java.util.Objects;
 public final class Address implements BlockchainEntity {
     private String              blockchainId;
     private String              hash;
-    private Long                timestamp; // TODO get it somewhere from Stellar
+    private Long                timestamp;
     private Map<String, Object> optionalProperties;
 
     private Address (Builder builder) {
