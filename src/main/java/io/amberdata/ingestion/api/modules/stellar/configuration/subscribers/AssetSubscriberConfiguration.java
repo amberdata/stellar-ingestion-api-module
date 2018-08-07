@@ -16,6 +16,7 @@ import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Asset;
+import io.amberdata.domain.Token;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
@@ -58,7 +59,7 @@ public class AssetSubscriberConfiguration {
                     .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/tokens", entities, Asset.class))
+            .map(entities -> apiClient.publish("/tokens", entities, Token.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
@@ -106,7 +107,7 @@ public class AssetSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getCursorPointer(Resource.ASSET);
+        String cursorPointer = stateStorage.getCursorPointer(Resource.TOKEN);
 
         LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 

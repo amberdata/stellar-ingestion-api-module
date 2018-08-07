@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.Arrays;
@@ -22,6 +23,7 @@ import io.amberdata.domain.Address;
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.Block;
 import io.amberdata.domain.FunctionCall;
+import io.amberdata.domain.Token;
 import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.mapper.operations.OperationMapperManager;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
@@ -116,20 +118,30 @@ public class ModelMapper {
         );
     }
 
-    public BlockchainEntityWithState<Asset> map (AssetResponse assetResponse, String pagingToken) {
-        Asset asset = new Asset.Builder()
-            .type(Asset.AssetType.fromName(assetResponse.getAssetType()))
-            .code(assetResponse.getAssetCode())
-            .issuerAccount(assetResponse.getAssetIssuer())
-            .amount(assetResponse.getAmount())
-            .isAuthRequired(assetResponse.getFlags().isAuthRequired())
-            .isAuthRevocable(assetResponse.getFlags().isAuthRevocable())
+    public BlockchainEntityWithState<Token> map (AssetResponse assetResponse, String pagingToken) {
+
+        Token token = new Token.Builder()
+            .address(assetResponse.getAssetIssuer())
+            .symbol(assetResponse.getAssetCode())
+            .name(assetResponse.getAssetType())
+            .decimals(new BigDecimal(assetResponse.getAmount()))
+            .optionalProperties(tokenOptionalProperties(assetResponse))
             .build();
 
         return BlockchainEntityWithState.from(
-            asset,
-            ResourceState.from(Resource.ASSET, pagingToken)
+            token,
+            ResourceState.from(Resource.TOKEN, pagingToken)
         );
+    }
+
+    private Map<String, Object> tokenOptionalProperties (AssetResponse assetResponse) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+
+        optionalProperties.put("num_accounts", assetResponse.getNumAccounts());
+        optionalProperties.put("flag_auth_required", assetResponse.getFlags().isAuthRequired());
+        optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
+
+        return optionalProperties;
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
