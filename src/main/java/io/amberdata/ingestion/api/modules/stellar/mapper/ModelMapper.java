@@ -113,7 +113,7 @@ public class ModelMapper {
                                                    String timestamp) {
         Address address = new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
-            .timestamp(timestamp)
+            .timestamp(Instant.parse(timestamp).toEpochMilli())
             .optionalProperties(addressOptionalProperties(accountResponse))
             .build();
 

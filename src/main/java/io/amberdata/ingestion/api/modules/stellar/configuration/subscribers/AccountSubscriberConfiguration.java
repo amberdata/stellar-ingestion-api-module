@@ -69,10 +69,10 @@ public class AccountSubscriberConfiguration {
             .flatMap(functionCall ->
                 Stream.of(
                     Optional.ofNullable(
-                        functionCall.getFrom() == null ?
+                        functionCall.getFrom() != null ?
                             AccountWithTime.from(functionCall.getFrom(), functionCall.getTimestamp()) : null),
                     Optional.ofNullable(
-                        functionCall.getTo() == null ?
+                        functionCall.getTo() != null ?
                             AccountWithTime.from(functionCall.getTo(), functionCall.getTimestamp()) : null)
                 )
             )

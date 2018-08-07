@@ -6,7 +6,7 @@ import java.util.Objects;
 public final class Address implements BlockchainEntity {
     private String              blockchainId;
     private String              hash;
-    private String              timestamp;
+    private Long                timestamp;
     private Map<String, Object> optionalProperties;
 
     private Address (Builder builder) {
@@ -32,11 +32,11 @@ public final class Address implements BlockchainEntity {
         this.hash = hash;
     }
 
-    public String getTimestamp () {
+    public Long getTimestamp () {
         return timestamp;
     }
 
-    public void setTimestamp (String timestamp) {
+    public void setTimestamp (Long timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -81,7 +81,7 @@ public final class Address implements BlockchainEntity {
     public static class Builder {
         private String              blockchainId;
         private String              hash;
-        private String              timestamp;
+        private Long                timestamp;
         private Map<String, Object> optionalProperties;
 
         public Address.Builder blockchainId (String value) {
@@ -94,7 +94,7 @@ public final class Address implements BlockchainEntity {
             return this;
         }
 
-        public Address.Builder timestamp (String value) {
+        public Address.Builder timestamp (Long value) {
             this.timestamp = value;
             return this;
         }
