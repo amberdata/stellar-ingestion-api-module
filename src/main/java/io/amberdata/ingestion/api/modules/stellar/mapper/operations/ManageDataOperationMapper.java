@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.ManageDataOperation;
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -25,6 +26,7 @@ public class ManageDataOperationMapper implements OperationMapper {
 
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .type(ManageDataOperation.class.getSimpleName())
             .arguments(
                 Collections.singletonList(
                     FunctionCall.Argument.from(response.getName(), response.getValue())

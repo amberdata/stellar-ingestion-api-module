@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.PathPaymentOperation;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 
@@ -48,6 +49,7 @@ public class PathPaymentOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getFrom() != null ? response.getFrom().getAccountId() : "")
             .to(response.getTo() != null ? response.getTo().getAccountId() : "")
+            .type(PathPaymentOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(response, asset))
