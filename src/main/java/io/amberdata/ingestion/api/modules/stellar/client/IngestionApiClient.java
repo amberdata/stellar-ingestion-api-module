@@ -50,11 +50,15 @@ public class IngestionApiClient {
             String.join(",", entities.stream().map(Object::toString).collect(Collectors.toList())),
             endpointUri);
 
+        List<T> domainEntities = entities.stream()
+            .map(BlockchainEntityWithState::getEntity)
+            .collect(Collectors.toList());
+
         webClient
             .post()
             .uri(endpointUri)
             .accept(MediaType.APPLICATION_JSON)
-            .body(BodyInserters.fromObject(entities))
+            .body(BodyInserters.fromObject(domainEntities))
             .retrieve()
             .bodyToMono(entityClass)
             .retryWhen(companion -> companion
