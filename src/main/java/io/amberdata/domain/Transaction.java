@@ -1,5 +1,6 @@
 package io.amberdata.domain;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.List;
 import java.util.Map;
@@ -15,6 +16,8 @@ public final class Transaction implements BlockchainEntity {
     private Integer             numLogs;
     private Long                timestamp;
     private List<FunctionCall>  functionCalls;
+    private String              status;
+    private BigDecimal          value;
     private Map<String, Object> optionalProperties;
 
     public Transaction (Builder builder) {
@@ -110,6 +113,22 @@ public final class Transaction implements BlockchainEntity {
         this.optionalProperties = optionalProperties;
     }
 
+    public String getStatus () {
+        return status;
+    }
+
+    public void setStatus (String status) {
+        this.status = status;
+    }
+
+    public BigDecimal getValue () {
+        return value;
+    }
+
+    public void setValue (BigDecimal value) {
+        this.value = value;
+    }
+
     @Override
     public boolean equals (Object o) {
         if (this == o) {
@@ -152,55 +171,67 @@ public final class Transaction implements BlockchainEntity {
         private Integer             numLogs;
         private Long                timestamp;
         private List<FunctionCall>  functionCalls;
+        private String              status;
+        private BigDecimal          value;
         private Map<String, Object> optionalProperties;
 
-        public Transaction.Builder hash (String value) {
-            this.hash = value;
+        public Transaction.Builder hash (String aValue) {
+            this.hash = aValue;
             return this;
         }
 
-        public Transaction.Builder nonce (BigInteger value) {
-            this.nonce = value;
+        public Transaction.Builder nonce (BigInteger aValue) {
+            this.nonce = aValue;
             return this;
         }
 
-        public Transaction.Builder blockNumber (BigInteger value) {
-            this.blockNumber = value;
+        public Transaction.Builder blockNumber (BigInteger aValue) {
+            this.blockNumber = aValue;
             return this;
         }
 
-        public Transaction.Builder from (String value) {
-            this.from = value;
+        public Transaction.Builder from (String aValue) {
+            this.from = aValue;
             return this;
         }
 
-        public Transaction.Builder gas (BigInteger value) {
-            this.gas = value;
+        public Transaction.Builder gas (BigInteger aValue) {
+            this.gas = aValue;
             return this;
         }
 
-        public Transaction.Builder gasUsed (BigInteger value) {
-            this.gasUsed = value;
+        public Transaction.Builder gasUsed (BigInteger aValue) {
+            this.gasUsed = aValue;
             return this;
         }
 
-        public Transaction.Builder numLogs (Integer value) {
-            this.numLogs = value;
+        public Transaction.Builder numLogs (Integer aValue) {
+            this.numLogs = aValue;
             return this;
         }
 
-        public Transaction.Builder timestamp (Long value) {
-            this.timestamp = value;
+        public Transaction.Builder timestamp (Long aValue) {
+            this.timestamp = aValue;
             return this;
         }
 
-        public Transaction.Builder functionCalls (List<FunctionCall> functionCalls) {
-            this.functionCalls = functionCalls;
+        public Transaction.Builder functionCalls (List<FunctionCall> aValue) {
+            this.functionCalls = aValue;
             return this;
         }
 
-        public Transaction.Builder optionalProperties (Map<String, Object> value) {
-            this.optionalProperties = value;
+        public Transaction.Builder status (String aValue) {
+            this.status = aValue;
+            return this;
+        }
+
+        public Transaction.Builder value (BigDecimal aValue) {
+            this.value = aValue;
+            return this;
+        }
+
+        public Transaction.Builder optionalProperties (Map<String, Object> aValue) {
+            this.optionalProperties = aValue;
             return this;
         }
 

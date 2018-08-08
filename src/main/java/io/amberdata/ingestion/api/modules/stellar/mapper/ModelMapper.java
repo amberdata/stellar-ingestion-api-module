@@ -83,6 +83,8 @@ public class ModelMapper {
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
             .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
+            .status("confirmed")
+            .value(BigDecimal.ZERO)
             .build();
 
         return BlockchainEntityWithState.from(
