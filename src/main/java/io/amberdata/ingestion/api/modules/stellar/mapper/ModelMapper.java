@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -95,8 +96,9 @@ public class ModelMapper {
     }
 
     public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {
-        return operationResponses.stream()
-            .map(operationResponse -> this.operationMapperManager.map(operationResponse, ledger))
+        return IntStream
+            .range(0, operationResponses.size())
+            .mapToObj(index -> this.operationMapperManager.map(operationResponses.get(index), ledger, index))
             .collect(Collectors.toList());
     }
 

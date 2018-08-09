@@ -45,13 +45,21 @@ public class OperationMapperManager {
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
     }
 
-    public FunctionCall map (OperationResponse operationResponse, Long ledger) {
+    public FunctionCall map (OperationResponse operationResponse, Long ledger, Integer index) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
 
         FunctionCall    functionCall    = operationMapper.map(operationResponse);
         functionCall.setBlockNumber(ledger);
         functionCall.setTransactionHash(operationResponse.getTransactionHash());
         functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
+        functionCall.setDepth(0);
+        functionCall.setIndex(index);
+        functionCall.setSignature(operationResponse.getSourceAccount().getAccountId());
+        functionCall.setHash(
+            String.valueOf(ledger) + "_" +
+            operationResponse.getTransactionHash() + "_" +
+            String.valueOf(index)
+        );
 
         return functionCall;
     }

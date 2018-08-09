@@ -6,6 +6,7 @@ import java.util.Objects;
 
 public class FunctionCall {
     private String              name;
+    private String              hash;
     private String              signature;
     private List<Argument>      arguments;
     private String              type;
@@ -19,6 +20,7 @@ public class FunctionCall {
     private Long                blockNumber;
     private String              transactionHash;
     private Integer             depth;
+    private Integer             index;
     private Long                timestamp;
 
     public FunctionCall () {
@@ -26,6 +28,7 @@ public class FunctionCall {
 
     private FunctionCall (Builder builder) {
         this.name = builder.name;
+        this.hash = builder.hash;
         this.signature = builder.signature;
         this.arguments = builder.arguments;
         this.type = builder.type;
@@ -39,6 +42,7 @@ public class FunctionCall {
         this.blockNumber = builder.blockNumber;
         this.transactionHash = builder.transactionHash;
         this.depth = builder.depth;
+        this.index = builder.index;
         this.timestamp = builder.timestamp;
     }
 
@@ -48,6 +52,14 @@ public class FunctionCall {
 
     public void setName (String name) {
         this.name = name;
+    }
+
+    public String getHash () {
+        return hash;
+    }
+
+    public void setHash (String hash) {
+        this.hash = hash;
     }
 
     public String getSignature () {
@@ -154,6 +166,14 @@ public class FunctionCall {
         this.depth = depth;
     }
 
+    public Integer getIndex () {
+        return index;
+    }
+
+    public void setIndex (Integer index) {
+        this.index = index;
+    }
+
     public Long getTimestamp () {
         return timestamp;
     }
@@ -230,6 +250,7 @@ public class FunctionCall {
 
     public static class Builder {
         private String              name;
+        private String              hash;
         private String              signature;
         private List<Argument>      arguments;
         private String              type;
@@ -243,10 +264,16 @@ public class FunctionCall {
         private Long                blockNumber;
         private String              transactionHash;
         private Integer             depth;
+        private Integer             index;
         private Long                timestamp;
 
         public FunctionCall.Builder name (String name) {
             this.name = name;
+            return this;
+        }
+
+        public FunctionCall.Builder hash (String hash) {
+            this.hash = hash;
             return this;
         }
 
@@ -312,6 +339,11 @@ public class FunctionCall {
 
         public FunctionCall.Builder depth (Integer value) {
             this.depth = value;
+            return this;
+        }
+
+        public FunctionCall.Builder index (Integer value) {
+            this.index = value;
             return this;
         }
 
