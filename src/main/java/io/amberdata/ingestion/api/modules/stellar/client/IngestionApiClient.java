@@ -34,6 +34,8 @@ public class IngestionApiClient {
             .baseUrl(apiProperties.getUrl())
             .defaultHeaders(this::defaultHttpHeaders)
             .build();
+
+        LOG.info("Creating Ingestion API client with configured with {}", apiProperties);
     }
 
     private void defaultHttpHeaders (HttpHeaders httpHeaders) {
@@ -46,12 +48,9 @@ public class IngestionApiClient {
                                                      List<BlockchainEntityWithState<T>> entities,
                                                      Class<T> entityClass) {
 
-        LOG.info("Going to publish {} to the ingestion API endpoint {}",
-            String.join(",", entities.stream().map(Object::toString).collect(Collectors.toList())),
-            endpointUri);
-
         List<T> domainEntities = entities.stream()
             .map(BlockchainEntityWithState::getEntity)
+            .peek(entity -> LOG.info("Going to publish {} to the ingestion API endpoint {}", entity, endpointUri))
             .collect(Collectors.toList());
 
         webClient
@@ -71,7 +70,7 @@ public class IngestionApiClient {
     }
 
     private int handleError (Throwable error, int retryIndex) {
-        if (retryIndex < 100) { // todo make this configurable - number of retries before the app gives up
+        if (retryIndex < apiProperties.getRetriesOnError()) {
             return retryIndex + 1;
         }
         throw Exceptions.propagate(error);

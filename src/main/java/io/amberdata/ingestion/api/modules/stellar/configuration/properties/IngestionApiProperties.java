@@ -9,6 +9,7 @@ public class IngestionApiProperties {
     private String url;
     private String blockchainId;
     private String apiKey;
+    private Integer retriesOnError;
 
     public String getUrl () {
         return url;
@@ -32,5 +33,23 @@ public class IngestionApiProperties {
 
     public void setApiKey (String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public Integer getRetriesOnError () {
+        return retriesOnError;
+    }
+
+    public void setRetriesOnError (Integer retriesOnError) {
+        this.retriesOnError = retriesOnError;
+    }
+
+    @Override
+    public String toString () {
+        return "IngestionApiProperties{" +
+            "url='" + url + '\'' +
+            ", blockchainId='" + blockchainId + '\'' +
+            ", apiKey='" + apiKey + '\'' +
+            ", retriesOnError=" + retriesOnError +
+            '}';
     }
 }
