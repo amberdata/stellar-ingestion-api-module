@@ -18,6 +18,7 @@ public class FunctionCall {
     private Map<String, Object> optionalProperties;
     private Long                blockNumber;
     private String              transactionHash;
+    private Integer             depth;
     private Long                timestamp;
 
     private FunctionCall (Builder builder) {
@@ -34,6 +35,7 @@ public class FunctionCall {
         this.optionalProperties = builder.optionalProperties;
         this.blockNumber = builder.blockNumber;
         this.transactionHash = builder.transactionHash;
+        this.depth = builder.depth;
         this.timestamp = builder.timestamp;
     }
 
@@ -141,6 +143,14 @@ public class FunctionCall {
         this.transactionHash = transactionHash;
     }
 
+    public Integer getDepth () {
+        return depth;
+    }
+
+    public void setDepth (Integer depth) {
+        this.depth = depth;
+    }
+
     public Long getTimestamp () {
         return timestamp;
     }
@@ -229,6 +239,7 @@ public class FunctionCall {
         private Map<String, Object> optionalProperties;
         private Long                blockNumber;
         private String              transactionHash;
+        private Integer             depth;
         private Long                timestamp;
 
         public FunctionCall.Builder name (String name) {
@@ -293,6 +304,11 @@ public class FunctionCall {
 
         public FunctionCall.Builder transactionHash (String value) {
             this.transactionHash = value;
+            return this;
+        }
+
+        public FunctionCall.Builder depth (Integer value) {
+            this.depth = value;
             return this;
         }
 

@@ -46,7 +46,7 @@ public class ModelMapper {
             .number(BigInteger.valueOf(ledgerResponse.getSequence()))
             .hash(ledgerResponse.getHash())
             .parentHash(ledgerResponse.getPrevHash())
-            //.gasUsed(new BigInteger(ledgerResponse.getFeePool())) causes NumberFormatException because of decimal there
+            .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
             .numTransactions(ledgerResponse.getTransactionCount())
             .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
             .optionalProperties(blockOptionalProperties(ledgerResponse))
@@ -66,6 +66,7 @@ public class ModelMapper {
         optionalProperties.put("base_fee_in_stroops", ledgerResponse.getBaseFeeInStroops());
         optionalProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
         optionalProperties.put("max_tx_set_size", ledgerResponse.getMaxTxSetSize());
+        optionalProperties.put("sequence", ledgerResponse.getSequence());
 
         return optionalProperties;
     }
