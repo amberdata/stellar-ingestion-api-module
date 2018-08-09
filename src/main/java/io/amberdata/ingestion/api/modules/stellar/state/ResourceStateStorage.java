@@ -16,6 +16,12 @@ public class ResourceStateStorage {
 
     public ResourceStateStorage (ResourceStateRepository resourceStateRepository) {
         this.resourceStateRepository = resourceStateRepository;
+
+        resourceStateRepository.findAll().forEach(this::logStateRecord);
+    }
+
+    private void logStateRecord (ResourceState resourceState) {
+        LOG.info("Stored state record: [ {} | {} ]", resourceState.getResourceType(), resourceState.getPagingToken());
     }
 
     public void storeState (BlockchainEntityWithState entityWithState) {
