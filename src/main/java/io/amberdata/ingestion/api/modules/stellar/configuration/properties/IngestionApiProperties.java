@@ -11,6 +11,8 @@ public class IngestionApiProperties {
     private String apiKey;
     private Integer retriesOnError;
 
+    private Batch batch;
+
     public String getUrl () {
         return url;
     }
@@ -43,6 +45,43 @@ public class IngestionApiProperties {
         this.retriesOnError = retriesOnError;
     }
 
+    public Batch getBatch () {
+        return batch;
+    }
+
+    public void setBatch (Batch batch) {
+        this.batch = batch;
+    }
+
+    public static class Batch {
+        private Integer blocksInChunk;
+        private Integer transactionsInChunk;
+
+        public Integer getBlocksInChunk () {
+            return blocksInChunk;
+        }
+
+        public void setBlocksInChunk (Integer blocksInChunk) {
+            this.blocksInChunk = blocksInChunk;
+        }
+
+        public Integer getTransactionsInChunk () {
+            return transactionsInChunk;
+        }
+
+        public void setTransactionsInChunk (Integer transactionsInChunk) {
+            this.transactionsInChunk = transactionsInChunk;
+        }
+
+        @Override
+        public String toString () {
+            return "Batch{" +
+                "blocksInChunk=" + blocksInChunk +
+                ", transactionsInChunk=" + transactionsInChunk +
+                '}';
+        }
+    }
+
     @Override
     public String toString () {
         return "IngestionApiProperties{" +
@@ -50,6 +89,7 @@ public class IngestionApiProperties {
             ", blockchainId='" + blockchainId + '\'' +
             ", apiKey='" + apiKey + '\'' +
             ", retriesOnError=" + retriesOnError +
+            ", batch=" + batch +
             '}';
     }
 }

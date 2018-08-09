@@ -48,7 +48,7 @@ public class LedgersSubscriberConfiguration {
             .retryWhen(SubscriberErrorsHandler::onError)
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(modelMapper::map)
-            .buffer(10)
+            .buffer(server.batchSettings().getBlocksInChunk())
             .map(entities -> apiClient.publish("/blocks", entities, Block.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }

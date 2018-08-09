@@ -8,15 +8,21 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.Server;
 
+import io.amberdata.ingestion.api.modules.stellar.configuration.properties.IngestionApiProperties;
+
 @Component
 public class HorizonServer {
     private static final Logger LOG = LoggerFactory.getLogger(HorizonServer.class);
 
     private final Server horizonServer;
+    private final IngestionApiProperties apiProperties;
 
-    public HorizonServer (@Value("${stellar.horizon.server}") String serverUrl) {
+    public HorizonServer (@Value("${stellar.horizon.server}") String serverUrl,
+                          IngestionApiProperties apiProperties) {
+
         LOG.info("Horizon server URL {}", serverUrl);
 
+        this.apiProperties = apiProperties;
         this.horizonServer = new Server(serverUrl);
     }
 
@@ -31,6 +37,10 @@ public class HorizonServer {
         catch (IOException e) {
             throw new ServerConnectionException("Cannot resolve connection to Horizon server", e);
         }
+    }
+
+    public IngestionApiProperties.Batch batchSettings () {
+        return apiProperties.getBatch();
     }
 
     public static class ServerConnectionException extends RuntimeException {
