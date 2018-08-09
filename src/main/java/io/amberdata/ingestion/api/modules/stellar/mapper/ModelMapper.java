@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +47,7 @@ public class ModelMapper {
             .number(BigInteger.valueOf(ledgerResponse.getSequence()))
             .hash(ledgerResponse.getHash())
             .parentHash(ledgerResponse.getPrevHash())
-            //.gasUsed(new BigInteger(ledgerResponse.getFeePool())) causes NumberFormatException because of decimal there
+            .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
             .numTransactions(ledgerResponse.getTransactionCount())
             .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
             .optionalProperties(blockOptionalProperties(ledgerResponse))
@@ -66,6 +67,7 @@ public class ModelMapper {
         optionalProperties.put("base_fee_in_stroops", ledgerResponse.getBaseFeeInStroops());
         optionalProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
         optionalProperties.put("max_tx_set_size", ledgerResponse.getMaxTxSetSize());
+        optionalProperties.put("sequence", ledgerResponse.getSequence());
 
         return optionalProperties;
     }
@@ -83,6 +85,8 @@ public class ModelMapper {
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
             .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
+            .status("0x1")
+            .value(BigDecimal.ZERO)
             .build();
 
         return BlockchainEntityWithState.from(
@@ -92,8 +96,9 @@ public class ModelMapper {
     }
 
     public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {
-        return operationResponses.stream()
-            .map(operationResponse -> this.operationMapperManager.map(operationResponse, ledger))
+        return IntStream
+            .range(0, operationResponses.size())
+            .mapToObj(index -> this.operationMapperManager.map(operationResponses.get(index), ledger, index))
             .collect(Collectors.toList());
     }
 

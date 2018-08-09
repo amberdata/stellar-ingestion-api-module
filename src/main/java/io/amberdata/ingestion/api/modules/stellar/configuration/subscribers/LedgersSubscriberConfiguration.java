@@ -12,6 +12,7 @@ import org.stellar.sdk.responses.LedgerResponse;
 import io.amberdata.domain.Block;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
+import io.amberdata.ingestion.api.modules.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
@@ -28,16 +29,19 @@ public class LedgersSubscriberConfiguration {
     private final IngestionApiClient   apiClient;
     private final ModelMapper          modelMapper;
     private final HorizonServer        server;
+    private final BatchSettings        batchSettings;
 
     public LedgersSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
-                                           HorizonServer server) {
+                                           HorizonServer server,
+                                           BatchSettings batchSettings) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
+        this.batchSettings = batchSettings;
     }
 
     @PostConstruct
@@ -48,7 +52,7 @@ public class LedgersSubscriberConfiguration {
             .retryWhen(SubscriberErrorsHandler::onError)
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(modelMapper::map)
-            .buffer(10)
+            .buffer(batchSettings.blocksInChunk())
             .map(entities -> apiClient.publish("/blocks", entities, Block.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }

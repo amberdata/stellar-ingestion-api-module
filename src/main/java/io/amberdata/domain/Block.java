@@ -1,5 +1,6 @@
 package io.amberdata.domain;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Map;
 import java.util.Objects;
@@ -8,10 +9,13 @@ public final class Block implements BlockchainEntity {
     private BigInteger          number;
     private String              hash;
     private String              parentHash;
-    private BigInteger          gasUsed;
+    private BigDecimal          gasUsed;
     private Long                timestamp;
     private Integer             numTransactions;
     private Map<String, Object> optionalProperties;
+
+    public Block () {
+    }
 
     private Block (Builder builder) {
         this.number = builder.number;
@@ -47,11 +51,11 @@ public final class Block implements BlockchainEntity {
         this.parentHash = parentHash;
     }
 
-    public BigInteger getGasUsed () {
+    public BigDecimal getGasUsed () {
         return gasUsed;
     }
 
-    public void setGasUsed (BigInteger gasUsed) {
+    public void setGasUsed (BigDecimal gasUsed) {
         this.gasUsed = gasUsed;
     }
 
@@ -119,7 +123,7 @@ public final class Block implements BlockchainEntity {
         private BigInteger          number;
         private String              hash;
         private String              parentHash;
-        private BigInteger          gasUsed;
+        private BigDecimal          gasUsed;
         private Long                timestamp;
         private Integer             numTransactions;
         private Map<String, Object> optionalProperties;
@@ -139,7 +143,7 @@ public final class Block implements BlockchainEntity {
             return this;
         }
 
-        public Block.Builder gasUsed (BigInteger value) {
+        public Block.Builder gasUsed (BigDecimal value) {
             this.gasUsed = value;
             return this;
         }

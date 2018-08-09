@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.Server;
 
+import io.amberdata.ingestion.api.modules.stellar.configuration.properties.IngestionApiProperties;
+
 @Component
 public class HorizonServer {
     private static final Logger LOG = LoggerFactory.getLogger(HorizonServer.class);
@@ -15,6 +17,7 @@ public class HorizonServer {
     private final Server horizonServer;
 
     public HorizonServer (@Value("${stellar.horizon.server}") String serverUrl) {
+
         LOG.info("Horizon server URL {}", serverUrl);
 
         this.horizonServer = new Server(serverUrl);

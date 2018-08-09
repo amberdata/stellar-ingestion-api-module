@@ -15,6 +15,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 import io.amberdata.domain.Transaction;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
+import io.amberdata.ingestion.api.modules.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
@@ -31,16 +32,19 @@ public class TransactionsSubscriberConfiguration {
     private final IngestionApiClient   apiClient;
     private final ModelMapper          modelMapper;
     private final HorizonServer        server;
+    private final BatchSettings        batchSettings;
 
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
                                                 IngestionApiClient apiClient,
                                                 ModelMapper modelMapper,
-                                                HorizonServer server) {
+                                                HorizonServer server,
+                                                BatchSettings batchSettings) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
+        this.batchSettings = batchSettings;
     }
 
     @PostConstruct
@@ -54,7 +58,7 @@ public class TransactionsSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return modelMapper.map(transactionResponse, operationResponses);
             })
-            .buffer(10)
+            .buffer(batchSettings.transactionsInChunk())
             .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity, Transaction.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
