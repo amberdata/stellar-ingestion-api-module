@@ -21,6 +21,9 @@ public class FunctionCall {
     private Integer             depth;
     private Long                timestamp;
 
+    public FunctionCall () {
+    }
+
     private FunctionCall (Builder builder) {
         this.name = builder.name;
         this.signature = builder.signature;

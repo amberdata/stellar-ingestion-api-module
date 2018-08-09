@@ -10,6 +10,9 @@ public class Asset {
     private boolean   isAuthRequired;
     private boolean   isAuthRevocable;
 
+    public Asset () {
+    }
+
     private Asset (Builder builder) {
         this.type = builder.type;
         this.code = builder.code;

@@ -60,12 +60,12 @@ public class IngestionApiClient {
             .accept(MediaType.APPLICATION_JSON)
             .body(BodyInserters.fromObject(domainEntities))
             .retrieve()
-            .bodyToMono(entityClass)
+            .bodyToFlux(entityClass)
             .retryWhen(companion -> companion
                 .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable.getMessage()))
                 .zipWith(Flux.range(1, Integer.MAX_VALUE), this::handleError)
                 .flatMap(index -> Mono.delay(Duration.ofMillis(index * 100)))
-            ).block();
+            ).blockLast();
 
         return entities.get(entities.size() - 1);
     }

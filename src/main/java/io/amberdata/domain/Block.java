@@ -14,6 +14,9 @@ public final class Block implements BlockchainEntity {
     private Integer             numTransactions;
     private Map<String, Object> optionalProperties;
 
+    public Block () {
+    }
+
     private Block (Builder builder) {
         this.number = builder.number;
         this.hash = builder.hash;

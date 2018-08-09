@@ -20,6 +20,9 @@ public final class Transaction implements BlockchainEntity {
     private BigDecimal          value;
     private Map<String, Object> optionalProperties;
 
+    public Transaction () {
+    }
+
     public Transaction (Builder builder) {
         this.hash               = builder.hash;
         this.nonce              = builder.nonce;
