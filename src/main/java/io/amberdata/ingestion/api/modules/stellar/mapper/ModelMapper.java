@@ -84,7 +84,7 @@ public class ModelMapper {
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
             .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
-            .status("confirmed")
+            .status("0x1")
             .value(BigDecimal.ZERO)
             .build();
 
