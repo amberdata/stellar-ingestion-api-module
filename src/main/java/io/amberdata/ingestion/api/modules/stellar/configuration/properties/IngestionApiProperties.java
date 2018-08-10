@@ -116,6 +116,8 @@ public class IngestionApiProperties {
             ", blockchainId='" + blockchainId + '\'' +
             ", apiKey='" + apiKey + '\'' +
             ", retriesOnError=" + retriesOnError +
+            ", backOffTimeoutInitial=" + backOffTimeoutInitial.toMillis() + "ms." +
+            ", backOffTimeoutMax=" + backOffTimeoutMax.toMillis() + "ms." +
             ", batch=" + batch +
             '}';
     }
