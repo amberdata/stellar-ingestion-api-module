@@ -1,15 +1,26 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration.properties;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.convert.DurationUnit;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 
-@Component
+@Configuration
 @ConfigurationProperties("ingestion.api")
 public class IngestionApiProperties {
     private String url;
     private String blockchainId;
     private String apiKey;
-    private Integer retriesOnError;
+
+    private Integer  retriesOnError;
+
+    @DurationUnit(ChronoUnit.MILLIS)
+    private Duration backOffTimeoutInitial;
+    @DurationUnit(ChronoUnit.MILLIS)
+    private Duration backOffTimeoutMax;
 
     private Batch batch;
 
@@ -38,11 +49,27 @@ public class IngestionApiProperties {
     }
 
     public Integer getRetriesOnError () {
-        return retriesOnError;
+        return retriesOnError > 0 ? retriesOnError : Integer.MAX_VALUE;
     }
 
     public void setRetriesOnError (Integer retriesOnError) {
         this.retriesOnError = retriesOnError;
+    }
+
+    public Duration getBackOffTimeoutInitial () {
+        return backOffTimeoutInitial;
+    }
+
+    public void setBackOffTimeoutInitial (Duration backOffTimeoutInitial) {
+        this.backOffTimeoutInitial = backOffTimeoutInitial;
+    }
+
+    public Duration getBackOffTimeoutMax () {
+        return backOffTimeoutMax;
+    }
+
+    public void setBackOffTimeoutMax (Duration backOffTimeoutMax) {
+        this.backOffTimeoutMax = backOffTimeoutMax;
     }
 
     public Batch getBatch () {
@@ -89,6 +116,8 @@ public class IngestionApiProperties {
             ", blockchainId='" + blockchainId + '\'' +
             ", apiKey='" + apiKey + '\'' +
             ", retriesOnError=" + retriesOnError +
+            ", backOffTimeoutInitial=" + backOffTimeoutInitial.toMillis() + "ms." +
+            ", backOffTimeoutMax=" + backOffTimeoutMax.toMillis() + "ms." +
             ", batch=" + batch +
             '}';
     }
