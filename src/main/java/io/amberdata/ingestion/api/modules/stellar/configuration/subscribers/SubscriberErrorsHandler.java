@@ -4,10 +4,10 @@ import java.time.Duration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import io.amberdata.ingestion.api.modules.stellar.StellarIngestionModuleDemoApplication;
+import io.amberdata.ingestion.api.modules.stellar.configuration.properties.HorizonServerProperties;
 
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -19,17 +19,21 @@ public class SubscriberErrorsHandler {
     private static final Logger LOG = LoggerFactory.getLogger(SubscriberErrorsHandler.class);
 
     private static int retriesOnError;
-    private static int backOffTimeout;
+    private static Duration backOffTimeoutInitialDuration;
+    private static Duration backOffTimeoutMaxDuration;
 
-    public SubscriberErrorsHandler (@Value("${stellar.horizon.retries-on-error}") int retriesOnError,
-                                    @Value("${stellar.horizon.back-off-timeout}") int backOffTimeout) {
-
-        SubscriberErrorsHandler.retriesOnError = retriesOnError;
-        SubscriberErrorsHandler.backOffTimeout = backOffTimeout;
+    public SubscriberErrorsHandler (HorizonServerProperties serverProperties) {
+        SubscriberErrorsHandler.retriesOnError = serverProperties.getRetriesOnError() > 0 ?
+            serverProperties.getRetriesOnError() : Integer.MAX_VALUE;
+        SubscriberErrorsHandler.backOffTimeoutInitialDuration = serverProperties.getBackOffTimeoutInitial();
+        SubscriberErrorsHandler.backOffTimeoutMaxDuration = serverProperties.getBackOffTimeoutMax();
 
         LOG.info(
-            "Configuring Subscriber errors handler with re-tries: {}, back-off-timeout: {}ms",
-            retriesOnError, backOffTimeout);
+            "Configuring Subscriber errors handler with re-tries: {}, " +
+                "back-off-timeout-initial: {}ms, back-off-timeout-max {}ms",
+            SubscriberErrorsHandler.retriesOnError,
+            SubscriberErrorsHandler.backOffTimeoutInitialDuration.toMillis(),
+            SubscriberErrorsHandler.backOffTimeoutMaxDuration.toMillis());
     }
 
     public static Flux<Long> onError (Flux<Throwable> companion) {
@@ -40,15 +44,21 @@ public class SubscriberErrorsHandler {
     }
 
     private static Mono<Long> retryBackOffPattern (Integer index) {
-        return Mono.delay(Duration.ofMillis(index * backOffTimeout));
+        Duration delayDuration = backOffTimeoutInitialDuration.multipliedBy(index);
+        if (delayDuration.compareTo(backOffTimeoutMaxDuration) > 0) {
+            delayDuration = backOffTimeoutMaxDuration;
+        }
+        LOG.info("Back-off delay {}ms", delayDuration.toMillis());
+
+        return Mono.delay(delayDuration);
     }
 
-    private static int retryCountPattern (Throwable error, Integer index) {
-        LOG.info("Retrying to recover after {}: {} times", error.getMessage(), index);
-        if (index == retriesOnError) {
+    private static int retryCountPattern (Throwable error, Integer retryIndex) {
+        LOG.info("Trying to recover after {}: {} times", error.getMessage(), retryIndex);
+        if (retryIndex == retriesOnError) {
             throw Exceptions.propagate(error);
         }
-        return index;
+        return retryIndex;
     }
 
     public static void handleFatalApplicationError (Throwable throwable) {

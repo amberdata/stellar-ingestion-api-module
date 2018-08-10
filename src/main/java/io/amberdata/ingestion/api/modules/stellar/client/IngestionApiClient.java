@@ -63,17 +63,29 @@ public class IngestionApiClient {
             .retryWhen(companion -> companion
                 .doOnNext(throwable -> LOG.error("Error occurred: {}", throwable.getMessage()))
                 .zipWith(Flux.range(1, Integer.MAX_VALUE), this::handleError)
-                .flatMap(index -> Mono.delay(Duration.ofMillis(index * 100)))
+                .flatMap(this::backOffDelay)
             ).blockLast();
 
         return entities.get(entities.size() - 1);
     }
 
     private int handleError (Throwable error, int retryIndex) {
+        LOG.info("Trying to recover after {}: {} times", error.getMessage(), retryIndex);
+
         if (retryIndex < apiProperties.getRetriesOnError()) {
             return retryIndex + 1;
         }
         throw Exceptions.propagate(error);
+    }
+
+    private Mono<Long> backOffDelay (Integer index) {
+        Duration delayDuration = apiProperties.getBackOffTimeoutInitial().multipliedBy(index);
+        if (delayDuration.compareTo(apiProperties.getBackOffTimeoutMax()) > 0) {
+            delayDuration = apiProperties.getBackOffTimeoutMax();
+        }
+        LOG.info("Back-off delay {}ms", delayDuration.toMillis());
+
+        return Mono.delay(delayDuration);
     }
 
     public <T extends BlockchainEntity> BlockchainEntityWithState<T> publish (String endpointUri,
