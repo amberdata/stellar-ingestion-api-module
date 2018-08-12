@@ -3,12 +3,14 @@ package io.amberdata.ingestion.api.modules.stellar.mapper;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,10 +103,23 @@ public class ModelMapper {
             .collect(Collectors.toList());
     }
 
-    public List<Asset> mapAssets (List<OperationResponse> operationResponses) {
-        return operationResponses.stream()
-            .flatMap(operationResponse -> this.operationMapperManager.mapAssets(operationResponse).stream())
-            .collect(Collectors.toList());
+    public List<Asset> mapAssets (List<OperationResponse> operationResponses, Long ledger) {
+        List<Asset> allAssets = new ArrayList<>();
+        for (int i = 0; i < operationResponses.size(); i++) {
+            OperationResponse operationResponse = operationResponses.get(i);
+            List<Asset> assets = this.operationMapperManager.mapAssets(operationResponse);
+            for (Asset asset : assets) {
+                asset.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
+                asset.setTransactionHash(operationResponse.getTransactionHash());
+                asset.setFunctionCallHash(
+                    String.valueOf(ledger) + "_" +
+                        operationResponse.getTransactionHash() + "_" +
+                        String.valueOf(i)
+                );
+            }
+            allAssets.addAll(assets);
+        }
+        return allAssets;
     }
 
     public BlockchainEntityWithState<Address> map (AccountResponse accountResponse,

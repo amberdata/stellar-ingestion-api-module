@@ -8,6 +8,9 @@ public class Asset implements BlockchainEntity {
     private String    code;
     private String    issuerAccount;
     private String    amount;
+    private Long      timestamp;
+    private String    transactionHash;
+    private String    functionCallHash;
 
     private Map<String, Object> optionalProperties;
 
@@ -19,6 +22,10 @@ public class Asset implements BlockchainEntity {
         this.code = builder.code;
         this.issuerAccount = builder.issuerAccount;
         this.amount = builder.amount;
+        this.timestamp = builder.timestamp;
+        this.transactionHash = builder.transactionHash;
+        this.functionCallHash = builder.functionCallHash;
+
         this.optionalProperties = builder.optionalProperties;
     }
 
@@ -56,6 +63,30 @@ public class Asset implements BlockchainEntity {
 
     public Map<String, Object> getOptionalProperties () {
         return optionalProperties;
+    }
+
+    public Long getTimestamp () {
+        return timestamp;
+    }
+
+    public void setTimestamp (Long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getTransactionHash () {
+        return transactionHash;
+    }
+
+    public void setTransactionHash (String transactionHash) {
+        this.transactionHash = transactionHash;
+    }
+
+    public String getFunctionCallHash () {
+        return functionCallHash;
+    }
+
+    public void setFunctionCallHash (String functionCallHash) {
+        this.functionCallHash = functionCallHash;
     }
 
     public void setOptionalProperties (Map<String, Object> optionalProperties) {
@@ -96,6 +127,9 @@ public class Asset implements BlockchainEntity {
         private String    code;
         private String    issuerAccount;
         private String    amount;
+        private Long      timestamp;
+        private String    transactionHash;
+        private String    functionCallHash;
 
         private Map<String, Object> optionalProperties;
 
@@ -116,6 +150,21 @@ public class Asset implements BlockchainEntity {
 
         public Builder amount (String value) {
             this.amount = value;
+            return this;
+        }
+
+        public Builder timestamp (Long value) {
+            this.timestamp = value;
+            return this;
+        }
+
+        public Builder transactionHash (String value) {
+            this.transactionHash = value;
+            return this;
+        }
+
+        public Builder functionCallHash (String value) {
+            this.functionCallHash = value;
             return this;
         }
 

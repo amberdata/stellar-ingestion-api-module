@@ -54,7 +54,7 @@ public class AssetSubscriberConfiguration {
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAssets(operationResponses).stream()
+                return processAssets(operationResponses, transactionResponse.getLedger()).stream()
                     .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
@@ -62,8 +62,8 @@ public class AssetSubscriberConfiguration {
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
-    private List<AssetResponse> processAssets (List<OperationResponse> operationResponses) {
-        return modelMapper.mapAssets(operationResponses).stream()
+    private List<AssetResponse> processAssets (List<OperationResponse> operationResponses, Long ledger) {
+        return modelMapper.mapAssets(operationResponses, ledger).stream()
             .distinct()
             .map(this::fetchAsset)
             .filter(Optional::isPresent)
