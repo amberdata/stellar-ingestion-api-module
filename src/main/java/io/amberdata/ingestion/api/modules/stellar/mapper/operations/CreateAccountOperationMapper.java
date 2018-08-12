@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -33,6 +34,12 @@ public class CreateAccountOperationMapper implements OperationMapper {
             .to(response.getAccount() != null ? response.getAccount().getAccountId() : "")
             .type(CreateAccountOperation.class.getSimpleName())
             .value(response.getStartingBalance())
+            .signature("create_account(account_id, integer)")
+            .arguments(Arrays.asList(
+                    FunctionCall.Argument.from("destination", response.getAccount().getAccountId()),
+                    FunctionCall.Argument.from("starting_balance", response.getStartingBalance())
+                )
+            )
             .build();
     }
 

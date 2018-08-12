@@ -32,6 +32,10 @@ public class AccountMergeOperationMapper implements OperationMapper {
             .from(response.getAccount() != null ? response.getAccount().getAccountId() : "")
             .to(response.getInto() != null ? response.getInto().getAccountId() : "")
             .type(AccountMergeOperation.class.getSimpleName())
+            .signature("account_merge(account_id)")
+            .arguments(Collections.singletonList(
+                FunctionCall.Argument.from("destination", response.getInto().getAccountId()))
+            )
             .build();
     }
 

@@ -53,6 +53,17 @@ public class PathPaymentOperationMapper implements OperationMapper {
             .assetType(asset.getCode())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(response, asset))
+            .signature("path_payment(asset, integer, account_id, asset, integer, list_of_assets)")
+            .arguments(
+                Arrays.asList(
+                    // FunctionCall.Argument.from("send_asset", asset.getCode()), should be source asset
+                    FunctionCall.Argument.from("send_max", response.getSourceMax()),
+                    FunctionCall.Argument.from("destination", response.getTo().getAccountId()),
+                    FunctionCall.Argument.from("destination_asset", asset.getCode()),
+                    FunctionCall.Argument.from("destination_amount", response.getAmount())
+                    // FunctionCall.Argument.from("path", "") - no path in response
+                )
+            )
             .build();
     }
 
@@ -61,8 +72,9 @@ public class PathPaymentOperationMapper implements OperationMapper {
         PathPaymentOperationResponse response = (PathPaymentOperationResponse) operationResponse;
 
         Asset asset       = assetMapper.map(response.getAsset());
-        Asset sourceAsset = assetMapper.map(response.getSourceAsset());
-        return Arrays.asList(asset, sourceAsset);
+        // Asset sourceAsset = assetMapper.map(response.getSourceAsset());
+        // return Arrays.asList(asset, sourceAsset);
+        return Arrays.asList(asset);
     }
 
     private Map<String, Object> getOptionalProperties (PathPaymentOperationResponse response, Asset asset) {

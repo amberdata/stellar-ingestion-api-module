@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +50,13 @@ public class AllowTrustOperationMapper implements OperationMapper {
             .type(AllowTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .optionalProperties(getOptionalProperties(response, asset))
+            .signature("allow_trust(account_id, asset, boolean)")
+            .arguments(Arrays.asList(
+                    FunctionCall.Argument.from("trustor", response.getTrustor().getAccountId()),
+                    FunctionCall.Argument.from("type", asset.getCode()),
+                    FunctionCall.Argument.from("authorize", String.valueOf(response.isAuthorize()))
+                )
+            )
             .build();
     }
 

@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -27,9 +28,11 @@ public class ManageDataOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .type(ManageDataOperation.class.getSimpleName())
+            .signature("manage_data(string, binary_data)")
             .arguments(
-                Collections.singletonList(
-                    FunctionCall.Argument.from(response.getName(), response.getValue())
+                Arrays.asList(
+                    FunctionCall.Argument.from("name", response.getName()),
+                    FunctionCall.Argument.from("value", response.getValue())
                 )
             )
             .build();
