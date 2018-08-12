@@ -16,7 +16,6 @@ import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.domain.Asset;
-import io.amberdata.domain.Token;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
@@ -55,16 +54,16 @@ public class AssetSubscriberConfiguration {
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAssets(operationResponses).stream()
+                return processAssets(operationResponses, transactionResponse.getLedger()).stream()
                     .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/tokens", entities, Token.class))
+            .map(entities -> apiClient.publish("/assets", entities, Asset.class))
             .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
-    private List<AssetResponse> processAssets (List<OperationResponse> operationResponses) {
-        return modelMapper.mapAssets(operationResponses).stream()
+    private List<AssetResponse> processAssets (List<OperationResponse> operationResponses, Long ledger) {
+        return modelMapper.mapAssets(operationResponses, ledger).stream()
             .distinct()
             .map(this::fetchAsset)
             .filter(Optional::isPresent)
@@ -107,7 +106,7 @@ public class AssetSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getCursorPointer(Resource.TOKEN);
+        String cursorPointer = stateStorage.getCursorPointer(Resource.ASSET);
 
         LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 
