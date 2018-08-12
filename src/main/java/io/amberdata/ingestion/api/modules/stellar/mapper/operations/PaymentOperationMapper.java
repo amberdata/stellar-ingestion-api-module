@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -53,6 +54,14 @@ public class PaymentOperationMapper implements OperationMapper {
             .assetType(asset.getCode())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(asset))
+            .signature("payment(account_id, asset, integer)")
+            .arguments(
+                Arrays.asList(
+                    FunctionCall.Argument.from("destination", response.getTo().getAccountId()),
+                    FunctionCall.Argument.from("asset", asset.getCode()),
+                    FunctionCall.Argument.from("amount", response.getAmount())
+                )
+            )
             .build();
     }
 

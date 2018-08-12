@@ -36,11 +36,24 @@ public class ManageOfferOperationMapper implements OperationMapper {
             LOG.warn("Source account in ManageOfferOperationResponse is null");
         }
 
+        Asset selling = assetMapper.map(response.getSellingAsset());
+        Asset buying  = assetMapper.map(response.getBuyingAsset());
+
         return new FunctionCall.Builder()
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .type(ManageOfferOperation.class.getSimpleName())
             .value(response.getAmount())
-            .optionalProperties(getOptionalProperties(response))
+            .optionalProperties(getOptionalProperties(response, selling, buying))
+            .signature("manage_offer(asset, asset, integer, {numerator, denominator}, unsigned_integer)")
+            .arguments(
+                Arrays.asList(
+                    FunctionCall.Argument.from("selling", selling.getCode()),
+                    FunctionCall.Argument.from("buying", buying.getCode()),
+                    FunctionCall.Argument.from("amount", response.getAmount()),
+                    FunctionCall.Argument.from("price", response.getPrice()),
+                    FunctionCall.Argument.from("offer_id", response.getOfferId().toString())
+                )
+            )
             .build();
     }
 
@@ -53,10 +66,9 @@ public class ManageOfferOperationMapper implements OperationMapper {
         return Arrays.asList(selling, buying);
     }
 
-    private Map<String, Object> getOptionalProperties (ManageOfferOperationResponse response) {
-        Asset selling = assetMapper.map(response.getSellingAsset());
-        Asset buying  = assetMapper.map(response.getBuyingAsset());
-
+    private Map<String, Object> getOptionalProperties (ManageOfferOperationResponse response,
+                                                       Asset selling,
+                                                       Asset buying) {
         Map<String, Object> optionalProperties = new HashMap<>();
         optionalProperties.put("sellingAsset", selling.getCode());
         optionalProperties.put("stellarSellingAssetType", selling.getType().getName());

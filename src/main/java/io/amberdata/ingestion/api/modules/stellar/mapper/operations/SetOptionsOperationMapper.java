@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,8 +39,31 @@ public class SetOptionsOperationMapper implements OperationMapper {
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : "")
             .type(SetOptionsOperation.class.getSimpleName())
-            .signature(response.getSigner() != null ? response.getSigner().getAccountId() : "")
             .optionalProperties(getOptionalProperties(response))
+            .signature("set_options(account_id, integer, integer, integer, integer," +
+                "integer, integer, string, {public_key, weight})")
+            .arguments(
+                Arrays.asList(
+                    FunctionCall.Argument.from("inflation_destination",
+                        response.getInflationDestination().getAccountId()),
+
+                    FunctionCall.Argument.from("clear_flags",
+                        response.getClearFlags() != null && response.getClearFlags().length > 0 ?
+                            String.join("-", response.getClearFlags()) : ""),
+
+                    FunctionCall.Argument.from("set_flags",
+                        response.getSetFlags() != null && response.getSetFlags().length > 0 ?
+                            String.join("-", response.getSetFlags()) : ""),
+
+                    FunctionCall.Argument.from("master_weight", response.getMasterKeyWeight().toString()),
+                    FunctionCall.Argument.from("low_threshold", response.getLowThreshold().toString()),
+                    FunctionCall.Argument.from("medium_threshold", response.getMedThreshold().toString()),
+                    FunctionCall.Argument.from("high_threshold", response.getHighThreshold().toString()),
+                    FunctionCall.Argument.from("home_domain", response.getHomeDomain()),
+                    FunctionCall.Argument.from("signer", "{" + response.getSigner().getAccountId() + "," +
+                        response.getSignerWeight() + "}")
+                )
+            )
             .build();
     }
 
@@ -61,6 +85,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
         optionalProperties.put("medThreshold", response.getMedThreshold());
         optionalProperties.put("highThreshold", response.getHighThreshold());
         optionalProperties.put("homeDomain", response.getHomeDomain());
+        optionalProperties.put("signer", response.getSigner() != null ? response.getSigner().getAccountId() : "");
         optionalProperties.put("signerWeight", response.getSignerWeight());
         return optionalProperties;
     }

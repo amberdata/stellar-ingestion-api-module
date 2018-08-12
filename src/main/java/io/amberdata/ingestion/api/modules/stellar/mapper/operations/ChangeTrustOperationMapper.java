@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +53,12 @@ public class ChangeTrustOperationMapper implements OperationMapper {
             .type(ChangeTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .optionalProperties(getOptionalProperties(response, asset))
+            .signature("change_trust(asset, integer)")
+            .arguments(Arrays.asList(
+                    FunctionCall.Argument.from("line", asset.getCode()),
+                    FunctionCall.Argument.from("limit", response.getLimit().toString())
+                )
+            )
             .build();
     }
 
