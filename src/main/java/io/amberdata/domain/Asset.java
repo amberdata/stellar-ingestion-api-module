@@ -1,14 +1,15 @@
 package io.amberdata.domain;
 
+import java.util.Map;
 import java.util.Objects;
 
-public class Asset {
+public class Asset implements BlockchainEntity {
     private AssetType type;
     private String    code;
     private String    issuerAccount;
     private String    amount;
-    private boolean   isAuthRequired;
-    private boolean   isAuthRevocable;
+
+    private Map<String, Object> optionalProperties;
 
     public Asset () {
     }
@@ -18,8 +19,7 @@ public class Asset {
         this.code = builder.code;
         this.issuerAccount = builder.issuerAccount;
         this.amount = builder.amount;
-        this.isAuthRequired = builder.isAuthRequired;
-        this.isAuthRevocable = builder.isAuthRevocable;
+        this.optionalProperties = builder.optionalProperties;
     }
 
     public AssetType getType () {
@@ -54,20 +54,12 @@ public class Asset {
         this.amount = amount;
     }
 
-    public boolean isAuthRequired () {
-        return isAuthRequired;
+    public Map<String, Object> getOptionalProperties () {
+        return optionalProperties;
     }
 
-    public void setAuthRequired (boolean authRequired) {
-        isAuthRequired = authRequired;
-    }
-
-    public boolean isAuthRevocable () {
-        return isAuthRevocable;
-    }
-
-    public void setAuthRevocable (boolean authRevocable) {
-        isAuthRevocable = authRevocable;
+    public void setOptionalProperties (Map<String, Object> optionalProperties) {
+        this.optionalProperties = optionalProperties;
     }
 
     @Override
@@ -104,8 +96,8 @@ public class Asset {
         private String    code;
         private String    issuerAccount;
         private String    amount;
-        private boolean   isAuthRequired;
-        private boolean   isAuthRevocable;
+
+        private Map<String, Object> optionalProperties;
 
         public Builder type (AssetType value) {
             this.type = value;
@@ -127,13 +119,8 @@ public class Asset {
             return this;
         }
 
-        public Builder isAuthRequired (boolean value) {
-            this.isAuthRequired = value;
-            return this;
-        }
-
-        public Builder isAuthRevocable (boolean value) {
-            this.isAuthRevocable = value;
+        public Builder optionalProperties (Map<String, Object> value) {
+            this.optionalProperties = value;
             return this;
         }
 
