@@ -1,6 +1,8 @@
 package io.amberdata.ingestion.api.modules.stellar.configuration.subscribers;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -10,41 +12,60 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.stellar.sdk.FormatException;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
+import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
+import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
 import io.amberdata.domain.Asset;
+import io.amberdata.domain.PreAuthOperationResponse;
 import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
 import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
 import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
+import io.amberdata.ingestion.api.modules.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
+
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.Response;
 import reactor.core.publisher.Flux;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
 @Configuration
-@ConditionalOnProperty(prefix = "stellar", name="subscribe-on-assets")
+@ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-assets")
 public class AssetSubscriberConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(AssetSubscriberConfiguration.class);
 
-    private final ResourceStateStorage stateStorage;
-    private final IngestionApiClient   apiClient;
-    private final ModelMapper          modelMapper;
-    private final HorizonServer        server;
+    private final ResourceStateStorage        stateStorage;
+    private final IngestionApiClient          apiClient;
+    private final ModelMapper                 modelMapper;
+    private final HorizonServer               server;
+    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
-                                         HorizonServer server) {
+                                         HorizonServer server,
+                                         PreAuthTransactionProcessor preAuthTransactionProcessor) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
+        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -78,6 +99,9 @@ public class AssetSubscriberConfiguration {
                 .forTransaction(transactionResponse.getHash())
                 .execute()
                 .getRecords();
+        }
+        catch (FormatException ex) {
+            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
         }
         catch (IOException ex) {
             return Collections.emptyList();

@@ -15,12 +15,18 @@ public class HorizonServer {
     private static final Logger LOG = LoggerFactory.getLogger(HorizonServer.class);
 
     private final Server horizonServer;
+    private final String serverUrl;
 
     public HorizonServer (@Value("${stellar.horizon.server}") String serverUrl) {
 
         LOG.info("Horizon server URL {}", serverUrl);
 
+        this.serverUrl = serverUrl;
         this.horizonServer = new Server(serverUrl);
+    }
+
+    public String getServerUrl () {
+        return serverUrl;
     }
 
     public Server horizonServer () {

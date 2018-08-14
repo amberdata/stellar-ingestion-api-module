@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
+import org.stellar.sdk.FormatException;
 import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.TransactionResponse;
@@ -24,6 +25,7 @@ import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
 import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
+import io.amberdata.ingestion.api.modules.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -34,20 +36,23 @@ public class AccountSubscriberConfiguration {
 
     private static final Logger LOG = LoggerFactory.getLogger(AccountSubscriberConfiguration.class);
 
-    private final ResourceStateStorage stateStorage;
-    private final IngestionApiClient   apiClient;
-    private final ModelMapper          modelMapper;
-    private final HorizonServer        server;
+    private final ResourceStateStorage        stateStorage;
+    private final IngestionApiClient          apiClient;
+    private final ModelMapper                 modelMapper;
+    private final HorizonServer               server;
+    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public AccountSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
-                                           HorizonServer server) {
+                                           HorizonServer server,
+                                           PreAuthTransactionProcessor preAuthTransactionProcessor) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
+        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -110,6 +115,9 @@ public class AccountSubscriberConfiguration {
                 .forTransaction(transactionResponse.getHash())
                 .execute()
                 .getRecords();
+        }
+        catch (FormatException ex) {
+            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
         }
         catch (IOException ex) {
             return Collections.emptyList();

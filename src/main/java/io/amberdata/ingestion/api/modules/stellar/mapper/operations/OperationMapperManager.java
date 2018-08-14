@@ -22,6 +22,7 @@ import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
 import io.amberdata.domain.Asset;
 import io.amberdata.domain.FunctionCall;
+import io.amberdata.domain.PreAuthOperationResponse;
 import io.amberdata.ingestion.api.modules.stellar.mapper.AssetMapper;
 
 @Component
@@ -43,6 +44,7 @@ public class OperationMapperManager {
         responsesMap.put(AccountMergeOperationResponse.class, new AccountMergeOperationMapper());
         responsesMap.put(InflationOperationResponse.class, new InflationOperationMapper());
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
+        responsesMap.put(PreAuthOperationResponse.class, new PreAuthOperationMapper());
     }
 
     public FunctionCall map (OperationResponse operationResponse, Long ledger, Integer index) {
@@ -54,7 +56,6 @@ public class OperationMapperManager {
         functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
         functionCall.setDepth(0);
         functionCall.setIndex(index);
-        functionCall.setSignature(operationResponse.getSourceAccount().getAccountId());
         functionCall.setHash(
             String.valueOf(ledger) + "_" +
             operationResponse.getTransactionHash() + "_" +
