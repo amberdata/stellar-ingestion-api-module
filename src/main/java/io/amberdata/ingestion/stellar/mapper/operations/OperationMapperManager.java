@@ -1,12 +1,17 @@
 package io.amberdata.ingestion.stellar.mapper.operations;
 
+import java.io.IOException;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
 import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
@@ -22,16 +27,18 @@ import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
 import io.amberdata.ingestion.domain.Asset;
 import io.amberdata.ingestion.domain.FunctionCall;
+import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.client.PreAuthOperationResponse;
 import io.amberdata.ingestion.stellar.mapper.AssetMapper;
 
 @Component
 public class OperationMapperManager {
 
-    private Map<Class<? extends OperationResponse>, OperationMapper> responsesMap;
+    private final Map<Class<? extends OperationResponse>, OperationMapper> responsesMap;
+    private final HorizonServer                                            server;
 
     @Autowired
-    public OperationMapperManager (AssetMapper assetMapper) {
+    public OperationMapperManager (AssetMapper assetMapper, HorizonServer server) {
         responsesMap = new HashMap<>();
         responsesMap.put(CreateAccountOperationResponse.class, new CreateAccountOperationMapper());
         responsesMap.put(PaymentOperationResponse.class, new PaymentOperationMapper(assetMapper));
@@ -45,10 +52,14 @@ public class OperationMapperManager {
         responsesMap.put(InflationOperationResponse.class, new InflationOperationMapper());
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
         responsesMap.put(PreAuthOperationResponse.class, new PreAuthOperationMapper());
+
+        this.server = server;
     }
 
     public FunctionCall map (OperationResponse operationResponse, Long ledger, Integer index) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
+
+        List<String> effects = fetchEffectsForOperation(operationResponse);
 
         FunctionCall    functionCall    = operationMapper.map(operationResponse);
         functionCall.setBlockNumber(ledger);
@@ -61,6 +72,12 @@ public class OperationMapperManager {
             operationResponse.getTransactionHash() + "_" +
             String.valueOf(index)
         );
+        Map<String, Object> optionalProperties = functionCall.getOptionalProperties();
+        if (optionalProperties == null) {
+            optionalProperties = new HashMap<>();
+        }
+        optionalProperties.put("effects", StringUtils.collectionToCommaDelimitedString(effects));
+        functionCall.setOptionalProperties(optionalProperties);
 
         return functionCall;
     }
@@ -68,5 +85,21 @@ public class OperationMapperManager {
     public List<Asset> mapAssets (OperationResponse operationResponse) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
         return operationMapper.getAssets(operationResponse);
+    }
+
+    private List<String> fetchEffectsForOperation (OperationResponse operationResponse) {
+        try {
+            return server.horizonServer()
+                .effects()
+                .forOperation(operationResponse.getId())
+                .execute()
+                .getRecords()
+                .stream()
+                .map(EffectResponse::getType)
+                .collect(Collectors.toList());
+        }
+        catch (IOException ex) {
+            return Collections.emptyList();
+        }
     }
 }
