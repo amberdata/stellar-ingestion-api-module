@@ -77,7 +77,7 @@ public class AssetSubscriberConfiguration {
                     .collect(Collectors.toList());
             })
             .map(entities -> apiClient.publish("/assets", entities, Asset.class))
-            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
+            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private List<AssetResponse> processAssets (List<OperationResponse> operationResponses, Long ledger) {

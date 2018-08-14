@@ -62,9 +62,9 @@ public class TransactionsSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return modelMapper.map(transactionResponse, operationResponses);
             })
-            .buffer(batchSettings.transactionsInChunk())
+            .buffer(Integer.parseInt(batchSettings.getTransactionsInChunk()))
             .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity, Transaction.class))
-            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
+            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {

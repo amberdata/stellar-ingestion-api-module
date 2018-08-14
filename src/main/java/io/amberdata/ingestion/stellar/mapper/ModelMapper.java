@@ -106,15 +106,15 @@ public class ModelMapper {
         for (int i = 0; i < operationResponses.size(); i++) {
             OperationResponse operationResponse = operationResponses.get(i);
             List<Asset> assets = this.operationMapperManager.mapAssets(operationResponse);
-//            for (Asset asset : assets) {
-//                asset.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
-//                asset.setTransactionHash(operationResponse.getTransactionHash());
-//                asset.setFunctionCallHash(
-//                    String.valueOf(ledger) + "_" +
-//                        operationResponse.getTransactionHash() + "_" +
-//                        String.valueOf(i)
-//                );
-//            }
+            for (Asset asset : assets) {
+                asset.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
+                asset.setTransactionHash(operationResponse.getTransactionHash());
+                asset.setFunctionCallHash(
+                    String.valueOf(ledger) + "_" +
+                        operationResponse.getTransactionHash() + "_" +
+                        String.valueOf(i)
+                );
+            }
             allAssets.addAll(assets);
         }
         return allAssets;
@@ -141,7 +141,7 @@ public class ModelMapper {
             .code(assetResponse.getAssetCode())
             .issuerAccount(assetResponse.getAssetIssuer())
             .amount(assetResponse.getAmount())
-            //.optionalProperties(assetOptionalProperties(assetResponse))
+            .optionalProperties(assetOptionalProperties(assetResponse))
             .build();
 
         return BlockchainEntityWithState.from(

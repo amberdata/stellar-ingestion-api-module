@@ -10,9 +10,13 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.gson.GsonAutoConfiguration;
 import org.springframework.boot.context.ApplicationPidFileWriter;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 
+import io.amberdata.ingestion.core.IngestionCore;
+
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
+@ComponentScan(basePackageClasses = {IngestionCore.class, StellarIngestionModuleDemoApplication.class})
 public class StellarIngestionModuleDemoApplication implements CommandLineRunner {
 
     private static CountDownLatch exitLatch;

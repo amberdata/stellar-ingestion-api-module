@@ -51,9 +51,9 @@ public class LedgersSubscriberConfiguration {
             .retryWhen(SubscriberErrorsHandler::onError)
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(modelMapper::map)
-            .buffer(batchSettings.blocksInChunk())
+            .buffer(Integer.parseInt(batchSettings.getBlocksInChunk()))
             .map(entities -> apiClient.publish("/blocks", entities, Block.class))
-            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
+            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {

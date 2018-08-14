@@ -1,21 +1,35 @@
 package io.amberdata.ingestion.stellar.configuration.properties;
 
-import org.springframework.stereotype.Component;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Configuration;
 
-@Component
+@Configuration
+@ConfigurationProperties("ingestion.api.batch")
 public class BatchSettings {
+    private String blocksInChunk;
+    private String transactionsInChunk;
 
-    private final IngestionApiProperties apiProperties;
-
-    public BatchSettings (IngestionApiProperties apiProperties) {
-        this.apiProperties = apiProperties;
+    public String getBlocksInChunk () {
+        return blocksInChunk;
     }
 
-    public int blocksInChunk () {
-        return apiProperties.getBatch().getBlocksInChunk();
+    public void setBlocksInChunk (String blocksInChunk) {
+        this.blocksInChunk = blocksInChunk;
     }
 
-    public int transactionsInChunk () {
-        return apiProperties.getBatch().getTransactionsInChunk();
+    public String getTransactionsInChunk () {
+        return transactionsInChunk;
+    }
+
+    public void setTransactionsInChunk (String transactionsInChunk) {
+        this.transactionsInChunk = transactionsInChunk;
+    }
+
+    @Override
+    public String toString () {
+        return "BatchSettings{" +
+            "blocksInChunk='" + blocksInChunk + '\'' +
+            ", transactionsInChunk='" + transactionsInChunk + '\'' +
+            '}';
     }
 }

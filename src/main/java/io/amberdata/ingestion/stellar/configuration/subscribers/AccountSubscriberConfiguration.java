@@ -71,7 +71,7 @@ public class AccountSubscriberConfiguration {
                 return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
             })
             .map(entities -> apiClient.publish("/addresses", entities, Address.class))
-            .subscribe(stateStorage::storeState, SubscriberErrorsHandler::handleFatalApplicationError);
+            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,
