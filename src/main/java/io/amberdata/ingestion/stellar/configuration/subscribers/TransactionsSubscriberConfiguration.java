@@ -85,7 +85,7 @@ public class TransactionsSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Transaction.class.getSimpleName());
+        String cursorPointer = stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
 
         LOG.info("Transactions cursor is set to {}", cursorPointer);
 

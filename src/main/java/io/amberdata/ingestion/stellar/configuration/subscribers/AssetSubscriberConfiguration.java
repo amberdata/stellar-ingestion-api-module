@@ -113,7 +113,7 @@ public class AssetSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Asset.class.getSimpleName());
+        String cursorPointer = stateStorage.getStateToken(Asset.class.getSimpleName(), () -> "now");
 
         LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 

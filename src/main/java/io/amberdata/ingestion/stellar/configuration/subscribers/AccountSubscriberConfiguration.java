@@ -94,7 +94,7 @@ public class AccountSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Address.class.getSimpleName());
+        String cursorPointer = stateStorage.getStateToken(Address.class.getSimpleName(), () -> "now");
 
         LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
 

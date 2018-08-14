@@ -57,7 +57,7 @@ public class LedgersSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Block.class.getSimpleName());
+        String cursorPointer = stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
 
         LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
