@@ -1,4 +1,4 @@
-package io.amberdata.domain;
+package io.amberdata.ingestion.stellar.client;
 
 import org.stellar.sdk.responses.operations.OperationResponse;
 

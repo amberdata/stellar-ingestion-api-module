@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules.stellar.mapper.operations;
+package io.amberdata.ingestion.stellar.mapper.operations;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -8,9 +8,10 @@ import java.util.Map;
 
 import org.stellar.sdk.responses.operations.OperationResponse;
 
-import io.amberdata.domain.Asset;
-import io.amberdata.domain.FunctionCall;
-import io.amberdata.domain.PreAuthOperationResponse;
+import io.amberdata.ingestion.domain.Asset;
+import io.amberdata.ingestion.domain.FunctionCall;
+import io.amberdata.ingestion.stellar.client.PreAuthOperationResponse;
+import io.amberdata.ingestion.stellar.mapper.operations.OperationMapper;
 
 public class PreAuthOperationMapper implements OperationMapper {
 

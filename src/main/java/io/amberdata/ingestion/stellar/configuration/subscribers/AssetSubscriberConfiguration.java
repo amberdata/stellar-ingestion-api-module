@@ -1,10 +1,6 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
-import io.amberdata.ingestion.core.client.IngestionApiClient;
-import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -14,31 +10,21 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.FormatException;
-import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
-import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
-import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
+import io.amberdata.ingestion.core.client.IngestionApiClient;
+import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import io.amberdata.ingestion.domain.Asset;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
-
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
 import reactor.core.publisher.Flux;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-assets")

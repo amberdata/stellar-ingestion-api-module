@@ -22,6 +22,7 @@ import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
 import io.amberdata.ingestion.domain.Asset;
 import io.amberdata.ingestion.domain.FunctionCall;
+import io.amberdata.ingestion.stellar.client.PreAuthOperationResponse;
 import io.amberdata.ingestion.stellar.mapper.AssetMapper;
 
 @Component

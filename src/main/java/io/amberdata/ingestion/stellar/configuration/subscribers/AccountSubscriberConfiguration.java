@@ -24,14 +24,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 import io.amberdata.ingestion.domain.Address;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
-import io.amberdata.domain.Address;
-import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
-import io.amberdata.ingestion.api.modules.stellar.client.IngestionApiClient;
-import io.amberdata.ingestion.api.modules.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.api.modules.stellar.state.ResourceStateStorage;
-import io.amberdata.ingestion.api.modules.stellar.state.entities.BlockchainEntityWithState;
-import io.amberdata.ingestion.api.modules.stellar.state.entities.Resource;
-import io.amberdata.ingestion.api.modules.stellar.util.PreAuthTransactionProcessor;
+import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;

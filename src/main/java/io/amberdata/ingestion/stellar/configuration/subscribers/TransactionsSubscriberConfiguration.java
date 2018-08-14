@@ -20,6 +20,7 @@ import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.stellar.configuration.subscribers.SubscriberErrorsHandler;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
+import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;

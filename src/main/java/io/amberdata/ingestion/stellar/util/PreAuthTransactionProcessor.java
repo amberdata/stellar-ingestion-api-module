@@ -1,4 +1,4 @@
-package io.amberdata.ingestion.api.modules.stellar.util;
+package io.amberdata.ingestion.stellar.util;
 
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
@@ -18,8 +18,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-import io.amberdata.domain.PreAuthOperationResponse;
-import io.amberdata.ingestion.api.modules.stellar.client.HorizonServer;
+import io.amberdata.ingestion.stellar.client.PreAuthOperationResponse;
+import io.amberdata.ingestion.stellar.client.HorizonServer;
 
 @Component
 public class PreAuthTransactionProcessor {
