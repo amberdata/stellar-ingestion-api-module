@@ -40,7 +40,7 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .type(CreatePassiveOfferOperation.class.getSimpleName())
             .value(response.getAmount())
-            .optionalProperties(getOptionalProperties(response, selling, buying))
+            .meta(getOptionalProperties(response, selling, buying))
             .signature("create_passive_offer(asset, asset, integer, {numerator, denominator})")
             .arguments(Arrays.asList(
                     FunctionCall.Argument.from("selling", selling.getCode()),

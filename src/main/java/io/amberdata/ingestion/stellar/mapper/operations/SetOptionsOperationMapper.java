@@ -39,7 +39,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : "")
             .type(SetOptionsOperation.class.getSimpleName())
-            .optionalProperties(getOptionalProperties(response))
+            .meta(getOptionalProperties(response))
             .signature("set_options(account_id, integer, integer, integer, integer," +
                 "integer, integer, string, {public_key, weight})")
             .arguments(

@@ -40,7 +40,7 @@ public class ManageOfferOperationMapper implements OperationMapper {
             .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
             .type(ManageOfferOperation.class.getSimpleName())
             .value(response.getAmount())
-            .optionalProperties(getOptionalProperties(response, selling, buying))
+            .meta(getOptionalProperties(response, selling, buying))
             .signature("manage_offer(asset, asset, integer, {numerator, denominator}, unsigned_integer)")
             .arguments(
                 Arrays.asList(

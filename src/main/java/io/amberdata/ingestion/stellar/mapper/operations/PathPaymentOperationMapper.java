@@ -49,7 +49,7 @@ public class PathPaymentOperationMapper implements OperationMapper {
             .type(PathPaymentOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .value(response.getAmount())
-            .optionalProperties(getOptionalProperties(response, asset))
+            .meta(getOptionalProperties(response, asset))
             .signature("path_payment(asset, integer, account_id, asset, integer, list_of_assets)")
             .arguments(
                 Arrays.asList(

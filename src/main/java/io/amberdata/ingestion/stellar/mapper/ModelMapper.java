@@ -49,7 +49,7 @@ public class ModelMapper {
             .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
             .numTransactions(ledgerResponse.getTransactionCount())
             .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
-            .optionalProperties(blockOptionalProperties(ledgerResponse))
+            .meta(blockOptionalProperties(ledgerResponse))
             .build();
 
         return BlockchainEntityWithState.from(
@@ -126,7 +126,7 @@ public class ModelMapper {
         Address address = new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
             .timestamp(timestamp)
-            .optionalProperties(addressOptionalProperties(accountResponse))
+            .meta(addressOptionalProperties(accountResponse))
             .build();
 
         return BlockchainEntityWithState.from(
@@ -141,7 +141,7 @@ public class ModelMapper {
             .code(assetResponse.getAssetCode())
             .issuerAccount(assetResponse.getAssetIssuer())
             .amount(assetResponse.getAmount())
-            .optionalProperties(assetOptionalProperties(assetResponse))
+            .meta(assetOptionalProperties(assetResponse))
             .build();
 
         return BlockchainEntityWithState.from(

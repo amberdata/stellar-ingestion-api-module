@@ -22,7 +22,7 @@ public class PreAuthOperationMapper implements OperationMapper {
         return new FunctionCall.Builder()
             .from(response.getPreAuthSourceAccount())
             .type("PreAuthOperation")
-            .optionalProperties(getOptionalProperties(response))
+            .meta(getOptionalProperties(response))
             .signature("set_options(account_id, integer, integer, integer, integer," +
                 "integer, integer, string, {public_key, weight})")
             .arguments(
