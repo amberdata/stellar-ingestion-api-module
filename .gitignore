@@ -42,4 +42,4 @@ screenlog.0
 /application.pid
 
 # State embedded database
-/stellar-ingestion-module-state*
+/ingestion-module-state*
