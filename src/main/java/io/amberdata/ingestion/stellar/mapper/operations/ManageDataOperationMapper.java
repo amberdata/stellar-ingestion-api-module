@@ -26,7 +26,7 @@ public class ManageDataOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .from(fetchAccountId(response))
             .type(ManageDataOperation.class.getSimpleName())
             .signature("manage_data(string, binary_data)")
             .arguments(
@@ -36,6 +36,10 @@ public class ManageDataOperationMapper implements OperationMapper {
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (ManageDataOperationResponse response) {
+        return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
     }
 
     @Override

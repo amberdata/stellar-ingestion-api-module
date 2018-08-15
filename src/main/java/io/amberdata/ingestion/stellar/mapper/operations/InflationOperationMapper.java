@@ -25,11 +25,15 @@ public class InflationOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .from(fetchAccountId(response))
             .type(InflationOperation.class.getSimpleName())
             .signature("inflation()")
             .arguments(Collections.emptyList())
             .build();
+    }
+
+    private String fetchAccountId (InflationOperationResponse response) {
+        return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
     }
 
     @Override

@@ -82,6 +82,7 @@ public class TransactionsSubscriberConfiguration {
             return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
         }
         catch (IOException ex) {
+            LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }
     }

@@ -6,6 +6,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stellar.sdk.AccountMergeOperation;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -29,14 +30,18 @@ public class AccountMergeOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getAccount() != null ? response.getAccount().getAccountId() : "")
-            .to(response.getInto() != null ? response.getInto().getAccountId() : "")
+            .from(fetchAccountId(response.getAccount()))
+            .to(fetchAccountId(response.getInto()))
             .type(AccountMergeOperation.class.getSimpleName())
             .signature("account_merge(account_id)")
             .arguments(Collections.singletonList(
-                FunctionCall.Argument.from("destination", response.getInto().getAccountId()))
+                FunctionCall.Argument.from("destination", fetchAccountId(response.getInto())))
             )
             .build();
+    }
+
+    private String fetchAccountId (KeyPair account) {
+        return account != null ? account.getAccountId() : "";
     }
 
     @Override

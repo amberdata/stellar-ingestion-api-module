@@ -9,6 +9,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stellar.sdk.AllowTrustOperation;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -45,19 +46,23 @@ public class AllowTrustOperationMapper implements OperationMapper {
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
-            .to(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
+            .from(fetchAccountId(response.getTrustee()))
+            .to(fetchAccountId(response.getTrustor()))
             .type(AllowTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .optionalProperties(getOptionalProperties(response, asset))
             .signature("allow_trust(account_id, asset, boolean)")
             .arguments(Arrays.asList(
-                    FunctionCall.Argument.from("trustor", response.getTrustor().getAccountId()),
+                    FunctionCall.Argument.from("trustor", fetchAccountId(response.getTrustor())),
                     FunctionCall.Argument.from("type", asset.getCode()),
                     FunctionCall.Argument.from("authorize", String.valueOf(response.isAuthorize()))
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (KeyPair trustee) {
+        return trustee != null ? trustee.getAccountId() : "";
     }
 
     @Override

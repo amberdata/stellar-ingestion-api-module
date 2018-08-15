@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.PaymentOperation;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
@@ -45,8 +46,8 @@ public class PaymentOperationMapper implements OperationMapper {
         Asset asset = this.assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getFrom() != null ? response.getFrom().getAccountId() : "")
-            .to(response.getTo() != null ? response.getTo().getAccountId() : "")
+            .from(fetchAccountId(response.getFrom()))
+            .to(fetchAccountId(response.getTo()))
             .type(PaymentOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .value(response.getAmount())
@@ -54,12 +55,16 @@ public class PaymentOperationMapper implements OperationMapper {
             .signature("payment(account_id, asset, integer)")
             .arguments(
                 Arrays.asList(
-                    FunctionCall.Argument.from("destination", response.getTo().getAccountId()),
+                    FunctionCall.Argument.from("destination", fetchAccountId(response.getTo())),
                     FunctionCall.Argument.from("asset", asset.getCode()),
                     FunctionCall.Argument.from("amount", response.getAmount())
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (KeyPair from) {
+        return from != null ? from.getAccountId() : "";
     }
 
     @Override

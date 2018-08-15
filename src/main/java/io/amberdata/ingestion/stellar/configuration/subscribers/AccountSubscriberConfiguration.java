@@ -119,6 +119,7 @@ public class AccountSubscriberConfiguration {
             return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
         }
         catch (IOException ex) {
+            LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }
     }
@@ -130,6 +131,7 @@ public class AccountSubscriberConfiguration {
                 .account(KeyPair.fromAccountId(accountId));
         }
         catch (IOException ex) {
+            LOG.error("Unable to get details for account {}", accountId);
             return null;
         }
     }

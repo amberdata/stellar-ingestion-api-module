@@ -9,6 +9,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stellar.sdk.ChangeTrustOperation;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -45,18 +46,22 @@ public class ChangeTrustOperationMapper implements OperationMapper {
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getTrustor() != null ? response.getTrustor().getAccountId() : "")
-            .to(response.getTrustee() != null ? response.getTrustee().getAccountId() : "")
+            .from(fetchAccountId(response.getTrustor()))
+            .to(fetchAccountId(response.getTrustee()))
             .type(ChangeTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .optionalProperties(getOptionalProperties(response, asset))
             .signature("change_trust(asset, integer)")
             .arguments(Arrays.asList(
                     FunctionCall.Argument.from("line", asset.getCode()),
-                    FunctionCall.Argument.from("limit", response.getLimit().toString())
+                    FunctionCall.Argument.from("limit", response.getLimit())
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (KeyPair trustor) {
+        return trustor != null ? trustor.getAccountId() : "";
     }
 
     @Override

@@ -37,7 +37,7 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
         Asset buying = assetMapper.map(response.getBuyingAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .from(fetchAccountId(response))
             .type(CreatePassiveOfferOperation.class.getSimpleName())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(response, selling, buying))
@@ -50,6 +50,10 @@ public class CreatePassiveOfferOperationMapper implements OperationMapper {
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (CreatePassiveOfferOperationResponse response) {
+        return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
     }
 
     @Override

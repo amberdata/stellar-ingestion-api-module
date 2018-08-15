@@ -8,6 +8,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.SetOptionsOperation;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
@@ -36,8 +37,8 @@ public class SetOptionsOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
-            .to(response.getInflationDestination() != null ? response.getInflationDestination().getAccountId() : "")
+            .from(fetchAccountId(response.getSourceAccount()))
+            .to(fetchAccountId(response.getInflationDestination()))
             .type(SetOptionsOperation.class.getSimpleName())
             .optionalProperties(getOptionalProperties(response))
             .signature("set_options(account_id, integer, integer, integer, integer," +
@@ -45,7 +46,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
             .arguments(
                 Arrays.asList(
                     FunctionCall.Argument.from("inflation_destination",
-                        response.getInflationDestination().getAccountId()),
+                        fetchAccountId(response.getInflationDestination())),
 
                     FunctionCall.Argument.from("clear_flags",
                         response.getClearFlags() != null && response.getClearFlags().length > 0 ?
@@ -60,8 +61,8 @@ public class SetOptionsOperationMapper implements OperationMapper {
                     FunctionCall.Argument.from("medium_threshold", response.getMedThreshold().toString()),
                     FunctionCall.Argument.from("high_threshold", response.getHighThreshold().toString()),
                     FunctionCall.Argument.from("home_domain", response.getHomeDomain()),
-                    FunctionCall.Argument.from("signer", "{" + response.getSigner().getAccountId() + "," +
-                        response.getSignerWeight() + "}")
+                    FunctionCall.Argument.from("signer", "{" + fetchAccountId(response.getSigner()) +
+                        "," + response.getSignerWeight() + "}")
                 )
             )
             .build();
@@ -85,8 +86,12 @@ public class SetOptionsOperationMapper implements OperationMapper {
         optionalProperties.put("medThreshold", response.getMedThreshold());
         optionalProperties.put("highThreshold", response.getHighThreshold());
         optionalProperties.put("homeDomain", response.getHomeDomain());
-        optionalProperties.put("signer", response.getSigner() != null ? response.getSigner().getAccountId() : "");
+        optionalProperties.put("signer", fetchAccountId(response.getSigner()));
         optionalProperties.put("signerWeight", response.getSignerWeight());
         return optionalProperties;
+    }
+
+    private String fetchAccountId (KeyPair sourceAccount) {
+        return sourceAccount != null ? sourceAccount.getAccountId() : "";
     }
 }

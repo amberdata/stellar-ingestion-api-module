@@ -7,6 +7,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.stellar.sdk.CreateAccountOperation;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -30,17 +31,21 @@ public class CreateAccountOperationMapper implements OperationMapper {
         }
 
         return new FunctionCall.Builder()
-            .from(response.getFunder() != null ? response.getFunder().getAccountId() : "")
-            .to(response.getAccount() != null ? response.getAccount().getAccountId() : "")
+            .from(fetchAccountId(response.getFunder()))
+            .to(fetchAccountId(response.getAccount()))
             .type(CreateAccountOperation.class.getSimpleName())
             .value(response.getStartingBalance())
             .signature("create_account(account_id, integer)")
             .arguments(Arrays.asList(
-                    FunctionCall.Argument.from("destination", response.getAccount().getAccountId()),
+                    FunctionCall.Argument.from("destination", fetchAccountId(response.getAccount())),
                     FunctionCall.Argument.from("starting_balance", response.getStartingBalance())
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (KeyPair funder) {
+        return funder != null ? funder.getAccountId() : "";
     }
 
     @Override

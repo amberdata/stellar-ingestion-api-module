@@ -7,6 +7,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.PathPaymentOperation;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
@@ -44,8 +45,8 @@ public class PathPaymentOperationMapper implements OperationMapper {
         Asset asset = assetMapper.map(response.getAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getFrom() != null ? response.getFrom().getAccountId() : "")
-            .to(response.getTo() != null ? response.getTo().getAccountId() : "")
+            .from(fetchAccountId(response.getFrom()))
+            .to(fetchAccountId(response.getTo()))
             .type(PathPaymentOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .value(response.getAmount())
@@ -55,13 +56,17 @@ public class PathPaymentOperationMapper implements OperationMapper {
                 Arrays.asList(
                     // FunctionCall.Argument.from("send_asset", asset.getCode()), should be source asset
                     FunctionCall.Argument.from("send_max", response.getSourceMax()),
-                    FunctionCall.Argument.from("destination", response.getTo().getAccountId()),
+                    FunctionCall.Argument.from("destination", fetchAccountId(response.getTo())),
                     FunctionCall.Argument.from("destination_asset", asset.getCode()),
                     FunctionCall.Argument.from("destination_amount", response.getAmount())
                     // FunctionCall.Argument.from("path", "") - no path in response
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (KeyPair from) {
+        return from != null ? from.getAccountId() : "";
     }
 
     @Override

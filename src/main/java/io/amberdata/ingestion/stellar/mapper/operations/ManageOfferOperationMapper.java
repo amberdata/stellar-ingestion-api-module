@@ -37,7 +37,7 @@ public class ManageOfferOperationMapper implements OperationMapper {
         Asset buying  = assetMapper.map(response.getBuyingAsset());
 
         return new FunctionCall.Builder()
-            .from(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+            .from(fetchAccountId(response))
             .type(ManageOfferOperation.class.getSimpleName())
             .value(response.getAmount())
             .optionalProperties(getOptionalProperties(response, selling, buying))
@@ -52,6 +52,10 @@ public class ManageOfferOperationMapper implements OperationMapper {
                 )
             )
             .build();
+    }
+
+    private String fetchAccountId (ManageOfferOperationResponse response) {
+        return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
     }
 
     @Override
