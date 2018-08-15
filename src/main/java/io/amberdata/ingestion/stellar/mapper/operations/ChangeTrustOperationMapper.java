@@ -50,7 +50,7 @@ public class ChangeTrustOperationMapper implements OperationMapper {
             .to(fetchAccountId(response.getTrustee()))
             .type(ChangeTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
-            .optionalProperties(getOptionalProperties(response, asset))
+            .meta(getOptionalProperties(response, asset))
             .signature("change_trust(asset, integer)")
             .arguments(Arrays.asList(
                     FunctionCall.Argument.from("line", asset.getCode()),

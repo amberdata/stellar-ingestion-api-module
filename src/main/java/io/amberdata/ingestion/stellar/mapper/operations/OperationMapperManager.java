@@ -10,7 +10,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
@@ -72,12 +71,12 @@ public class OperationMapperManager {
             operationResponse.getTransactionHash() + "_" +
             String.valueOf(index)
         );
-        Map<String, Object> optionalProperties = functionCall.getOptionalProperties();
+        Map<String, Object> optionalProperties = functionCall.getMeta();
         if (optionalProperties == null) {
             optionalProperties = new HashMap<>();
         }
-        optionalProperties.put("effects", StringUtils.collectionToCommaDelimitedString(effects));
-        functionCall.setOptionalProperties(optionalProperties);
+        optionalProperties.put("effects", String.join(",", effects));
+        functionCall.setMeta(optionalProperties);
 
         return functionCall;
     }

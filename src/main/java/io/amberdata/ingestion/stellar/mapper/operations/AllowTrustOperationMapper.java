@@ -50,7 +50,7 @@ public class AllowTrustOperationMapper implements OperationMapper {
             .to(fetchAccountId(response.getTrustor()))
             .type(AllowTrustOperation.class.getSimpleName())
             .assetType(asset.getCode())
-            .optionalProperties(getOptionalProperties(response, asset))
+            .meta(getOptionalProperties(response, asset))
             .signature("allow_trust(account_id, asset, boolean)")
             .arguments(Arrays.asList(
                     FunctionCall.Argument.from("trustor", fetchAccountId(response.getTrustor())),

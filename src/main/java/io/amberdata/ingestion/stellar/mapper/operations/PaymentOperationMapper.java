@@ -51,7 +51,7 @@ public class PaymentOperationMapper implements OperationMapper {
             .type(PaymentOperation.class.getSimpleName())
             .assetType(asset.getCode())
             .value(response.getAmount())
-            .optionalProperties(getOptionalProperties(asset))
+            .meta(getOptionalProperties(asset))
             .signature("payment(account_id, asset, integer)")
             .arguments(
                 Arrays.asList(
