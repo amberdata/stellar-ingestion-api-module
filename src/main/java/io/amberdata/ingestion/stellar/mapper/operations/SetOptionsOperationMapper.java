@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,10 +57,10 @@ public class SetOptionsOperationMapper implements OperationMapper {
                         response.getSetFlags() != null && response.getSetFlags().length > 0 ?
                             String.join("-", response.getSetFlags()) : ""),
 
-                    FunctionCall.Argument.from("master_weight", response.getMasterKeyWeight().toString()),
-                    FunctionCall.Argument.from("low_threshold", response.getLowThreshold().toString()),
-                    FunctionCall.Argument.from("medium_threshold", response.getMedThreshold().toString()),
-                    FunctionCall.Argument.from("high_threshold", response.getHighThreshold().toString()),
+                    FunctionCall.Argument.from("master_weight", Objects.toString(response.getMasterKeyWeight(), "")),
+                    FunctionCall.Argument.from("low_threshold", Objects.toString(response.getLowThreshold(), "")),
+                    FunctionCall.Argument.from("medium_threshold", Objects.toString(response.getMedThreshold(), "")),
+                    FunctionCall.Argument.from("high_threshold", Objects.toString(response.getHighThreshold(), "")),
                     FunctionCall.Argument.from("home_domain", response.getHomeDomain()),
                     FunctionCall.Argument.from("signer", "{" + fetchAccountId(response.getSigner()) +
                         "," + response.getSignerWeight() + "}")

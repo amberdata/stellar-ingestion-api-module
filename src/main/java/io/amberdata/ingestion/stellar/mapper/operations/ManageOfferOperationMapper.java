@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public class ManageOfferOperationMapper implements OperationMapper {
                     FunctionCall.Argument.from("buying", buying.getCode()),
                     FunctionCall.Argument.from("amount", response.getAmount()),
                     FunctionCall.Argument.from("price", response.getPrice()),
-                    FunctionCall.Argument.from("offer_id", response.getOfferId().toString())
+                    FunctionCall.Argument.from("offer_id", Objects.toString(response.getOfferId(), ""))
                 )
             )
             .build();
