@@ -54,9 +54,9 @@ public class SetOptionsOperationMapper implements OperationMapper {
                             String.join("-", response.getSetFlags()) : ""),
 
                     FunctionCall.Argument.from("master_weight", Objects.toString(response.getMasterKeyWeight(), "")),
-                    FunctionCall.Argument.from("low_threshold", Objects.toString(response.getLowThreshold(), ""),
+                    FunctionCall.Argument.from("low_threshold", Objects.toString(response.getLowThreshold(), "")),
                     FunctionCall.Argument.from("medium_threshold", Objects.toString(response.getMedThreshold(), "")),
-                    FunctionCall.Argument.from("high_threshold", Objects.toString(response.getHighThreshold(), ""),
+                    FunctionCall.Argument.from("high_threshold", Objects.toString(response.getHighThreshold(), "")),
                     FunctionCall.Argument.from("home_domain", response.getHomeDomain()),
                     FunctionCall.Argument.from("signer", "{" + response.getSignerKey() +
                         "," + response.getSignerWeight() + "}")
