@@ -51,7 +51,7 @@ public class HistoricalManager {
 
         try {
             return horizonServer.ledgers()
-                .ledger(ledgerSequenceNumber)
+                .ledger(ledgerSequenceNumber - 1)
                 .getPagingToken();
         }
         catch (Exception e) {
