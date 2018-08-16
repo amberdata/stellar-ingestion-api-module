@@ -10,4 +10,4 @@ fi
 
 echo "Going to run java -jar ${JAVA_OPTS} ${PARAMETER_STORE_PATH} -Djava.security.egd=file:/dev/./urandom /app.jar"
 
-java -jar ${JAVA_OPTS} ${PARAMETER_STORE_PATH} -Djava.security.egd=file:/dev/./urandom /app.jar
+java --add-modules java.xml.bind -jar ${JAVA_OPTS} ${PARAMETER_STORE_PATH} -Djava.security.egd=file:/dev/./urandom /app.jar
