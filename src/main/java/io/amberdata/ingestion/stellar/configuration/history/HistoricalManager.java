@@ -1,6 +1,5 @@
 package io.amberdata.ingestion.stellar.configuration.history;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -22,8 +21,7 @@ public class HistoricalManager {
 
     private final boolean isActive;
     private final Server  horizonServer;
-
-    private Long ledgerSequenceNumber;
+    private final Long    ledgerSequenceNumber;
 
     public HistoricalManager (
         @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumber,
@@ -34,6 +32,7 @@ public class HistoricalManager {
             this.ledgerSequenceNumber = ledgerSequenceNumber;
         } else {
             isActive = false;
+            this.ledgerSequenceNumber = 0L;
         }
 
         this.horizonServer = horizonServer.horizonServer();
@@ -62,23 +61,27 @@ public class HistoricalManager {
     public String transactionPagingToken () {
         ensureIsActive();
 
+        return transactionPagingToken(ledgerSequenceNumber);
+    }
+
+    private String transactionPagingToken (Long seqNumber) {
         LOG.info(
             "Going to request paging token for first transaction in ledger with sequence number {}",
-            ledgerSequenceNumber
+            seqNumber
         );
 
         try {
             Page<TransactionResponse> transactionsPage = horizonServer.transactions()
-                .forLedger(ledgerSequenceNumber)
+                .forLedger(seqNumber)
                 .order(RequestBuilder.Order.ASC)
                 .execute();
 
             ArrayList<TransactionResponse> transactions = transactionsPage.getRecords();
             if (transactions.isEmpty()) {
                 LOG.info("There are no transactions in ledger with sequence number {} " +
-                    "\n going to check the next ledger in sequence", ledgerSequenceNumber);
+                    "\n going to check the next ledger in sequence", seqNumber);
 
-                return incrementAndGetNext();
+                return incrementAndGetNext(seqNumber + 1);
             }
             return transactions.get(0).getPagingToken();
         }
@@ -87,7 +90,7 @@ public class HistoricalManager {
         }
     }
 
-    private String incrementAndGetNext () {
+    private String incrementAndGetNext (Long seqNumber) {
         long sleepTime = 100L;
         try {
             LOG.info("Sleeping for {}ms before request the next ledger in seqence", sleepTime);
@@ -96,9 +99,8 @@ public class HistoricalManager {
         catch (InterruptedException e) {
             LOG.error("Interrupted", e);
         }
-        ledgerSequenceNumber++;
 
-        return transactionPagingToken();
+        return transactionPagingToken(seqNumber);
     }
 
     private void ensureIsActive () {
