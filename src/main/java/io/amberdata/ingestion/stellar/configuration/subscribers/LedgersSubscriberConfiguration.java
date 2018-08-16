@@ -75,7 +75,7 @@ public class LedgersSubscriberConfiguration {
     }
 
     private String getCursorPointer () {
-        if (!historicalManager.isActive()) {
+        if (historicalManager.disabled()) {
             return stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
         } else {
             return historicalManager.ledgerPagingToken();

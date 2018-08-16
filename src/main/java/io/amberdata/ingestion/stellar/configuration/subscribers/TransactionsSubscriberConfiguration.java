@@ -3,7 +3,6 @@ package io.amberdata.ingestion.stellar.configuration.subscribers;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
 import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -14,13 +13,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.FormatException;
 import org.stellar.sdk.responses.TransactionResponse;
-import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.ingestion.domain.Transaction;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
+import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
 import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
-import io.amberdata.ingestion.stellar.configuration.subscribers.SubscriberErrorsHandler;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
@@ -35,6 +33,7 @@ public class TransactionsSubscriberConfiguration {
     private final ResourceStateStorage        stateStorage;
     private final IngestionApiClient          apiClient;
     private final ModelMapper                 modelMapper;
+    private final HistoricalManager           historicalManager;
     private final HorizonServer               server;
     private final BatchSettings               batchSettings;
     private final PreAuthTransactionProcessor preAuthTransactionProcessor;
@@ -42,6 +41,7 @@ public class TransactionsSubscriberConfiguration {
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
                                                 IngestionApiClient apiClient,
                                                 ModelMapper modelMapper,
+                                                HistoricalManager historicalManager,
                                                 HorizonServer server,
                                                 BatchSettings batchSettings,
                                                 PreAuthTransactionProcessor preAuthTransactionProcessor) {
@@ -49,6 +49,7 @@ public class TransactionsSubscriberConfiguration {
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
+        this.historicalManager = historicalManager;
         this.server = server;
         this.batchSettings = batchSettings;
         this.preAuthTransactionProcessor = preAuthTransactionProcessor;
@@ -88,7 +89,7 @@ public class TransactionsSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
+        String cursorPointer = getCursorPointer();
 
         LOG.info("Transactions cursor is set to {}", cursorPointer);
 
@@ -99,6 +100,14 @@ public class TransactionsSubscriberConfiguration {
             .transactions()
             .cursor(cursorPointer)
             .stream(responseConsumer::accept);
+    }
+
+    private String getCursorPointer () {
+        if (historicalManager.disabled()) {
+            return stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
+        } else {
+            return historicalManager.transactionPagingToken();
+        }
     }
 
     private void testCursorCorrectness (String cursorPointer) {
