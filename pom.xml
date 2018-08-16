@@ -27,6 +27,7 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
 
+        <spring.boot.version>2.0.4.RELEASE</spring.boot.version>
         <stellar.sdk.version>0.3.2</stellar.sdk.version>
     </properties>
 
@@ -104,6 +105,45 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>${spring.boot.version}</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>dockerfile-maven-plugin</artifactId>
+                <version>1.4.3</version>
+                <executions>
+                    <execution>
+                        <id>default</id>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>tag</goal>
+                            <goal>push</goal>
+                        </goals>
+                        <configuration>
+                            <tag>latest</tag>
+                        </configuration>
+                    </execution>
+                </executions>
+                <configuration>
+                    <repository>241887966600.dkr.ecr.us-east-1.amazonaws.com/stellar-ingestion-module</repository>
+                    <buildArgs>
+                        <JAR_FILE>target/${project.build.finalName}.jar</JAR_FILE>
+                    </buildArgs>
+                </configuration>
             </plugin>
         </plugins>
     </build>
