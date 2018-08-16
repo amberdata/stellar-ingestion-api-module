@@ -66,7 +66,7 @@ public class TransactionsSubscriberConfiguration {
                 return modelMapper.map(transactionResponse, operationResponses);
             })
             .buffer(Integer.parseInt(batchSettings.getTransactionsInChunk()))
-            .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity, Transaction.class))
+            .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 

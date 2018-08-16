@@ -62,7 +62,7 @@ public class AssetSubscriberConfiguration {
                     .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/assets", entities, Asset.class))
+            .map(entities -> apiClient.publish("/assets", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 

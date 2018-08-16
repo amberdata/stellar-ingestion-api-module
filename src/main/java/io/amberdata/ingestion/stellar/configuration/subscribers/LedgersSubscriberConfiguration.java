@@ -52,7 +52,7 @@ public class LedgersSubscriberConfiguration {
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(modelMapper::map)
             .buffer(Integer.parseInt(batchSettings.getBlocksInChunk()))
-            .map(entities -> apiClient.publish("/blocks", entities, Block.class))
+            .map(entities -> apiClient.publish("/blocks", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
