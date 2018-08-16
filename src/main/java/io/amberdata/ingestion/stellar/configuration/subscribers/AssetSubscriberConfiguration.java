@@ -19,9 +19,10 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
 import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import io.amberdata.ingestion.domain.Asset;
+import io.amberdata.ingestion.domain.Transaction;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
+import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -35,20 +36,20 @@ public class AssetSubscriberConfiguration {
     private final ResourceStateStorage        stateStorage;
     private final IngestionApiClient          apiClient;
     private final ModelMapper                 modelMapper;
+    private final HistoricalManager           historicalManager;
     private final HorizonServer               server;
-    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
-                                         HorizonServer server,
-                                         PreAuthTransactionProcessor preAuthTransactionProcessor) {
+                                         HistoricalManager historicalManager,
+                                         HorizonServer server) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
+        this.historicalManager = historicalManager;
         this.server = server;
-        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -62,7 +63,7 @@ public class AssetSubscriberConfiguration {
                     .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/assets", entities, Asset.class))
+            .map(entities -> apiClient.publish("/assets", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
@@ -83,10 +84,7 @@ public class AssetSubscriberConfiguration {
                 .execute()
                 .getRecords();
         }
-        catch (FormatException ex) {
-            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
-        }
-        catch (IOException ex) {
+        catch (IOException | FormatException ex) {
             LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }
@@ -114,7 +112,7 @@ public class AssetSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Asset.class.getSimpleName(), () -> "now");
+        String cursorPointer = getCursorPointer();
 
         LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 
@@ -125,6 +123,14 @@ public class AssetSubscriberConfiguration {
             .transactions()
             .cursor(cursorPointer)
             .stream(stellarSdkResponseConsumer::accept);
+    }
+
+    private String getCursorPointer () {
+        if (historicalManager.disabled()) {
+            return stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
+        } else {
+            return historicalManager.transactionPagingToken();
+        }
     }
 
     private void testCursorCorrectness (String cursorPointer) {

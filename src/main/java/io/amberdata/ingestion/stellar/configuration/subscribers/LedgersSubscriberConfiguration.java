@@ -13,6 +13,7 @@ import org.stellar.sdk.responses.LedgerResponse;
 
 import io.amberdata.ingestion.domain.Block;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
+import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
 import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
@@ -27,18 +28,21 @@ public class LedgersSubscriberConfiguration {
     private final ResourceStateStorage stateStorage;
     private final IngestionApiClient   apiClient;
     private final ModelMapper          modelMapper;
+    private final HistoricalManager    historicalManager;
     private final HorizonServer        server;
     private final BatchSettings        batchSettings;
 
     public LedgersSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
+                                           HistoricalManager historicalManager,
                                            HorizonServer server,
                                            BatchSettings batchSettings) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
+        this.historicalManager = historicalManager;
         this.server = server;
         this.batchSettings = batchSettings;
     }
@@ -52,12 +56,12 @@ public class LedgersSubscriberConfiguration {
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(modelMapper::map)
             .buffer(Integer.parseInt(batchSettings.getBlocksInChunk()))
-            .map(entities -> apiClient.publish("/blocks", entities, Block.class))
+            .map(entities -> apiClient.publish("/blocks", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
+        String cursorPointer = getCursorPointer();
 
         LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
@@ -68,6 +72,14 @@ public class LedgersSubscriberConfiguration {
             .ledgers()
             .cursor(cursorPointer)
             .stream(stellarSdkResponseConsumer::accept);
+    }
+
+    private String getCursorPointer () {
+        if (historicalManager.disabled()) {
+            return stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
+        } else {
+            return historicalManager.ledgerPagingToken();
+        }
     }
 
     private void testCursorCorrectness (String cursorPointer) {

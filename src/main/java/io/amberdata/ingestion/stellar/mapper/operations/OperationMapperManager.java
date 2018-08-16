@@ -50,7 +50,6 @@ public class OperationMapperManager {
         responsesMap.put(AccountMergeOperationResponse.class, new AccountMergeOperationMapper());
         responsesMap.put(InflationOperationResponse.class, new InflationOperationMapper());
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
-        responsesMap.put(PreAuthOperationResponse.class, new PreAuthOperationMapper());
 
         this.server = server;
     }

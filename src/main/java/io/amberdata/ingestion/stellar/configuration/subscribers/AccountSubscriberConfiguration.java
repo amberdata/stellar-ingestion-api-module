@@ -23,8 +23,8 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.ingestion.domain.Address;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
+import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -38,20 +38,20 @@ public class AccountSubscriberConfiguration {
     private final ResourceStateStorage        stateStorage;
     private final IngestionApiClient          apiClient;
     private final ModelMapper                 modelMapper;
+    private final HistoricalManager           historicalManager;
     private final HorizonServer               server;
-    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public AccountSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
-                                           HorizonServer server,
-                                           PreAuthTransactionProcessor preAuthTransactionProcessor) {
+                                           HistoricalManager historicalManager,
+                                           HorizonServer server) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
+        this.historicalManager = historicalManager;
         this.server = server;
-        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -63,7 +63,7 @@ public class AccountSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/addresses", entities, Address.class))
+            .map(entities -> apiClient.publish("/addresses", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
@@ -94,7 +94,7 @@ public class AccountSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = stateStorage.getStateToken(Address.class.getSimpleName(), () -> "now");
+        String cursorPointer = getCursorPointer();
 
         LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
 
@@ -107,6 +107,14 @@ public class AccountSubscriberConfiguration {
             .stream(stellarSdkResponseConsumer::accept);
     }
 
+    private String getCursorPointer () {
+        if (historicalManager.disabled()) {
+            return stateStorage.getStateToken(Address.class.getSimpleName(), () -> "now");
+        } else {
+            return historicalManager.transactionPagingToken();
+        }
+    }
+
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
             return server.horizonServer()
@@ -115,10 +123,7 @@ public class AccountSubscriberConfiguration {
                 .execute()
                 .getRecords();
         }
-        catch (FormatException ex) {
-            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
-        }
-        catch (IOException ex) {
+        catch (IOException | FormatException ex) {
             LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }

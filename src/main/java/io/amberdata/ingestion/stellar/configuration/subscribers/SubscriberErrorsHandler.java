@@ -1,6 +1,5 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
-import io.amberdata.ingestion.stellar.configuration.properties.HorizonServerProperties;
 import java.time.Duration;
 
 import org.slf4j.Logger;
@@ -8,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import io.amberdata.ingestion.stellar.StellarIngestionModuleDemoApplication;
+import io.amberdata.ingestion.stellar.configuration.properties.HorizonServerProperties;
 
 import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
@@ -54,11 +54,20 @@ public class SubscriberErrorsHandler {
     }
 
     private static int retryCountPattern (Throwable error, Integer retryIndex) {
+        ensureErrorIsNotFatal(error);
+
         LOG.info("Trying to recover after {}: {} times", error.getMessage(), retryIndex);
         if (retryIndex == retriesOnError) {
             throw Exceptions.propagate(error);
         }
         return retryIndex;
+    }
+
+    private static void ensureErrorIsNotFatal (Throwable error) {
+        if (error instanceof IllegalStateException) {
+            LOG.error("Fatal error occurred. Check if there are any configuration issues", error);
+            throw Exceptions.propagate(error);
+        }
     }
 
     public static void handleFatalApplicationError (Throwable throwable) {
