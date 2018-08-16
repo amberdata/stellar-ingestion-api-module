@@ -70,12 +70,7 @@ public class OperationMapperManager {
             operationResponse.getTransactionHash() + "_" +
             String.valueOf(index)
         );
-        Map<String, Object> optionalProperties = functionCall.getMeta();
-        if (optionalProperties == null) {
-            optionalProperties = new HashMap<>();
-        }
-        optionalProperties.put("effects", String.join(",", effects));
-        functionCall.setMeta(optionalProperties);
+        functionCall.setResult(String.join(",", effects));
 
         return functionCall;
     }
