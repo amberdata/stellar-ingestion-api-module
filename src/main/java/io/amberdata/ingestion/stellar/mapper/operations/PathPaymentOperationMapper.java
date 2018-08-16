@@ -43,6 +43,7 @@ public class PathPaymentOperationMapper implements OperationMapper {
         }
 
         Asset asset = assetMapper.map(response.getAsset());
+        Asset sourceAsset = assetMapper.map(response.getSourceAsset());
 
         return new FunctionCall.Builder()
             .from(fetchAccountId(response.getFrom()))
@@ -54,7 +55,7 @@ public class PathPaymentOperationMapper implements OperationMapper {
             .signature("path_payment(asset, integer, account_id, asset, integer, list_of_assets)")
             .arguments(
                 Arrays.asList(
-                    // FunctionCall.Argument.from("send_asset", asset.getCode()), should be source asset
+                    FunctionCall.Argument.from("send_asset", sourceAsset.getCode()),
                     FunctionCall.Argument.from("send_max", response.getSourceMax()),
                     FunctionCall.Argument.from("destination", fetchAccountId(response.getTo())),
                     FunctionCall.Argument.from("destination_asset", asset.getCode()),
@@ -74,23 +75,20 @@ public class PathPaymentOperationMapper implements OperationMapper {
         PathPaymentOperationResponse response = (PathPaymentOperationResponse) operationResponse;
 
         Asset asset       = assetMapper.map(response.getAsset());
-        // Asset sourceAsset = assetMapper.map(response.getSourceAsset());
-        // return Arrays.asList(asset, sourceAsset);
-        return Arrays.asList(asset);
+        Asset sourceAsset = assetMapper.map(response.getSourceAsset());
+        return Arrays.asList(asset, sourceAsset);
     }
 
     private Map<String, Object> getOptionalProperties (PathPaymentOperationResponse response, Asset asset) {
-        // commented out due to a bug in sdk (causes npe - no code for native asset)
-        // Asset sourceAsset = assetMapper.map(response.getSourceAsset());
+        Asset sourceAsset = assetMapper.map(response.getSourceAsset());
 
         Map<String, Object> optionalProperties = new HashMap<>();
         optionalProperties.put("stellarAssetType", asset.getType().getName());
         optionalProperties.put("assetIssuer", asset.getIssuerAccount());
 
-        // commented out due to a bug in sdk (causes npe - no code for native asset)
-        // metaMap.put("sourceAsset", sourceAsset.getCode());
-        // metaMap.put("stellarSourceAssetType", sourceAsset.getType().getName());
-        // metaMap.put("sourceAssetIssuer", sourceAsset.getIssuerAccount());
+        optionalProperties.put("sourceAsset", sourceAsset.getCode());
+        optionalProperties.put("stellarSourceAssetType", sourceAsset.getType().getName());
+        optionalProperties.put("sourceAssetIssuer", sourceAsset.getIssuerAccount());
         optionalProperties.put("sourceMax", response.getSourceMax());
         return optionalProperties;
     }
