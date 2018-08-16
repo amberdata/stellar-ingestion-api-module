@@ -1,6 +1,8 @@
 package io.amberdata.ingestion.stellar.configuration.history;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -76,17 +78,23 @@ public class HistoricalManager {
         );
 
         try {
-            Page<TransactionResponse> transactionsPage = horizonServer.transactions()
-                .forLedger(seqNumber)
-                .order(RequestBuilder.Order.ASC)
-                .execute();
+            List<TransactionResponse> transactions = Collections.emptyList();
 
-            ArrayList<TransactionResponse> transactions = transactionsPage.getRecords();
-            if (transactions.isEmpty()) {
-                LOG.info("There are no transactions in ledger with sequence number {} " +
+            while (transactions.isEmpty()) {
+                Page<TransactionResponse> transactionsPage = horizonServer.transactions()
+                    .forLedger(seqNumber)
+                    .order(RequestBuilder.Order.ASC)
+                    .execute();
+
+                transactions = transactionsPage.getRecords();
+
+                if (transactions.isEmpty()) {
+                    LOG.info("There are no transactions in ledger with sequence number {} " +
                     "\n going to check the next ledger in sequence", seqNumber);
+                    waitBeforeNextLedgerProcessing();
+                }
 
-                return incrementAndGetNext(seqNumber + 1);
+                seqNumber++;
             }
             return transactions.get(0).getPagingToken();
         }
@@ -95,7 +103,7 @@ public class HistoricalManager {
         }
     }
 
-    private String incrementAndGetNext (Long seqNumber) {
+    private void waitBeforeNextLedgerProcessing () {
         long sleepTime = 100L;
         try {
             LOG.info("Sleeping for {}ms before request the next ledger in seqence", sleepTime);
@@ -104,8 +112,6 @@ public class HistoricalManager {
         catch (InterruptedException e) {
             LOG.error("Interrupted", e);
         }
-
-        return transactionPagingToken(seqNumber);
     }
 
     private void ensureIsActive () {
