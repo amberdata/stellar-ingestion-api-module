@@ -20,7 +20,6 @@ import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
 import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -36,15 +35,13 @@ public class TransactionsSubscriberConfiguration {
     private final HistoricalManager           historicalManager;
     private final HorizonServer               server;
     private final BatchSettings               batchSettings;
-    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
                                                 IngestionApiClient apiClient,
                                                 ModelMapper modelMapper,
                                                 HistoricalManager historicalManager,
                                                 HorizonServer server,
-                                                BatchSettings batchSettings,
-                                                PreAuthTransactionProcessor preAuthTransactionProcessor) {
+                                                BatchSettings batchSettings) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
@@ -52,7 +49,6 @@ public class TransactionsSubscriberConfiguration {
         this.historicalManager = historicalManager;
         this.server = server;
         this.batchSettings = batchSettings;
-        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -79,10 +75,7 @@ public class TransactionsSubscriberConfiguration {
                 .execute()
                 .getRecords();
         }
-        catch (FormatException ex) {
-            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
-        }
-        catch (IOException ex) {
+        catch (IOException | FormatException ex) {
             LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }
