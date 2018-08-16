@@ -10,7 +10,7 @@ public class BatchSettings {
     private String transactionsInChunk;
 
     public String getBlocksInChunk () {
-        return blocksInChunk;
+        return this.blocksInChunk;
     }
 
     public void setBlocksInChunk (String blocksInChunk) {
@@ -18,7 +18,7 @@ public class BatchSettings {
     }
 
     public String getTransactionsInChunk () {
-        return transactionsInChunk;
+        return this.transactionsInChunk;
     }
 
     public void setTransactionsInChunk (String transactionsInChunk) {
@@ -28,8 +28,8 @@ public class BatchSettings {
     @Override
     public String toString () {
         return "BatchSettings{" +
-            "blocksInChunk='" + blocksInChunk + '\'' +
-            ", transactionsInChunk='" + transactionsInChunk + '\'' +
+            "blocksInChunk='" + this.blocksInChunk + '\'' +
+            ", transactionsInChunk='" + this.transactionsInChunk + '\'' +
             '}';
     }
 }

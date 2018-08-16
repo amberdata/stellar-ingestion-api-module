@@ -24,16 +24,16 @@ public class HorizonServer {
     }
 
     public String getServerUrl () {
-        return serverUrl;
+        return this.serverUrl;
     }
 
     public Server horizonServer () {
-        return horizonServer;
+        return this.horizonServer;
     }
 
     public void testConnection () {
         try {
-            horizonServer.root().getProtocolVersion();
+            this.horizonServer.root().getProtocolVersion();
         }
         catch (IOException e) {
             throw new ServerConnectionException("Cannot resolve connection to Horizon server", e);

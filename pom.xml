@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+<project
+  xmlns              = "http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi          = "http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation = "http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"
+>
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.amberdata.ingestion-api</groupId>
@@ -33,18 +37,44 @@
         </repository>
     </repositories>
 
-    <dependencies>
+    <distributionManagement>
+        <!-- Publish the versioned releases here -->
+        <repository>
+            <id>nexus-release</id>
+            <name>Release Repo</name>
+            <url>http://nexus.amberdata.internal:8081/repository/mvn-releases</url>
+        </repository>
 
+        <snapshotRepository>
+            <id>nexus</id>
+            <name>Snapshot Repo</name>
+            <url>http://nexus.amberdata.internal:8081/repository/mvn-snapshots</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>2.0.4.RELEASE</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
         <dependency>
             <groupId>io.amberdata.ingestion</groupId>
             <artifactId>ingestion-domain</artifactId>
-            <version>0.1.3</version>
+            <version>0.1.4</version>
         </dependency>
 
         <dependency>
             <groupId>io.amberdata.ingestion</groupId>
             <artifactId>ingestion-core</artifactId>
-            <version>0.0.3</version>
+            <version>0.0.4</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.amberdata.ingestion</groupId>
@@ -74,6 +104,7 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
         <dependency>
             <groupId>io.projectreactor</groupId>
             <artifactId>reactor-test</artifactId>
