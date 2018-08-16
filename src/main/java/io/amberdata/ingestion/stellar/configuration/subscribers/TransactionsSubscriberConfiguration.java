@@ -3,7 +3,6 @@ package io.amberdata.ingestion.stellar.configuration.subscribers;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
 import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
@@ -14,15 +13,12 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 import org.stellar.sdk.FormatException;
 import org.stellar.sdk.responses.TransactionResponse;
-import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.ingestion.domain.Transaction;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
-import io.amberdata.ingestion.stellar.configuration.subscribers.SubscriberErrorsHandler;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -37,21 +33,18 @@ public class TransactionsSubscriberConfiguration {
     private final ModelMapper                 modelMapper;
     private final HorizonServer               server;
     private final BatchSettings               batchSettings;
-    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
                                                 IngestionApiClient apiClient,
                                                 ModelMapper modelMapper,
                                                 HorizonServer server,
-                                                BatchSettings batchSettings,
-                                                PreAuthTransactionProcessor preAuthTransactionProcessor) {
+                                                BatchSettings batchSettings) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
         this.batchSettings = batchSettings;
-        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -78,10 +71,7 @@ public class TransactionsSubscriberConfiguration {
                 .execute()
                 .getRecords();
         }
-        catch (FormatException ex) {
-            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
-        }
-        catch (IOException ex) {
+        catch (IOException | FormatException ex) {
             LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }

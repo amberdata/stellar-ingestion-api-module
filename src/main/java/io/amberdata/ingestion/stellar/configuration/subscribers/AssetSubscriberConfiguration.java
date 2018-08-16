@@ -21,7 +21,6 @@ import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import io.amberdata.ingestion.domain.Asset;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
-import io.amberdata.ingestion.stellar.util.PreAuthTransactionProcessor;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
@@ -36,19 +35,16 @@ public class AssetSubscriberConfiguration {
     private final IngestionApiClient          apiClient;
     private final ModelMapper                 modelMapper;
     private final HorizonServer               server;
-    private final PreAuthTransactionProcessor preAuthTransactionProcessor;
 
     public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
-                                         HorizonServer server,
-                                         PreAuthTransactionProcessor preAuthTransactionProcessor) {
+                                         HorizonServer server) {
 
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.server = server;
-        this.preAuthTransactionProcessor = preAuthTransactionProcessor;
     }
 
     @PostConstruct
@@ -83,10 +79,7 @@ public class AssetSubscriberConfiguration {
                 .execute()
                 .getRecords();
         }
-        catch (FormatException ex) {
-            return this.preAuthTransactionProcessor.fetchOperations(transactionResponse.getHash());
-        }
-        catch (IOException ex) {
+        catch (IOException | FormatException ex) {
             LOG.error("Unable to fetch information about operations for transaction {}", transactionResponse.getHash());
             return Collections.emptyList();
         }

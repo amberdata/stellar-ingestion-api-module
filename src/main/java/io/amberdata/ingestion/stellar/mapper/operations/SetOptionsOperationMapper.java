@@ -33,10 +33,6 @@ public class SetOptionsOperationMapper implements OperationMapper {
             LOG.warn("Inflation destination account in SetOptionsOperationResponse is null");
         }
 
-        if (response.getSigner() == null) {
-            LOG.warn("Signer account in SetOptionsOperationResponse is null");
-        }
-
         return new FunctionCall.Builder()
             .from(fetchAccountId(response.getSourceAccount()))
             .to(fetchAccountId(response.getInflationDestination()))
@@ -62,7 +58,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
                     FunctionCall.Argument.from("medium_threshold", Objects.toString(response.getMedThreshold(), "")),
                     FunctionCall.Argument.from("high_threshold", Objects.toString(response.getHighThreshold(), "")),
                     FunctionCall.Argument.from("home_domain", response.getHomeDomain()),
-                    FunctionCall.Argument.from("signer", "{" + fetchAccountId(response.getSigner()) +
+                    FunctionCall.Argument.from("signer", "{" + response.getSignerKey() +
                         "," + response.getSignerWeight() + "}")
                 )
             )
@@ -87,7 +83,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
         optionalProperties.put("medThreshold", response.getMedThreshold());
         optionalProperties.put("highThreshold", response.getHighThreshold());
         optionalProperties.put("homeDomain", response.getHomeDomain());
-        optionalProperties.put("signer", fetchAccountId(response.getSigner()));
+        optionalProperties.put("signer", response.getSignerKey());
         optionalProperties.put("signerWeight", response.getSignerWeight());
         return optionalProperties;
     }
