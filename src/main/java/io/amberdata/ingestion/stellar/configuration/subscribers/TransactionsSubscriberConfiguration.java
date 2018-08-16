@@ -42,7 +42,6 @@ public class TransactionsSubscriberConfiguration {
                                                 HistoricalManager historicalManager,
                                                 HorizonServer server,
                                                 BatchSettings batchSettings) {
-
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
@@ -60,16 +59,16 @@ public class TransactionsSubscriberConfiguration {
             .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return modelMapper.map(transactionResponse, operationResponses);
+                return this.modelMapper.map(transactionResponse, operationResponses);
             })
-            .buffer(Integer.parseInt(batchSettings.getTransactionsInChunk()))
-            .map(mappedEntity -> apiClient.publish("/transactions", mappedEntity))
+            .buffer(Integer.parseInt(this.batchSettings.getTransactionsInChunk()))
+            .map(mappedEntity -> this.apiClient.publish("/transactions", mappedEntity))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
-            return server.horizonServer()
+            return this.server.horizonServer()
                 .operations()
                 .forTransaction(transactionResponse.getHash())
                 .execute()
@@ -86,26 +85,26 @@ public class TransactionsSubscriberConfiguration {
 
         LOG.info("Transactions cursor is set to {}", cursorPointer);
 
-        server.testConnection();
+        this.server.testConnection();
         testCursorCorrectness(cursorPointer);
 
-        server.horizonServer()
+        this.server.horizonServer()
             .transactions()
             .cursor(cursorPointer)
             .stream(responseConsumer::accept);
     }
 
     private String getCursorPointer () {
-        if (historicalManager.disabled()) {
-            return stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
+        if (this.historicalManager.disabled()) {
+            return this.stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
         } else {
-            return historicalManager.transactionPagingToken();
+            return this.historicalManager.transactionPagingToken();
         }
     }
 
     private void testCursorCorrectness (String cursorPointer) {
         try {
-            server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
+            this.server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
             throw new RuntimeException("Failed to test if cursor value is valid", e);

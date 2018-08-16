@@ -22,8 +22,16 @@ public class PreAuthOperationResponse extends OperationResponse {
     @SerializedName("signer_weight")
     protected String signerWeight;
 
-    public PreAuthOperationResponse (Long id, String sourceAccount, String pagingToken, String createdAt, String
-        transactionHash, String type, String signerKey, String signerWeight) {
+    public PreAuthOperationResponse (
+        Long id,
+        String sourceAccount,
+        String pagingToken,
+        String createdAt,
+        String transactionHash,
+        String type,
+        String signerKey,
+        String signerWeight
+    ) {
         this.id = id;
         this.sourceAccount = sourceAccount;
         this.pagingToken = pagingToken;
@@ -36,38 +44,38 @@ public class PreAuthOperationResponse extends OperationResponse {
 
     @Override
     public Long getId () {
-        return id;
+        return this.id;
     }
 
     public String getPreAuthSourceAccount () {
-        return sourceAccount;
+        return this.sourceAccount;
     }
 
     @Override
     public String getPagingToken () {
-        return pagingToken;
+        return this.pagingToken;
     }
 
     @Override
     public String getCreatedAt () {
-        return createdAt;
+        return this.createdAt;
     }
 
     @Override
     public String getTransactionHash () {
-        return transactionHash;
+        return this.transactionHash;
     }
 
     @Override
     public String getType () {
-        return type;
+        return this.type;
     }
 
     public String getSignerKey () {
-        return signerKey;
+        return this.signerKey;
     }
 
     public String getSignerWeight () {
-        return signerWeight;
+        return this.signerWeight;
     }
 }

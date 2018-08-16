@@ -1,16 +1,17 @@
 package io.amberdata.ingestion.stellar.configuration.history;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.stereotype.Component;
+
 import org.stellar.sdk.Server;
 import org.stellar.sdk.requests.RequestBuilder;
 import org.stellar.sdk.responses.Page;
@@ -21,7 +22,6 @@ import io.amberdata.ingestion.stellar.client.HorizonServer;
 @Component
 @EnableCaching
 public class HistoricalManager {
-
     private static final Logger LOG = LoggerFactory.getLogger(HistoricalManager.class);
 
     private final boolean isActive;
@@ -30,13 +30,14 @@ public class HistoricalManager {
 
     public HistoricalManager (
         @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumber,
-        HorizonServer horizonServer) {
+        HorizonServer horizonServer
+    ) {
 
         if (ledgerSequenceNumber != null && ledgerSequenceNumber > 0) {
-            isActive = true;
+            this.isActive = true;
             this.ledgerSequenceNumber = ledgerSequenceNumber;
         } else {
-            isActive = false;
+            this.isActive = false;
             this.ledgerSequenceNumber = 0L;
         }
 
@@ -45,30 +46,30 @@ public class HistoricalManager {
     }
 
     public boolean disabled () {
-        return !isActive;
+        return !this.isActive;
     }
 
     @Cacheable("state-history-ledger-paging-token")
     public String ledgerPagingToken () {
         ensureIsActive();
 
-        LOG.info("Going to request paging token for ledger with sequence number {}", ledgerSequenceNumber);
+        LOG.info("Going to request paging token for ledger with sequence number {}", this.ledgerSequenceNumber);
 
         try {
-            return horizonServer.ledgers()
-                .ledger(ledgerSequenceNumber - 1)
+            return this.horizonServer.ledgers()
+                .ledger(this.ledgerSequenceNumber - 1)
                 .getPagingToken();
         }
         catch (Exception e) {
-            throw new IllegalStateException("Error occurred, provided ledger sequence: " + ledgerSequenceNumber);
+            throw new IllegalStateException("Error occurred, provided ledger sequence: " + this.ledgerSequenceNumber);
         }
     }
 
     @Cacheable("state-history-transaction-paging-token")
     public String transactionPagingToken () {
-        ensureIsActive();
+        this.ensureIsActive();
 
-        return transactionPagingToken(ledgerSequenceNumber);
+        return transactionPagingToken(this.ledgerSequenceNumber);
     }
 
     private String transactionPagingToken (Long seqNumber) {
@@ -81,7 +82,7 @@ public class HistoricalManager {
             List<TransactionResponse> transactions = Collections.emptyList();
 
             while (transactions.isEmpty()) {
-                Page<TransactionResponse> transactionsPage = horizonServer.transactions()
+                Page<TransactionResponse> transactionsPage = this.horizonServer.transactions()
                     .forLedger(seqNumber)
                     .order(RequestBuilder.Order.ASC)
                     .execute();
@@ -99,7 +100,7 @@ public class HistoricalManager {
             return transactions.get(0).getPagingToken();
         }
         catch (Exception e) {
-            throw new IllegalStateException("Error occurred, provided ledger sequence number: " + ledgerSequenceNumber);
+            throw new IllegalStateException("Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber);
         }
     }
 
@@ -115,7 +116,7 @@ public class HistoricalManager {
     }
 
     private void ensureIsActive () {
-        if (disabled()) {
+        if (this.disabled()) {
             throw new IllegalStateException("Historical Manager is not active. To enable it define ledger sequence number on startup");
         }
     }

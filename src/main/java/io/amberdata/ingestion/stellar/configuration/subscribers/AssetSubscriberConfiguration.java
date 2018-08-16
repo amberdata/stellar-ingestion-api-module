@@ -30,21 +30,19 @@ import reactor.core.publisher.Flux;
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-assets")
 public class AssetSubscriberConfiguration {
-
     private static final Logger LOG = LoggerFactory.getLogger(AssetSubscriberConfiguration.class);
 
-    private final ResourceStateStorage        stateStorage;
-    private final IngestionApiClient          apiClient;
-    private final ModelMapper                 modelMapper;
-    private final HistoricalManager           historicalManager;
-    private final HorizonServer               server;
+    private final ResourceStateStorage stateStorage;
+    private final IngestionApiClient   apiClient;
+    private final ModelMapper          modelMapper;
+    private final HistoricalManager    historicalManager;
+    private final HorizonServer        server;
 
     public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
                                          HistoricalManager historicalManager,
                                          HorizonServer server) {
-
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
@@ -60,10 +58,10 @@ public class AssetSubscriberConfiguration {
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAssets(operationResponses, transactionResponse.getLedger()).stream()
-                    .map(assetResponse -> modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
+                    .map(assetResponse -> this.modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
                     .collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/assets", entities))
+            .map(entities -> this.apiClient.publish("/assets", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
@@ -78,7 +76,7 @@ public class AssetSubscriberConfiguration {
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
-            return server.horizonServer()
+            return this.server.horizonServer()
                 .operations()
                 .forTransaction(transactionResponse.getHash())
                 .execute()
@@ -92,7 +90,7 @@ public class AssetSubscriberConfiguration {
 
     private Optional<AssetResponse> fetchAsset (Asset asset) {
         try {
-            List<AssetResponse> records = server
+            List<AssetResponse> records = this.server
                 .horizonServer()
                 .assets()
                 .assetCode(asset.getCode())
@@ -116,26 +114,26 @@ public class AssetSubscriberConfiguration {
 
         LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 
-        server.testConnection();
+        this.server.testConnection();
         testCursorCorrectness(cursorPointer);
 
-        server.horizonServer()
+        this.server.horizonServer()
             .transactions()
             .cursor(cursorPointer)
             .stream(stellarSdkResponseConsumer::accept);
     }
 
     private String getCursorPointer () {
-        if (historicalManager.disabled()) {
-            return stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
+        if (this.historicalManager.disabled()) {
+            return this.stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
         } else {
-            return historicalManager.transactionPagingToken();
+            return this.historicalManager.transactionPagingToken();
         }
     }
 
     private void testCursorCorrectness (String cursorPointer) {
         try {
-            server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
+            this.server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
             throw new HorizonServer.IncorrectRequestException("Failed to test if cursor value is valid", e);

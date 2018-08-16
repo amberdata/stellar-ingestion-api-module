@@ -15,25 +15,24 @@ import reactor.core.publisher.Mono;
 
 @Component
 public class SubscriberErrorsHandler {
-
     private static final Logger LOG = LoggerFactory.getLogger(SubscriberErrorsHandler.class);
 
-    private static int retriesOnError;
-    private static Duration backOffTimeoutInitialDuration;
-    private static Duration backOffTimeoutMaxDuration;
+    private static int RETRIES_ON_ERROR;
+    private static Duration BACKOFF_TIMEOUT_INITIAL_DURATION;
+    private static Duration BACKOFF_TIMEOUT_MAX_DURATION;
 
     public SubscriberErrorsHandler (HorizonServerProperties serverProperties) {
-        SubscriberErrorsHandler.retriesOnError = serverProperties.getRetriesOnError() > 0 ?
+        SubscriberErrorsHandler.RETRIES_ON_ERROR = serverProperties.getRetriesOnError() > 0 ?
             serverProperties.getRetriesOnError() : Integer.MAX_VALUE;
-        SubscriberErrorsHandler.backOffTimeoutInitialDuration = serverProperties.getBackOffTimeoutInitial();
-        SubscriberErrorsHandler.backOffTimeoutMaxDuration = serverProperties.getBackOffTimeoutMax();
+        SubscriberErrorsHandler.BACKOFF_TIMEOUT_INITIAL_DURATION = serverProperties.getBackOffTimeoutInitial();
+        SubscriberErrorsHandler.BACKOFF_TIMEOUT_MAX_DURATION = serverProperties.getBackOffTimeoutMax();
 
         LOG.info(
             "Configuring Subscriber errors handler with re-tries: {}, " +
                 "back-off-timeout-initial: {}ms, back-off-timeout-max {}ms",
-            SubscriberErrorsHandler.retriesOnError,
-            SubscriberErrorsHandler.backOffTimeoutInitialDuration.toMillis(),
-            SubscriberErrorsHandler.backOffTimeoutMaxDuration.toMillis());
+            SubscriberErrorsHandler.RETRIES_ON_ERROR,
+            SubscriberErrorsHandler.BACKOFF_TIMEOUT_INITIAL_DURATION.toMillis(),
+            SubscriberErrorsHandler.BACKOFF_TIMEOUT_MAX_DURATION.toMillis());
     }
 
     public static Flux<Long> onError (Flux<Throwable> companion) {
@@ -44,9 +43,9 @@ public class SubscriberErrorsHandler {
     }
 
     private static Mono<Long> retryBackOffPattern (Integer index) {
-        Duration delayDuration = backOffTimeoutInitialDuration.multipliedBy(index);
-        if (delayDuration.compareTo(backOffTimeoutMaxDuration) > 0) {
-            delayDuration = backOffTimeoutMaxDuration;
+        Duration delayDuration = BACKOFF_TIMEOUT_INITIAL_DURATION.multipliedBy(index);
+        if (delayDuration.compareTo(BACKOFF_TIMEOUT_MAX_DURATION) > 0) {
+            delayDuration = BACKOFF_TIMEOUT_MAX_DURATION;
         }
         LOG.info("Back-off delay {}ms", delayDuration.toMillis());
 
@@ -57,7 +56,7 @@ public class SubscriberErrorsHandler {
         ensureErrorIsNotFatal(error);
 
         LOG.info("Trying to recover after {}: {} times", error.getMessage(), retryIndex);
-        if (retryIndex == retriesOnError) {
+        if (retryIndex == RETRIES_ON_ERROR) {
             throw Exceptions.propagate(error);
         }
         return retryIndex;

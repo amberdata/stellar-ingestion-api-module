@@ -18,8 +18,7 @@ import io.amberdata.ingestion.core.IngestionCore;
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
 @ComponentScan(basePackageClasses = {IngestionCore.class, StellarIngestionModuleDemoApplication.class})
 public class StellarIngestionModuleDemoApplication implements CommandLineRunner {
-
-    private static CountDownLatch exitLatch;
+    private static CountDownLatch EXIT_LATCH;
 
     private final Environment environment;
 
@@ -30,12 +29,12 @@ public class StellarIngestionModuleDemoApplication implements CommandLineRunner 
 
     @Override
     public void run (String... args) throws Exception {
-        boolean testProfileDisabled = Arrays.stream(environment.getActiveProfiles())
+        boolean testProfileDisabled = Arrays.stream(this.environment.getActiveProfiles())
             .noneMatch(profile -> profile.equalsIgnoreCase("test"));
 
         if (testProfileDisabled) {
-            exitLatch = new CountDownLatch(1);
-            exitLatch.await();
+            EXIT_LATCH = new CountDownLatch(1);
+            EXIT_LATCH.await();
         }
     }
 
@@ -47,8 +46,8 @@ public class StellarIngestionModuleDemoApplication implements CommandLineRunner 
     }
 
     public static void shutdown () {
-        if (exitLatch != null) {
-            exitLatch.countDown();
+        if (EXIT_LATCH != null) {
+            EXIT_LATCH.countDown();
         }
     }
 }

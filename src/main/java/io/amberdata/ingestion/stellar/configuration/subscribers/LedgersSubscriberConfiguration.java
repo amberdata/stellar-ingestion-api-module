@@ -38,7 +38,6 @@ public class LedgersSubscriberConfiguration {
                                            HistoricalManager historicalManager,
                                            HorizonServer server,
                                            BatchSettings batchSettings) {
-
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
@@ -54,9 +53,9 @@ public class LedgersSubscriberConfiguration {
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .retryWhen(SubscriberErrorsHandler::onError)
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
-            .map(modelMapper::map)
-            .buffer(Integer.parseInt(batchSettings.getBlocksInChunk()))
-            .map(entities -> apiClient.publish("/blocks", entities))
+            .map(this.modelMapper::map)
+            .buffer(Integer.parseInt(this.batchSettings.getBlocksInChunk()))
+            .map(entities -> this.apiClient.publish("/blocks", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
@@ -65,26 +64,26 @@ public class LedgersSubscriberConfiguration {
 
         LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
-        server.testConnection();
+        this.server.testConnection();
         testCursorCorrectness(cursorPointer);
 
-        server.horizonServer()
+        this.server.horizonServer()
             .ledgers()
             .cursor(cursorPointer)
             .stream(stellarSdkResponseConsumer::accept);
     }
 
     private String getCursorPointer () {
-        if (historicalManager.disabled()) {
-            return stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
+        if (this.historicalManager.disabled()) {
+            return this.stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
         } else {
-            return historicalManager.ledgerPagingToken();
+            return this.historicalManager.ledgerPagingToken();
         }
     }
 
     private void testCursorCorrectness (String cursorPointer) {
         try {
-            server.horizonServer().ledgers().cursor(cursorPointer).limit(1).execute();
+            this.server.horizonServer().ledgers().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
             throw new HorizonServer.IncorrectRequestException("Failed to test if cursor value is valid", e);

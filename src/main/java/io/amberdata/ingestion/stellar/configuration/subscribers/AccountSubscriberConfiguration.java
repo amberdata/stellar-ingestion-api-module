@@ -32,21 +32,19 @@ import reactor.core.publisher.Flux;
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name="subscribe-on-accounts")
 public class AccountSubscriberConfiguration {
-
     private static final Logger LOG = LoggerFactory.getLogger(AccountSubscriberConfiguration.class);
 
-    private final ResourceStateStorage        stateStorage;
-    private final IngestionApiClient          apiClient;
-    private final ModelMapper                 modelMapper;
-    private final HistoricalManager           historicalManager;
-    private final HorizonServer               server;
+    private final ResourceStateStorage stateStorage;
+    private final IngestionApiClient   apiClient;
+    private final ModelMapper          modelMapper;
+    private final HistoricalManager    historicalManager;
+    private final HorizonServer        server;
 
     public AccountSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
                                            HistoricalManager historicalManager,
                                            HorizonServer server) {
-
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
@@ -63,13 +61,13 @@ public class AccountSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
             })
-            .map(entities -> apiClient.publish("/addresses", entities))
+            .map(entities -> this.apiClient.publish("/addresses", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
     private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,
                                                                         TransactionResponse transactionResponse) {
-        return modelMapper.map(operationResponses, null).stream()
+        return this.modelMapper.map(operationResponses, null).stream()
             .flatMap(functionCall ->
                 Stream.of(
                     Optional.ofNullable(
@@ -85,7 +83,7 @@ public class AccountSubscriberConfiguration {
             .distinct()
             .map(accountWithTime -> {
                 AccountResponse accountResponse = this.fetchAccountDetails(accountWithTime.getName());
-                return modelMapper.map(
+                return this.modelMapper.map(
                     accountResponse,
                     transactionResponse.getPagingToken(),
                     accountWithTime.getTimestamp()
@@ -98,26 +96,26 @@ public class AccountSubscriberConfiguration {
 
         LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
 
-        server.testConnection();
+        this.server.testConnection();
         testCursorCorrectness(cursorPointer);
 
-        server.horizonServer()
+        this.server.horizonServer()
             .transactions()
             .cursor(cursorPointer)
             .stream(stellarSdkResponseConsumer::accept);
     }
 
     private String getCursorPointer () {
-        if (historicalManager.disabled()) {
-            return stateStorage.getStateToken(Address.class.getSimpleName(), () -> "now");
+        if (this.historicalManager.disabled()) {
+            return this.stateStorage.getStateToken(Address.class.getSimpleName(), () -> "now");
         } else {
-            return historicalManager.transactionPagingToken();
+            return this.historicalManager.transactionPagingToken();
         }
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
         try {
-            return server.horizonServer()
+            return this.server.horizonServer()
                 .operations()
                 .forTransaction(transactionResponse.getHash())
                 .execute()
@@ -131,7 +129,7 @@ public class AccountSubscriberConfiguration {
 
     private AccountResponse fetchAccountDetails (String accountId) {
         try {
-            return server.horizonServer()
+            return this.server.horizonServer()
                 .accounts()
                 .account(KeyPair.fromAccountId(accountId));
         }
@@ -143,7 +141,7 @@ public class AccountSubscriberConfiguration {
 
     private void testCursorCorrectness (String cursorPointer) {
         try {
-            server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
+            this.server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
         }
         catch (IOException e) {
             throw new HorizonServer.IncorrectRequestException("Failed to test if cursor value is valid", e);
@@ -151,7 +149,6 @@ public class AccountSubscriberConfiguration {
     }
 
     public static class AccountWithTime {
-
         private String name;
         private Long timestamp;
 
@@ -165,11 +162,11 @@ public class AccountSubscriberConfiguration {
         }
 
         public String getName () {
-            return name;
+            return this.name;
         }
 
         public Long getTimestamp () {
-            return timestamp;
+            return this.timestamp;
         }
     }
 }

@@ -20,7 +20,7 @@ public class HorizonServerProperties {
     private Duration backOffTimeoutMax;
 
     public String getServer () {
-        return server;
+        return this.server;
     }
 
     public void setServer (String server) {
@@ -28,7 +28,7 @@ public class HorizonServerProperties {
     }
 
     public Integer getRetriesOnError () {
-        return retriesOnError;
+        return this.retriesOnError;
     }
 
     public void setRetriesOnError (Integer retriesOnError) {
@@ -36,7 +36,7 @@ public class HorizonServerProperties {
     }
 
     public Duration getBackOffTimeoutInitial () {
-        return backOffTimeoutInitial;
+        return this.backOffTimeoutInitial;
     }
 
     public void setBackOffTimeoutInitial (Duration backOffTimeoutInitial) {
@@ -44,7 +44,7 @@ public class HorizonServerProperties {
     }
 
     public Duration getBackOffTimeoutMax () {
-        return backOffTimeoutMax;
+        return this.backOffTimeoutMax;
     }
 
     public void setBackOffTimeoutMax (Duration backOffTimeoutMax) {
