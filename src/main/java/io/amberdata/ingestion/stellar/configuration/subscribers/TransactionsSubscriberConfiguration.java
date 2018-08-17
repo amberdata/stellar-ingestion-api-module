@@ -62,7 +62,8 @@ public class TransactionsSubscriberConfiguration {
                 return this.modelMapper.map(transactionResponse, operationResponses);
             })
             .buffer(Integer.parseInt(this.batchSettings.getTransactionsInChunk()))
-            .map(mappedEntity -> this.apiClient.publish("/transactions", mappedEntity))
+            .filter(entities -> !entities.isEmpty())
+            .map(entities -> this.apiClient.publish("/transactions", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 

@@ -61,6 +61,7 @@ public class AccountSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
             })
+            .filter(entities -> !entities.isEmpty())
             .map(entities -> this.apiClient.publish("/addresses", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
