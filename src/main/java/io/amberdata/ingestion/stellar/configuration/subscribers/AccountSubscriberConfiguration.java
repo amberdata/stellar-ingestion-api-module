@@ -68,27 +68,31 @@ public class AccountSubscriberConfiguration {
     private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,
                                                                         TransactionResponse transactionResponse) {
         return this.modelMapper.map(operationResponses, null).stream()
-            .flatMap(functionCall ->
-                Stream.of(
-                    Optional.ofNullable(
-                        functionCall.getFrom() != null ?
-                            AccountWithTime.from(functionCall.getFrom(), functionCall.getTimestamp()) : null),
-                    Optional.ofNullable(
-                        functionCall.getTo() != null ?
-                            AccountWithTime.from(functionCall.getTo(), functionCall.getTimestamp()) : null)
-                )
-            )
-            .filter(Optional::isPresent)
-            .map(Optional::get)
-            .distinct()
-            .map(accountWithTime -> {
-                AccountResponse accountResponse = this.fetchAccountDetails(accountWithTime.getName());
-                return this.modelMapper.map(
-                    accountResponse,
-                    transactionResponse.getPagingToken(),
-                    accountWithTime.getTimestamp()
-                );
-            });
+            .flatMap(functionCall -> {
+                Stream.Builder<BlockchainEntityWithState<Address>> stream = Stream.builder();
+                if (functionCall.getFrom() != null) {
+                    AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getFrom());
+                    if (accountResponse != null) {
+                        stream.add(this.modelMapper.map(
+                            accountResponse,
+                            transactionResponse.getPagingToken(),
+                            functionCall.getTimestamp()
+                        ));
+                    }
+                }
+                if (functionCall.getTo() != null) {
+                    AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getTo());
+                    if (accountResponse != null) {
+                        stream.add(this.modelMapper.map(
+                            accountResponse,
+                            transactionResponse.getPagingToken(),
+                            functionCall.getTimestamp()
+                        ));
+                    }
+                }
+                return stream.build();
+            })
+            .distinct();
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
@@ -133,7 +137,7 @@ public class AccountSubscriberConfiguration {
                 .accounts()
                 .account(KeyPair.fromAccountId(accountId));
         }
-        catch (IOException ex) {
+        catch (Exception ex) {
             LOG.error("Unable to get details for account {}", accountId);
             return null;
         }
