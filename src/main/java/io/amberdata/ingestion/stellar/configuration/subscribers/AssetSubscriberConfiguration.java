@@ -67,6 +67,7 @@ public class AssetSubscriberConfiguration {
                     ))
                     .collect(Collectors.toList());
             })
+            .filter(entities -> !entities.isEmpty())
             .map(entities -> this.apiClient.publish("/assets", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
