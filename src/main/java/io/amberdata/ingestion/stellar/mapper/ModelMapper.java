@@ -107,6 +107,7 @@ public class ModelMapper {
             OperationResponse operationResponse = operationResponses.get(i);
             List<Asset> assets = this.operationMapperManager.mapAssets(operationResponse);
             for (Asset asset : assets) {
+                asset.setAmount("0");
                 asset.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
                 asset.setTransactionHash(operationResponse.getTransactionHash());
                 asset.setFunctionCallHash(
