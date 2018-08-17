@@ -135,31 +135,6 @@ public class ModelMapper {
         );
     }
 
-    public BlockchainEntityWithState<Asset> map (AssetResponse assetResponse, String pagingToken) {
-        Asset asset = new Asset.Builder()
-            .type(Asset.AssetType.fromName(assetResponse.getAssetType()))
-            .code(assetResponse.getAssetCode())
-            .issuerAccount(assetResponse.getAssetIssuer())
-            .amount(assetResponse.getAmount())
-            .meta(assetOptionalProperties(assetResponse))
-            .build();
-
-        return BlockchainEntityWithState.from(
-            asset,
-            ResourceState.from(Asset.class.getSimpleName(), pagingToken)
-        );
-    }
-
-    private Map<String, Object> assetOptionalProperties (AssetResponse assetResponse) {
-        Map<String, Object> optionalProperties = new HashMap<>();
-
-        optionalProperties.put("num_accounts", assetResponse.getNumAccounts());
-        optionalProperties.put("flag_auth_required", assetResponse.getFlags().isAuthRequired());
-        optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
-
-        return optionalProperties;
-    }
-
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
         Map<String, Object> optionalProperties = new HashMap<>();
 
