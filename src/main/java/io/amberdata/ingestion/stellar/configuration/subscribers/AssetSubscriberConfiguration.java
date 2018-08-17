@@ -2,8 +2,9 @@ package io.amberdata.ingestion.stellar.configuration.subscribers;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Optional;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -16,8 +17,10 @@ import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
 import io.amberdata.ingestion.core.state.ResourceStateStorage;
+import io.amberdata.ingestion.core.state.entities.ResourceState;
 import io.amberdata.ingestion.domain.Asset;
 import io.amberdata.ingestion.domain.Transaction;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
@@ -58,20 +61,22 @@ public class AssetSubscriberConfiguration {
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return processAssets(operationResponses, transactionResponse.getLedger()).stream()
-                    .map(assetResponse -> this.modelMapper.map(assetResponse, transactionResponse.getPagingToken()))
+                    .map(asset -> BlockchainEntityWithState.from(
+                        asset,
+                        ResourceState.from(Asset.class.getSimpleName(), transactionResponse.getPagingToken())
+                    ))
                     .collect(Collectors.toList());
             })
             .map(entities -> this.apiClient.publish("/assets", entities))
             .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
     }
 
-    private List<AssetResponse> processAssets (List<OperationResponse> operationResponses, Long ledger) {
-        return modelMapper.mapAssets(operationResponses, ledger).stream()
+    private List<Asset> processAssets (List<OperationResponse> operationResponses, Long ledger) {
+        List<Asset> assets = modelMapper.mapAssets(operationResponses, ledger).stream()
             .distinct()
-            .map(this::fetchAsset)
-            .filter(Optional::isPresent)
-            .map(Optional::get)
             .collect(Collectors.toList());
+        assets.forEach(this::enrichAsset);
+        return assets;
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
@@ -88,7 +93,7 @@ public class AssetSubscriberConfiguration {
         }
     }
 
-    private Optional<AssetResponse> fetchAsset (Asset asset) {
+    private void enrichAsset (Asset asset) {
         try {
             List<AssetResponse> records = this.server
                 .horizonServer()
@@ -99,14 +104,28 @@ public class AssetSubscriberConfiguration {
                 .getRecords();
 
             if (records.size() > 0) {
-                return Optional.of(records.get(0));
+                AssetResponse assetResponse = records.get(0);
+                asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
+                asset.setCode(assetResponse.getAssetCode());
+                asset.setIssuerAccount(assetResponse.getAssetIssuer());
+                asset.setAmount(assetResponse.getAmount());
+                asset.setMeta(assetOptionalProperties(assetResponse));
             }
         }
         catch (IOException ex) {
+            asset.setAmount("0");
             LOG.error("Error during fetching an asset: " + asset.getCode());
         }
+    }
 
-        return Optional.empty();
+    private Map<String, Object> assetOptionalProperties (AssetResponse assetResponse) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+
+        optionalProperties.put("num_accounts", assetResponse.getNumAccounts());
+        optionalProperties.put("flag_auth_required", assetResponse.getFlags().isAuthRequired());
+        optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
+
+        return optionalProperties;
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
