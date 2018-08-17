@@ -8,11 +8,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
+import org.stellar.sdk.responses.operations.BumpSequenceOperationResponse;
 import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
 import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
 import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
@@ -32,6 +35,8 @@ import io.amberdata.ingestion.stellar.mapper.AssetMapper;
 @Component
 public class OperationMapperManager {
 
+    private static final Logger LOG = LoggerFactory.getLogger(OperationMapperManager.class);
+
     private final Map<Class<? extends OperationResponse>, OperationMapper> responsesMap;
     private final HorizonServer                                            server;
 
@@ -49,6 +54,7 @@ public class OperationMapperManager {
         responsesMap.put(AccountMergeOperationResponse.class, new AccountMergeOperationMapper());
         responsesMap.put(InflationOperationResponse.class, new InflationOperationMapper());
         responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
+        responsesMap.put(BumpSequenceOperationResponse.class, new BumpSequenceOperationMapper());
 
         this.server = server;
     }
@@ -58,7 +64,18 @@ public class OperationMapperManager {
 
         List<String> effects = fetchEffectsForOperation(operationResponse);
 
-        FunctionCall    functionCall    = operationMapper.map(operationResponse);
+        FunctionCall functionCall;
+        if (operationMapper == null) {
+            LOG.warn("An unknown operation has been introduced which is not implemented: " +
+                operationResponse.getClass().getSimpleName());
+            functionCall = new FunctionCall();
+            functionCall.setName("unknown");
+            functionCall.setSignature("unknown_operation");
+            functionCall.setArguments(Collections.emptyList());
+        } else {
+            functionCall = operationMapper.map(operationResponse);
+        }
+
         functionCall.setBlockNumber(ledger);
         functionCall.setTransactionHash(operationResponse.getTransactionHash());
         functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
@@ -76,6 +93,12 @@ public class OperationMapperManager {
 
     public List<Asset> mapAssets (OperationResponse operationResponse) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
+        if (operationMapper == null) {
+            LOG.warn("An unknown operation has been introduced which is not implemented: " +
+                operationResponse.getClass().getSimpleName());
+            return Collections.emptyList();
+        }
+
         return operationMapper.getAssets(operationResponse);
     }
 
