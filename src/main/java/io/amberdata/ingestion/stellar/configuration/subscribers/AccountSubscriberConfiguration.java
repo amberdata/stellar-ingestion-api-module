@@ -72,19 +72,23 @@ public class AccountSubscriberConfiguration {
                 Stream.Builder<BlockchainEntityWithState<Address>> stream = Stream.builder();
                 if (functionCall.getFrom() != null) {
                     AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getFrom());
-                    stream.add(this.modelMapper.map(
-                        accountResponse,
-                        transactionResponse.getPagingToken(),
-                        functionCall.getTimestamp()
-                    ));
+                    if (accountResponse != null) {
+                        stream.add(this.modelMapper.map(
+                            accountResponse,
+                            transactionResponse.getPagingToken(),
+                            functionCall.getTimestamp()
+                        ));
+                    }
                 }
                 if (functionCall.getTo() != null) {
                     AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getTo());
-                    stream.add(this.modelMapper.map(
-                        accountResponse,
-                        transactionResponse.getPagingToken(),
-                        functionCall.getTimestamp()
-                    ));
+                    if (accountResponse != null) {
+                        stream.add(this.modelMapper.map(
+                            accountResponse,
+                            transactionResponse.getPagingToken(),
+                            functionCall.getTimestamp()
+                        ));
+                    }
                 }
                 return stream.build();
             })
