@@ -58,7 +58,16 @@ public class OperationMapperManager {
 
         List<String> effects = fetchEffectsForOperation(operationResponse);
 
-        FunctionCall    functionCall    = operationMapper.map(operationResponse);
+        FunctionCall functionCall;
+        if (operationMapper == null) {
+            functionCall = new FunctionCall();
+            functionCall.setName("unknown");
+            functionCall.setSignature("unknown_operation");
+            functionCall.setArguments(Collections.emptyList());
+        } else {
+            functionCall = operationMapper.map(operationResponse);
+        }
+
         functionCall.setBlockNumber(ledger);
         functionCall.setTransactionHash(operationResponse.getTransactionHash());
         functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
