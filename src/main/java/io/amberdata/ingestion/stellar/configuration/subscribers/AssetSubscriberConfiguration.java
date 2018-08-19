@@ -109,7 +109,7 @@ public class AssetSubscriberConfiguration {
                 asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
                 asset.setCode(assetResponse.getAssetCode());
                 asset.setIssuerAccount(assetResponse.getAssetIssuer());
-                asset.setAmount(assetResponse.getAmount());
+                asset.setAmount(assetResponse.getAmount() != null ? assetResponse.getAmount() : "0");
                 asset.setMeta(assetOptionalProperties(assetResponse));
             }
         }
