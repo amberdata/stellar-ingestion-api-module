@@ -68,8 +68,11 @@ public class AssetSubscriberConfiguration {
                     .collect(Collectors.toList());
             })
             .filter(entities -> !entities.isEmpty())
-            .map(entities -> this.apiClient.publish("/assets", entities))
-            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
+            .retryWhen(SubscriberErrorsHandler::onError)
+            .subscribe(
+                entities -> this.apiClient.publish("/assets", entities),
+                SubscriberErrorsHandler::handleFatalApplicationError
+            );
     }
 
     private List<Asset> processAssets (List<OperationResponse> operationResponses, Long ledger) {

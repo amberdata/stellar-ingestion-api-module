@@ -55,7 +55,6 @@ public class TransactionsSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Transactions stream");
 
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
-            .retryWhen(SubscriberErrorsHandler::onError)
             .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
@@ -63,8 +62,11 @@ public class TransactionsSubscriberConfiguration {
             })
             .buffer(Integer.parseInt(this.batchSettings.getTransactionsInChunk()))
             .filter(entities -> !entities.isEmpty())
-            .map(entities -> this.apiClient.publish("/transactions", entities))
-            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
+            .retryWhen(SubscriberErrorsHandler::onError)
+            .subscribe(
+                entities -> this.apiClient.publish("/transactions", entities),
+                SubscriberErrorsHandler::handleFatalApplicationError
+            );
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
