@@ -111,7 +111,7 @@ public class HistoricalManager {
             return transactions.get(0).getPagingToken();
         }
         catch (Exception e) {
-            throw new IllegalStateException("Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber);
+            throw new IllegalStateException("Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber, e);
         }
     }
 
