@@ -62,8 +62,11 @@ public class AccountSubscriberConfiguration {
                 return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
             })
             .filter(entities -> !entities.isEmpty())
-            .map(entities -> this.apiClient.publish("/addresses", entities))
-            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
+            .retryWhen(SubscriberErrorsHandler::onError)
+            .subscribe(
+                entities -> this.apiClient.publish("/addresses", entities),
+                SubscriberErrorsHandler::handleFatalApplicationError
+            );
     }
 
     private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,

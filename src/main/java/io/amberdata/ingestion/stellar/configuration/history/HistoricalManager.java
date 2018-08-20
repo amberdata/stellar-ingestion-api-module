@@ -6,11 +6,8 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
-
 import org.stellar.sdk.Server;
 import org.stellar.sdk.requests.RequestBuilder;
 import org.stellar.sdk.responses.Page;
@@ -25,6 +22,9 @@ public class HistoricalManager {
     private final boolean isActive;
     private final Server  horizonServer;
     private final Long    ledgerSequenceNumber;
+
+    private String lastLedgerToken;
+    private String lastTransactionToken;
 
     public HistoricalManager (
         @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumber,
@@ -47,27 +47,40 @@ public class HistoricalManager {
         return !this.isActive;
     }
 
-    @Cacheable(cacheNames = "state-history", key = "#root.methodName", sync = true)
-    public String ledgerPagingToken () {
+    synchronized public String ledgerPagingToken () {
         ensureIsActive();
+
+        if (this.lastLedgerToken != null) {
+            return this.lastLedgerToken;
+        }
 
         LOG.info("Going to request paging token for ledger with sequence number {}", this.ledgerSequenceNumber);
 
         try {
-            return this.horizonServer.ledgers()
-                .ledger(this.ledgerSequenceNumber - 1)
+            String token = this.horizonServer.ledgers()
+                .ledger(this.ledgerSequenceNumber)
                 .getPagingToken();
+
+            this.lastLedgerToken = token;
+            
+            return token;
         }
         catch (Exception e) {
             throw new IllegalStateException("Error occurred, provided ledger sequence: " + this.ledgerSequenceNumber);
         }
     }
 
-    @Cacheable(cacheNames = "state-history", key = "#root.methodName", sync = true)
-    public String transactionPagingToken () {
+    synchronized public String transactionPagingToken () {
         this.ensureIsActive();
 
-        return transactionPagingToken(this.ledgerSequenceNumber);
+        if (this.lastTransactionToken != null) {
+            return this.lastTransactionToken;
+        }
+
+        String token = transactionPagingToken(this.ledgerSequenceNumber);
+        this.lastTransactionToken = token;
+
+        return token;
     }
 
     private String transactionPagingToken (Long seqNumber) {

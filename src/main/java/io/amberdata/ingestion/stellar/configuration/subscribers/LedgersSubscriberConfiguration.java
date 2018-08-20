@@ -51,13 +51,15 @@ public class LedgersSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Ledgers stream");
 
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
-            .retryWhen(SubscriberErrorsHandler::onError)
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(this.modelMapper::map)
             .buffer(Integer.parseInt(this.batchSettings.getBlocksInChunk()))
             .filter(entities -> !entities.isEmpty())
-            .map(entities -> this.apiClient.publish("/blocks", entities))
-            .subscribe(null, SubscriberErrorsHandler::handleFatalApplicationError);
+            .retryWhen(SubscriberErrorsHandler::onError)
+            .subscribe(
+                entities -> this.apiClient.publish("/blocks", entities),
+                SubscriberErrorsHandler::handleFatalApplicationError
+            );
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {

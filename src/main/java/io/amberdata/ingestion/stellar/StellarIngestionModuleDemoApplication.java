@@ -18,7 +18,6 @@ import io.amberdata.ingestion.core.IngestionCore;
 
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
 @ComponentScan(basePackageClasses = {IngestionCore.class, StellarIngestionModuleDemoApplication.class})
-@EnableCaching
 public class StellarIngestionModuleDemoApplication implements CommandLineRunner {
     private static CountDownLatch EXIT_LATCH;
 
