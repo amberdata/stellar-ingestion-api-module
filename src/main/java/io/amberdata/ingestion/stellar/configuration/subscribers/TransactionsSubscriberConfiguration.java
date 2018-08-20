@@ -60,8 +60,7 @@ public class TransactionsSubscriberConfiguration {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
                 return this.modelMapper.map(transactionResponse, operationResponses);
             })
-            .buffer(Integer.parseInt(this.batchSettings.getTransactionsInChunk()))
-            .filter(entities -> !entities.isEmpty())
+            .buffer(this.batchSettings.transactionsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/transactions", entities),

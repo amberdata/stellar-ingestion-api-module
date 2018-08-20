@@ -53,8 +53,7 @@ public class LedgersSubscriberConfiguration {
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(this.modelMapper::map)
-            .buffer(Integer.parseInt(this.batchSettings.getBlocksInChunk()))
-            .filter(entities -> !entities.isEmpty())
+            .buffer(this.batchSettings.blocksInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/blocks", entities),
