@@ -58,12 +58,6 @@
             <groupId>io.amberdata</groupId>
             <artifactId>java-spring-utilities</artifactId>
             <version>0.0.1</version>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.ehcache</groupId>
-                    <artifactId>ehcache</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>
