@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheConfig;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 
@@ -19,6 +20,7 @@ import org.stellar.sdk.responses.TransactionResponse;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 
 @Component
+@CacheConfig(cacheNames = "stateHistory", cacheManager = "stateHistoryCacheManager")
 public class HistoricalManager {
     private static final Logger LOG = LoggerFactory.getLogger(HistoricalManager.class);
 
@@ -47,7 +49,7 @@ public class HistoricalManager {
         return !this.isActive;
     }
 
-    @Cacheable(cacheNames = "state-history", key = "#root.methodName", sync = true)
+    @Cacheable(key = "#root.methodName", sync = true)
     public String ledgerPagingToken () {
         ensureIsActive();
 
@@ -63,7 +65,7 @@ public class HistoricalManager {
         }
     }
 
-    @Cacheable(cacheNames = "state-history", key = "#root.methodName", sync = true)
+    @Cacheable(key = "#root.methodName", sync = true)
     public String transactionPagingToken () {
         this.ensureIsActive();
 
