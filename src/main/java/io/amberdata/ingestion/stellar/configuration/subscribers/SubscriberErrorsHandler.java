@@ -56,10 +56,10 @@ public class SubscriberErrorsHandler {
         ensureErrorIsNotFatal(error);
 
         LOG.info("Trying to recover after {}: {} times", error.getMessage(), retryIndex);
-        if (retryIndex == RETRIES_ON_ERROR) {
-            throw Exceptions.propagate(error);
+        if (retryIndex <= RETRIES_ON_ERROR) {
+            return (int) Math.pow(2, retryIndex);
         }
-        return retryIndex;
+        throw Exceptions.propagate(error);
     }
 
     private static void ensureErrorIsNotFatal (Throwable error) {
