@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.Server;
 import org.stellar.sdk.requests.RequestBuilder;
+import org.stellar.sdk.requests.TooManyRequestsException;
 import org.stellar.sdk.responses.Page;
 import org.stellar.sdk.responses.TransactionResponse;
 
@@ -110,8 +111,12 @@ public class HistoricalManager {
             }
             return transactions.get(0).getPagingToken();
         }
-        catch (Exception e) {
-            throw new IllegalStateException("Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber, e);
+        catch (TooManyRequestsException ex) {
+            throw ex;
+        }
+        catch (Exception ex) {
+            // this kind of exception will make the app to stop with fatal error
+            throw new IllegalStateException("Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber, ex);
         }
     }
 
