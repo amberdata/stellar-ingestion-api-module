@@ -111,9 +111,11 @@ public class AssetSubscriberConfiguration {
                 asset.setIssuerAccount(assetResponse.getAssetIssuer());
                 asset.setAmount(assetResponse.getAmount() != null ? assetResponse.getAmount() : "0");
                 asset.setMeta(assetOptionalProperties(assetResponse));
+            } else {
+                asset.setAmount("0");
             }
         }
-        catch (IOException ex) {
+        catch (Exception ex) {
             asset.setAmount("0");
             LOG.error("Error during fetching an asset: " + asset.getCode());
         }
