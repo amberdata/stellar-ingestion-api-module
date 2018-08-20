@@ -54,7 +54,6 @@ public class LedgersSubscriberConfiguration {
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(this.modelMapper::map)
             .buffer(this.batchSettings.blocksInChunk())
-            .filter(entities -> !entities.isEmpty())
             .retryWhen(SubscriberErrorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/blocks", entities),
