@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +26,7 @@ import io.amberdata.ingestion.domain.Asset;
 import io.amberdata.ingestion.domain.Transaction;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
+import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
@@ -40,17 +42,20 @@ public class AssetSubscriberConfiguration {
     private final ModelMapper          modelMapper;
     private final HistoricalManager    historicalManager;
     private final HorizonServer        server;
+    private final BatchSettings        batchSettings;
 
     public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
                                          HistoricalManager historicalManager,
-                                         HorizonServer server) {
+                                         HorizonServer server,
+                                         BatchSettings batchSettings) {
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.historicalManager = historicalManager;
         this.server = server;
+        this.batchSettings = batchSettings;
     }
 
     @PostConstruct
@@ -64,10 +69,10 @@ public class AssetSubscriberConfiguration {
                     .map(asset -> BlockchainEntityWithState.from(
                         asset,
                         ResourceState.from(Asset.class.getSimpleName(), transactionResponse.getPagingToken())
-                    ))
-                    .collect(Collectors.toList());
+                    ));
             })
-            .filter(entities -> !entities.isEmpty())
+            .flatMap(Flux::fromStream)
+            .buffer(this.batchSettings.assetsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/assets", entities),

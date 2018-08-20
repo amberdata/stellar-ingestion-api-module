@@ -24,6 +24,7 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 import io.amberdata.ingestion.domain.Address;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
+import io.amberdata.ingestion.stellar.configuration.properties.BatchSettings;
 import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
@@ -39,17 +40,20 @@ public class AccountSubscriberConfiguration {
     private final ModelMapper          modelMapper;
     private final HistoricalManager    historicalManager;
     private final HorizonServer        server;
+    private final BatchSettings        batchSettings;
 
     public AccountSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
                                            HistoricalManager historicalManager,
-                                           HorizonServer server) {
+                                           HorizonServer server,
+                                           BatchSettings batchSettings) {
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.historicalManager = historicalManager;
         this.server = server;
+        this.batchSettings = batchSettings;
     }
 
     @PostConstruct
@@ -59,9 +63,10 @@ public class AccountSubscriberConfiguration {
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .map(transactionResponse -> {
                 List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAccounts(operationResponses, transactionResponse).collect(Collectors.toList());
+                return processAccounts(operationResponses, transactionResponse);
             })
-            .filter(entities -> !entities.isEmpty())
+            .flatMap(Flux::fromStream)
+            .buffer(this.batchSettings.addressesInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/addresses", entities),
