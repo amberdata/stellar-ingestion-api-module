@@ -31,6 +31,7 @@ import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-assets")
@@ -63,23 +64,26 @@ public class AssetSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Assets stream through Transactions stream");
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
-            .map(transactionResponse -> {
-                List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAssets(operationResponses, transactionResponse.getLedger()).stream()
-                    .map(asset -> BlockchainEntityWithState.from(
-                        asset,
-                        ResourceState.from(Asset.class.getSimpleName(), transactionResponse.getPagingToken())
-                    ));
-            })
+            .publishOn(Schedulers.newSingle("assets-subscriber-thread"))
+            .map(this::toAssetsStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.assetsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
-            .map(entities -> this.apiClient.publish("/assets", entities))
-            .timestamp()
             .subscribe(
-                (tuple -> LOG.info("Published asset at {}", tuple.getT1())),
+                entities -> this.apiClient.publish("/assets", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
+    }
+
+    private Stream<BlockchainEntityWithState<Asset>> toAssetsStream (TransactionResponse transactionResponse) {
+        return processAssets(
+            fetchOperationsForTransaction(transactionResponse),
+            transactionResponse.getLedger()
+        ).stream()
+            .map(asset -> BlockchainEntityWithState.from(
+                asset,
+                ResourceState.from(Asset.class.getSimpleName(), transactionResponse.getPagingToken())
+            ));
     }
 
     private List<Asset> processAssets (List<OperationResponse> operationResponses, Long ledger) {

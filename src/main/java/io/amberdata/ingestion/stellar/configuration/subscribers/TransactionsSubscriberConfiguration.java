@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
+import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
 import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
@@ -23,6 +24,7 @@ import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name="subscribe-on-transactions")
@@ -55,19 +57,20 @@ public class TransactionsSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Transactions stream");
 
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
+            .publishOn(Schedulers.newSingle("transactions-subscriber-thread"))
             .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
-            .map(transactionResponse -> {
-                List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return this.modelMapper.map(transactionResponse, operationResponses);
-            })
+            .map(this::enrichTransaction)
             .buffer(this.batchSettings.transactionsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
-            .map(entities -> this.apiClient.publish("/transactions", entities))
-            .timestamp()
             .subscribe(
-                (tuple -> LOG.info("Published transaction at {}", tuple.getT1())),
+                entities -> this.apiClient.publish("/transactions", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
+    }
+
+    private BlockchainEntityWithState<Transaction> enrichTransaction (TransactionResponse transactionResponse) {
+        List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
+        return this.modelMapper.map(transactionResponse, operationResponses);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
