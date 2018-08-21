@@ -62,8 +62,10 @@ public class TransactionsSubscriberConfiguration {
             })
             .buffer(this.batchSettings.transactionsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
+            .map(entities -> this.apiClient.publish("/transactions", entities))
+            .timestamp()
             .subscribe(
-                entities -> this.apiClient.publish("/transactions", entities),
+                (tuple -> LOG.info("Published transaction at {}", tuple.getT1())),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
@@ -83,17 +85,22 @@ public class TransactionsSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
-        String cursorPointer = getCursorPointer();
+        try {
+            String cursorPointer = getCursorPointer();
 
-        LOG.info("Transactions cursor is set to {}", cursorPointer);
+            LOG.info("Transactions cursor is set to {}", cursorPointer);
 
-        this.server.testConnection();
-        testCursorCorrectness(cursorPointer);
+            this.server.testConnection();
+            testCursorCorrectness(cursorPointer);
 
-        this.server.horizonServer()
-            .transactions()
-            .cursor(cursorPointer)
-            .stream(responseConsumer::accept);
+            this.server.horizonServer()
+                .transactions()
+                .cursor(cursorPointer)
+                .stream(responseConsumer::accept);
+        }
+        catch (Exception e) {
+            SubscriberErrorsHandler.handleFatalApplicationError(e);
+        }
     }
 
     private String getCursorPointer () {
