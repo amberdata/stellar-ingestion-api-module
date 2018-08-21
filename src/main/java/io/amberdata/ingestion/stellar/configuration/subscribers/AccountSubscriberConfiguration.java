@@ -29,6 +29,7 @@ import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name="subscribe-on-accounts")
@@ -61,19 +62,20 @@ public class AccountSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Accounts stream through Transactions stream");
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
-            .map(transactionResponse -> {
-                List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-                return processAccounts(operationResponses, transactionResponse);
-            })
+            .publishOn(Schedulers.newSingle("addresses-subscriber-thread"))
+            .map(this::toOperationsStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.addressesInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
-            .map(entities -> this.apiClient.publish("/addresses", entities))
-            .timestamp()
             .subscribe(
-                (tuple -> LOG.info("Published address at {}", tuple.getT1())),
+                entities -> this.apiClient.publish("/addresses", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
+    }
+
+    private Stream<BlockchainEntityWithState<Address>> toOperationsStream (TransactionResponse transactionResponse) {
+        List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
+        return processAccounts(operationResponses, transactionResponse);
     }
 
     private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,

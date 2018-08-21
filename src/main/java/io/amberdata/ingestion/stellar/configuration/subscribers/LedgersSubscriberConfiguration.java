@@ -19,6 +19,7 @@ import io.amberdata.ingestion.stellar.mapper.ModelMapper;
 
 import javax.annotation.PostConstruct;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name="subscribe-on-ledgers")
@@ -51,14 +52,13 @@ public class LedgersSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Ledgers stream");
 
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
+            .publishOn(Schedulers.newSingle("ledgers-subscriber-thread"))
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(this.modelMapper::map)
             .buffer(this.batchSettings.blocksInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
-            .map(entities -> this.apiClient.publish("/blocks", entities))
-            .timestamp()
             .subscribe(
-                (tuple -> LOG.info("Published ledger at {}", tuple.getT1())),
+                entities -> this.apiClient.publish("/blocks", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
