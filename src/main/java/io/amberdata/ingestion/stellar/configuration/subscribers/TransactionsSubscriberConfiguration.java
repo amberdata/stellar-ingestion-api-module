@@ -57,7 +57,7 @@ public class TransactionsSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Transactions stream");
 
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
-            .publishOn(Schedulers.newSingle("transactions-subscriber-thread"))
+            .publishOn(Schedulers.newElastic("transactions-subscriber-thread"))
             .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
             .map(this::enrichTransaction)
             .buffer(this.batchSettings.transactionsInChunk())
