@@ -142,22 +142,17 @@ public class AssetSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        try {
-            String cursorPointer = getCursorPointer();
+        String cursorPointer = getCursorPointer();
 
-            LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
+        LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 
-            this.server.testConnection();
-            testCursorCorrectness(cursorPointer);
+        this.server.testConnection();
+        testCursorCorrectness(cursorPointer);
 
-            this.server.horizonServer()
-                .transactions()
-                .cursor(cursorPointer)
-                .stream(stellarSdkResponseConsumer::accept);
-        }
-        catch (Exception e) {
-            SubscriberErrorsHandler.handleFatalApplicationError(e);
-        }
+        this.server.horizonServer()
+            .transactions()
+            .cursor(cursorPointer)
+            .stream(stellarSdkResponseConsumer::accept);
     }
 
     private String getCursorPointer () {

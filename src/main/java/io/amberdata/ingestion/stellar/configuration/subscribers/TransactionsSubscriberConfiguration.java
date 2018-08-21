@@ -85,22 +85,16 @@ public class TransactionsSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
-        try {
-            String cursorPointer = getCursorPointer();
+        String cursorPointer = getCursorPointer();
 
-            LOG.info("Transactions cursor is set to {}", cursorPointer);
+        LOG.info("Transactions cursor is set to {}", cursorPointer);
 
-            this.server.testConnection();
-            testCursorCorrectness(cursorPointer);
+        this.server.testConnection();
+        testCursorCorrectness(cursorPointer);
 
-            this.server.horizonServer()
-                .transactions()
-                .cursor(cursorPointer)
-                .stream(responseConsumer::accept);
-        }
-        catch (Exception e) {
-            SubscriberErrorsHandler.handleFatalApplicationError(e);
-        }
+        this.server.horizonServer()
+            .transactions()
+            .cursor(cursorPointer);
     }
 
     private String getCursorPointer () {

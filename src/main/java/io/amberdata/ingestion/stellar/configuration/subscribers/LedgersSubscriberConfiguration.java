@@ -64,22 +64,17 @@ public class LedgersSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {
-        try {
-            String cursorPointer = getCursorPointer();
+        String cursorPointer = getCursorPointer();
 
-            LOG.info("Ledgers cursor is set to {}", cursorPointer);
+        LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
-            this.server.testConnection();
-            testCursorCorrectness(cursorPointer);
+        this.server.testConnection();
+        testCursorCorrectness(cursorPointer);
 
-            this.server.horizonServer()
-                .ledgers()
-                .cursor(cursorPointer)
-                .stream(stellarSdkResponseConsumer::accept);
-        }
-        catch (Exception e) {
-            SubscriberErrorsHandler.handleFatalApplicationError(e);
-        }
+        this.server.horizonServer()
+            .ledgers()
+            .cursor(cursorPointer)
+            .stream(stellarSdkResponseConsumer::accept);
     }
 
     private String getCursorPointer () {
