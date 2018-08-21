@@ -55,24 +55,31 @@ public class LedgersSubscriberConfiguration {
             .map(this.modelMapper::map)
             .buffer(this.batchSettings.blocksInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
+            .map(entities -> this.apiClient.publish("/blocks", entities))
+            .timestamp()
             .subscribe(
-                entities -> this.apiClient.publish("/blocks", entities),
+                (tuple -> LOG.info("Published ledger at {}", tuple.getT1())),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
 
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = getCursorPointer();
+        try {
+            String cursorPointer = getCursorPointer();
 
-        LOG.info("Ledgers cursor is set to {}", cursorPointer);
+            LOG.info("Ledgers cursor is set to {}", cursorPointer);
 
-        this.server.testConnection();
-        testCursorCorrectness(cursorPointer);
+            this.server.testConnection();
+            testCursorCorrectness(cursorPointer);
 
-        this.server.horizonServer()
-            .ledgers()
-            .cursor(cursorPointer)
-            .stream(stellarSdkResponseConsumer::accept);
+            this.server.horizonServer()
+                .ledgers()
+                .cursor(cursorPointer)
+                .stream(stellarSdkResponseConsumer::accept);
+        }
+        catch (Exception e) {
+            SubscriberErrorsHandler.handleFatalApplicationError(e);
+        }
     }
 
     private String getCursorPointer () {

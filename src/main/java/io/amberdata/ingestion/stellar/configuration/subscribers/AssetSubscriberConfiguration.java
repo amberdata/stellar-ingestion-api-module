@@ -74,8 +74,10 @@ public class AssetSubscriberConfiguration {
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.assetsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
+            .map(entities -> this.apiClient.publish("/assets", entities))
+            .timestamp()
             .subscribe(
-                entities -> this.apiClient.publish("/assets", entities),
+                (tuple -> LOG.info("Published asset at {}", tuple.getT1())),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
@@ -140,17 +142,22 @@ public class AssetSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = getCursorPointer();
+        try {
+            String cursorPointer = getCursorPointer();
 
-        LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
+            LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
 
-        this.server.testConnection();
-        testCursorCorrectness(cursorPointer);
+            this.server.testConnection();
+            testCursorCorrectness(cursorPointer);
 
-        this.server.horizonServer()
-            .transactions()
-            .cursor(cursorPointer)
-            .stream(stellarSdkResponseConsumer::accept);
+            this.server.horizonServer()
+                .transactions()
+                .cursor(cursorPointer)
+                .stream(stellarSdkResponseConsumer::accept);
+        }
+        catch (Exception e) {
+            SubscriberErrorsHandler.handleFatalApplicationError(e);
+        }
     }
 
     private String getCursorPointer () {

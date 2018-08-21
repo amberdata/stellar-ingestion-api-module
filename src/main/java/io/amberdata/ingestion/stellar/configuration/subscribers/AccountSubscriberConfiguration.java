@@ -68,8 +68,10 @@ public class AccountSubscriberConfiguration {
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.addressesInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
+            .map(entities -> this.apiClient.publish("/addresses", entities))
+            .timestamp()
             .subscribe(
-                entities -> this.apiClient.publish("/addresses", entities),
+                (tuple -> LOG.info("Published address at {}", tuple.getT1())),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
@@ -105,17 +107,22 @@ public class AccountSubscriberConfiguration {
     }
 
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
-        String cursorPointer = getCursorPointer();
+        try {
+            String cursorPointer = getCursorPointer();
 
-        LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
+            LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
 
-        this.server.testConnection();
-        testCursorCorrectness(cursorPointer);
+            this.server.testConnection();
+            testCursorCorrectness(cursorPointer);
 
-        this.server.horizonServer()
-            .transactions()
-            .cursor(cursorPointer)
-            .stream(stellarSdkResponseConsumer::accept);
+            this.server.horizonServer()
+                .transactions()
+                .cursor(cursorPointer)
+                .stream(stellarSdkResponseConsumer::accept);
+        }
+        catch (Exception e) {
+            SubscriberErrorsHandler.handleFatalApplicationError(e);
+        }
     }
 
     private String getCursorPointer () {
@@ -158,28 +165,6 @@ public class AccountSubscriberConfiguration {
         }
         catch (IOException e) {
             throw new HorizonServer.IncorrectRequestException("Failed to test if cursor value is valid", e);
-        }
-    }
-
-    public static class AccountWithTime {
-        private String name;
-        private Long timestamp;
-
-        private AccountWithTime (String name, Long timestamp) {
-            this.name = name;
-            this.timestamp = timestamp;
-        }
-
-        public static AccountWithTime from (String name, Long timestamp) {
-            return new AccountWithTime(name, timestamp);
-        }
-
-        public String getName () {
-            return this.name;
-        }
-
-        public Long getTimestamp () {
-            return this.timestamp;
         }
     }
 }
