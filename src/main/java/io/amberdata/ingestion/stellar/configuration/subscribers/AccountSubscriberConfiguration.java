@@ -6,9 +6,7 @@ import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -63,7 +61,7 @@ public class AccountSubscriberConfiguration {
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newSingle("addresses-subscriber-thread"))
-            .map(this::toOperationsStream)
+            .map(this::toAddressesStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.addressesInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
@@ -73,7 +71,7 @@ public class AccountSubscriberConfiguration {
             );
     }
 
-    private Stream<BlockchainEntityWithState<Address>> toOperationsStream (TransactionResponse transactionResponse) {
+    private Stream<BlockchainEntityWithState<Address>> toAddressesStream (TransactionResponse transactionResponse) {
         List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
         return processAccounts(operationResponses, transactionResponse);
     }

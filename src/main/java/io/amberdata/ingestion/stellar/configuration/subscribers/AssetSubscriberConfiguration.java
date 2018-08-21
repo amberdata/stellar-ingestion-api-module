@@ -65,7 +65,7 @@ public class AssetSubscriberConfiguration {
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newSingle("assets-subscriber-thread"))
-            .map(this::toOperationsStream)
+            .map(this::toAssetsStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.assetsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
@@ -75,7 +75,7 @@ public class AssetSubscriberConfiguration {
             );
     }
 
-    private Stream<BlockchainEntityWithState<Asset>> toOperationsStream (TransactionResponse transactionResponse) {
+    private Stream<BlockchainEntityWithState<Asset>> toAssetsStream (TransactionResponse transactionResponse) {
         return processAssets(
             fetchOperationsForTransaction(transactionResponse),
             transactionResponse.getLedger()

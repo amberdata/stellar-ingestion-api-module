@@ -59,7 +59,7 @@ public class TransactionsSubscriberConfiguration {
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newSingle("transactions-subscriber-thread"))
             .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
-            .map(this::toEnrichedTransaction)
+            .map(this::enrichTransaction)
             .buffer(this.batchSettings.transactionsInChunk())
             .retryWhen(SubscriberErrorsHandler::onError)
             .subscribe(
@@ -68,7 +68,7 @@ public class TransactionsSubscriberConfiguration {
             );
     }
 
-    private BlockchainEntityWithState<Transaction> toEnrichedTransaction (TransactionResponse transactionResponse) {
+    private BlockchainEntityWithState<Transaction> enrichTransaction (TransactionResponse transactionResponse) {
         List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
         return this.modelMapper.map(transactionResponse, operationResponses);
     }
