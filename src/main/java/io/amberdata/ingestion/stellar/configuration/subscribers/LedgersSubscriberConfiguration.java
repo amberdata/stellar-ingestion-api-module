@@ -52,7 +52,7 @@ public class LedgersSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Ledgers stream");
 
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
-            .publishOn(Schedulers.newSingle("ledgers-subscriber-thread"))
+            .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
             .doOnNext(l -> LOG.info("Received ledger with sequence {}", l.getSequence()))
             .map(this.modelMapper::map)
             .buffer(this.batchSettings.blocksInChunk())

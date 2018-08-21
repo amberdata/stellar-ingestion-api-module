@@ -60,7 +60,7 @@ public class AccountSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Accounts stream through Transactions stream");
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
-            .publishOn(Schedulers.newSingle("addresses-subscriber-thread"))
+            .publishOn(Schedulers.newElastic("addresses-subscriber-thread"))
             .map(this::toAddressesStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.addressesInChunk())

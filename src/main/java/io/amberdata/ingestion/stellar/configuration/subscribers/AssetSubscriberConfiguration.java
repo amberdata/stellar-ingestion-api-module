@@ -64,7 +64,7 @@ public class AssetSubscriberConfiguration {
         LOG.info("Going to subscribe on Stellar Assets stream through Transactions stream");
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
-            .publishOn(Schedulers.newSingle("assets-subscriber-thread"))
+            .publishOn(Schedulers.newElastic("assets-subscriber-thread"))
             .map(this::toAssetsStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.assetsInChunk())
