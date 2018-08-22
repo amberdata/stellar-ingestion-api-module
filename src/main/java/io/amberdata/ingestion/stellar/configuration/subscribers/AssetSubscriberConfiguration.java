@@ -142,14 +142,7 @@ public class AssetSubscriberConfiguration {
     }
 
     private boolean isNumeric (String string) {
-        try {
-            Double.parseDouble(string);
-        }
-        catch (NumberFormatException e) {
-            return false;
-        }
-
-        return true;
+        return string.matches("\\d+(\\.\\d+)?");
     }
 
     private Map<String, Object> assetOptionalProperties (AssetResponse assetResponse) {
