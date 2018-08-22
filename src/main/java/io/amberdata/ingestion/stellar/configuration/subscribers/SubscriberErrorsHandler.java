@@ -53,7 +53,7 @@ public class SubscriberErrorsHandler {
 
         if (error instanceof TooManyRequestsException) {
             int secondsToWait = ((TooManyRequestsException) error).getRetryAfter();
-            LOG.info("Horizon Rate Limit exceeded. The server requests to wait for {}sec.", secondsToWait);
+            LOG.info("Horizon Rate Limit exceeded. As per the server's request waiting {}sec", secondsToWait);
             return Duration.of(secondsToWait, ChronoUnit.SECONDS);
         }
 
