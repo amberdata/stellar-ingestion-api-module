@@ -93,7 +93,7 @@ public class TransactionsSubscriberConfiguration {
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Transactions cursor is set to {}", cursorPointer);
+        LOG.info("Subscribing to transactions using cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);

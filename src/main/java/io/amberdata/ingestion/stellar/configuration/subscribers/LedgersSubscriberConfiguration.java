@@ -69,7 +69,7 @@ public class LedgersSubscriberConfiguration {
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Ledgers cursor is set to {}", cursorPointer);
+        LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);

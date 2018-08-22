@@ -152,7 +152,7 @@ public class AssetSubscriberConfiguration {
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
+        LOG.info("Subscribing to assets using transactions cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);

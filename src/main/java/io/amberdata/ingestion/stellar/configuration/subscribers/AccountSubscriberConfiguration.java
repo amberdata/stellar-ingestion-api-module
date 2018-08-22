@@ -113,7 +113,7 @@ public class AccountSubscriberConfiguration {
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Addresses cursor is set to {} [using transactions cursor]", cursorPointer);
+        LOG.info("Subscribing to addresses using transactions cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);
