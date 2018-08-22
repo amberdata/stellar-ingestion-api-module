@@ -1,8 +1,5 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
-import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
-import io.amberdata.ingestion.core.client.IngestionApiClient;
-import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +16,9 @@ import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
+import io.amberdata.ingestion.core.client.IngestionApiClient;
+import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import io.amberdata.ingestion.domain.Address;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
@@ -34,25 +34,28 @@ import reactor.core.scheduler.Schedulers;
 public class AccountSubscriberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(AccountSubscriberConfiguration.class);
 
-    private final ResourceStateStorage stateStorage;
-    private final IngestionApiClient   apiClient;
-    private final ModelMapper          modelMapper;
-    private final HistoricalManager    historicalManager;
-    private final HorizonServer        server;
-    private final BatchSettings        batchSettings;
+    private final ResourceStateStorage    stateStorage;
+    private final IngestionApiClient      apiClient;
+    private final ModelMapper             modelMapper;
+    private final HistoricalManager       historicalManager;
+    private final HorizonServer           server;
+    private final BatchSettings           batchSettings;
+    private final SubscriberErrorsHandler errorsHandler;
 
     public AccountSubscriberConfiguration (ResourceStateStorage stateStorage,
                                            IngestionApiClient apiClient,
                                            ModelMapper modelMapper,
                                            HistoricalManager historicalManager,
                                            HorizonServer server,
-                                           BatchSettings batchSettings) {
+                                           BatchSettings batchSettings,
+                                           SubscriberErrorsHandler errorsHandler) {
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.historicalManager = historicalManager;
         this.server = server;
         this.batchSettings = batchSettings;
+        this.errorsHandler = errorsHandler;
     }
 
     @PostConstruct
@@ -61,10 +64,11 @@ public class AccountSubscriberConfiguration {
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newElastic("addresses-subscriber-thread"))
+            .timeout(this.errorsHandler.timeoutDuration())
             .map(this::toAddressesStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.addressesInChunk())
-            .retryWhen(SubscriberErrorsHandler::onError)
+            .retryWhen(errorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/addresses", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
