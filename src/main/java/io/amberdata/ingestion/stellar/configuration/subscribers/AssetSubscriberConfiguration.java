@@ -91,11 +91,10 @@ public class AssetSubscriberConfiguration {
     }
 
     private List<Asset> processAssets (List<OperationResponse> operationResponses, Long ledger) {
-        List<Asset> assets = modelMapper.mapAssets(operationResponses, ledger).stream()
+        return modelMapper.mapAssets(operationResponses, ledger).stream()
             .distinct()
+            .map(this::enrichAsset)
             .collect(Collectors.toList());
-        assets.forEach(this::enrichAsset);
-        return assets;
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {
@@ -112,7 +111,7 @@ public class AssetSubscriberConfiguration {
         }
     }
 
-    private void enrichAsset (Asset asset) {
+    private Asset enrichAsset (Asset asset) {
         try {
             List<AssetResponse> records = this.server
                 .horizonServer()
@@ -127,16 +126,19 @@ public class AssetSubscriberConfiguration {
                 asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
                 asset.setCode(assetResponse.getAssetCode());
                 asset.setIssuerAccount(assetResponse.getAssetIssuer());
-                asset.setAmount(assetResponse.getAmount() != null ? assetResponse.getAmount() : "0");
+                asset.setAmount(assetResponse.getAmount());
                 asset.setMeta(assetOptionalProperties(assetResponse));
-            } else {
-                asset.setAmount("0");
             }
         }
         catch (Exception ex) {
-            asset.setAmount("0");
-            LOG.error("Error during fetching an asset: " + asset.getCode());
+            LOG.error("Error during fetching an asset: " + asset.getCode(), ex);
         }
+
+        if (asset.getAmount() == null) {
+            asset.setAmount("0");
+        }
+
+        return asset;
     }
 
     private Map<String, Object> assetOptionalProperties (AssetResponse assetResponse) {
