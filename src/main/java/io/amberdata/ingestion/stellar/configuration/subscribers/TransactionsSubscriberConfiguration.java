@@ -1,8 +1,5 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
-import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
-import io.amberdata.ingestion.core.client.IngestionApiClient;
-import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
@@ -16,6 +13,9 @@ import org.stellar.sdk.FormatException;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
+import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
+import io.amberdata.ingestion.core.client.IngestionApiClient;
+import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import io.amberdata.ingestion.domain.Transaction;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
@@ -31,25 +31,28 @@ import reactor.core.scheduler.Schedulers;
 public class TransactionsSubscriberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(TransactionsSubscriberConfiguration.class);
 
-    private final ResourceStateStorage        stateStorage;
-    private final IngestionApiClient          apiClient;
-    private final ModelMapper                 modelMapper;
-    private final HistoricalManager           historicalManager;
-    private final HorizonServer               server;
-    private final BatchSettings               batchSettings;
+    private final ResourceStateStorage    stateStorage;
+    private final IngestionApiClient      apiClient;
+    private final ModelMapper             modelMapper;
+    private final HistoricalManager       historicalManager;
+    private final HorizonServer           server;
+    private final BatchSettings           batchSettings;
+    private final SubscriberErrorsHandler errorsHandler;
 
     public TransactionsSubscriberConfiguration (ResourceStateStorage stateStorage,
                                                 IngestionApiClient apiClient,
                                                 ModelMapper modelMapper,
                                                 HistoricalManager historicalManager,
                                                 HorizonServer server,
-                                                BatchSettings batchSettings) {
+                                                BatchSettings batchSettings,
+                                                SubscriberErrorsHandler errorsHandler) {
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.historicalManager = historicalManager;
         this.server = server;
         this.batchSettings = batchSettings;
+        this.errorsHandler = errorsHandler;
     }
 
     @PostConstruct
@@ -58,10 +61,10 @@ public class TransactionsSubscriberConfiguration {
 
         Flux.<TransactionResponse>push(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newElastic("transactions-subscriber-thread"))
-            .doOnNext(tx -> LOG.info("Received transaction with hash {}", tx.getHash()))
+            .timeout(this.errorsHandler.timeoutDuration())
             .map(this::enrichTransaction)
             .buffer(this.batchSettings.transactionsInChunk())
-            .retryWhen(SubscriberErrorsHandler::onError)
+            .retryWhen(errorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/transactions", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
@@ -90,7 +93,7 @@ public class TransactionsSubscriberConfiguration {
     private void subscribe (Consumer<TransactionResponse> responseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Transactions cursor is set to {}", cursorPointer);
+        LOG.info("Subscribing to transactions using cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);

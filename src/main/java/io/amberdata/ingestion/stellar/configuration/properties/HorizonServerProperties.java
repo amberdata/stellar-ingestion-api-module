@@ -19,6 +19,8 @@ public class HorizonServerProperties {
     @DurationUnit(ChronoUnit.MILLIS)
     private Duration backOffTimeoutMax;
 
+    private Double idleTimeoutMultiplier;
+
     public String getServer () {
         return this.server;
     }
@@ -49,6 +51,14 @@ public class HorizonServerProperties {
 
     public void setBackOffTimeoutMax (Duration backOffTimeoutMax) {
         this.backOffTimeoutMax = backOffTimeoutMax;
+    }
+
+    public Double getIdleTimeoutMultiplier () {
+        return idleTimeoutMultiplier;
+    }
+
+    public void setIdleTimeoutMultiplier (Double idleTimeoutMultiplier) {
+        this.idleTimeoutMultiplier = idleTimeoutMultiplier;
     }
 }
 

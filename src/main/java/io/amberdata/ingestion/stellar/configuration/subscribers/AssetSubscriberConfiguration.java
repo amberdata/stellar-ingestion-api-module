@@ -38,25 +38,28 @@ import reactor.core.scheduler.Schedulers;
 public class AssetSubscriberConfiguration {
     private static final Logger LOG = LoggerFactory.getLogger(AssetSubscriberConfiguration.class);
 
-    private final ResourceStateStorage stateStorage;
-    private final IngestionApiClient   apiClient;
-    private final ModelMapper          modelMapper;
-    private final HistoricalManager    historicalManager;
-    private final HorizonServer        server;
-    private final BatchSettings        batchSettings;
+    private final ResourceStateStorage    stateStorage;
+    private final IngestionApiClient      apiClient;
+    private final ModelMapper             modelMapper;
+    private final HistoricalManager       historicalManager;
+    private final HorizonServer           server;
+    private final BatchSettings           batchSettings;
+    private final SubscriberErrorsHandler errorsHandler;
 
     public AssetSubscriberConfiguration (ResourceStateStorage stateStorage,
                                          IngestionApiClient apiClient,
                                          ModelMapper modelMapper,
                                          HistoricalManager historicalManager,
                                          HorizonServer server,
-                                         BatchSettings batchSettings) {
+                                         BatchSettings batchSettings,
+                                         SubscriberErrorsHandler errorsHandler) {
         this.stateStorage = stateStorage;
         this.apiClient = apiClient;
         this.modelMapper = modelMapper;
         this.historicalManager = historicalManager;
         this.server = server;
         this.batchSettings = batchSettings;
+        this.errorsHandler = errorsHandler;
     }
 
     @PostConstruct
@@ -65,10 +68,11 @@ public class AssetSubscriberConfiguration {
 
         Flux.<TransactionResponse>create(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newElastic("assets-subscriber-thread"))
+            .timeout(this.errorsHandler.timeoutDuration())
             .map(this::toAssetsStream)
             .flatMap(Flux::fromStream)
             .buffer(this.batchSettings.assetsInChunk())
-            .retryWhen(SubscriberErrorsHandler::onError)
+            .retryWhen(errorsHandler::onError)
             .subscribe(
                 entities -> this.apiClient.publish("/assets", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
@@ -148,7 +152,7 @@ public class AssetSubscriberConfiguration {
     private void subscribe (Consumer<TransactionResponse> stellarSdkResponseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Assets cursor is set to {} [using transactions cursor]", cursorPointer);
+        LOG.info("Subscribing to assets using transactions cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);
