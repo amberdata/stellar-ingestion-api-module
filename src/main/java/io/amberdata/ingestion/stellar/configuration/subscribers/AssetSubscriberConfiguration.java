@@ -134,11 +134,22 @@ public class AssetSubscriberConfiguration {
             LOG.error("Error during fetching an asset: " + asset.getCode(), ex);
         }
 
-        if (asset.getAmount() == null) {
+        if (asset.getAmount() == null || !isNumeric(asset.getAmount())) {
             asset.setAmount("0");
         }
 
         return asset;
+    }
+
+    private boolean isNumeric (String string) {
+        try {
+            Double.parseDouble(string);
+        }
+        catch (NumberFormatException e) {
+            return false;
+        }
+
+        return true;
     }
 
     private Map<String, Object> assetOptionalProperties (AssetResponse assetResponse) {
