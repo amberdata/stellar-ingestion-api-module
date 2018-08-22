@@ -100,7 +100,8 @@ public class TransactionsSubscriberConfiguration {
 
         this.server.horizonServer()
             .transactions()
-            .cursor(cursorPointer);
+            .cursor(cursorPointer)
+            .stream(responseConsumer::accept);
     }
 
     private String getCursorPointer () {
