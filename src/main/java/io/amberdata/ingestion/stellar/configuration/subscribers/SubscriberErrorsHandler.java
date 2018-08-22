@@ -1,10 +1,8 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
 import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -53,8 +51,8 @@ public class SubscriberErrorsHandler {
 
         if (error instanceof TooManyRequestsException) {
             int secondsToWait = ((TooManyRequestsException) error).getRetryAfter();
-            LOG.info("Horizon Rate Limit exceeded. As per the server's request waiting {}sec", secondsToWait);
-            return Duration.of(secondsToWait, ChronoUnit.SECONDS);
+            LOG.info("Horizon Rate Limit exceeded. As per the server's request waiting for {}sec", secondsToWait);
+            return Duration.ofSeconds(secondsToWait);
         }
 
         if (error instanceof TimeoutException) {
