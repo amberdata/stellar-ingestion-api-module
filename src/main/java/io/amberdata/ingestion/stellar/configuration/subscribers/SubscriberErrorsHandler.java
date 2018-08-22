@@ -21,9 +21,8 @@ import reactor.core.publisher.Mono;
 public class SubscriberErrorsHandler {
     private static final Logger LOG = LoggerFactory.getLogger(SubscriberErrorsHandler.class);
 
-    private static final double TIMEOUT_DURATION_MULTIPLIER = 1.2;
-
     private final int      retriesOnError;
+    private final double   idleTimeoutMultiplier;
     private final Duration backoffTimeoutInitialDuration;
     private final Duration backoffTimeoutMaxDuration;
 
@@ -32,6 +31,7 @@ public class SubscriberErrorsHandler {
             serverProperties.getRetriesOnError() : Integer.MAX_VALUE;
         this.backoffTimeoutInitialDuration = serverProperties.getBackOffTimeoutInitial();
         this.backoffTimeoutMaxDuration = serverProperties.getBackOffTimeoutMax();
+        this.idleTimeoutMultiplier = serverProperties.getIdleTimeoutMultiplier();
 
         LOG.info(
             "Configuring Subscriber errors handler with re-tries: {}, " +
@@ -58,7 +58,7 @@ public class SubscriberErrorsHandler {
         }
 
         if (error instanceof TimeoutException) {
-            LOG.info("{}. Going to wait {} before re-subscribe", error.getMessage(), backoffTimeoutInitialDuration.toMillis());
+            LOG.info("{}. Going to wait {}ms before re-subscribe", error.getMessage(), backoffTimeoutInitialDuration.toMillis());
             return backoffTimeoutInitialDuration;
         }
 
@@ -87,7 +87,7 @@ public class SubscriberErrorsHandler {
 
     public Duration timeoutDuration () {
         return backoffTimeoutMaxDuration.plus(
-            Duration.ofMillis((long) (backoffTimeoutMaxDuration.toMillis() * TIMEOUT_DURATION_MULTIPLIER))
+            Duration.ofMillis((long) (backoffTimeoutMaxDuration.toMillis() * idleTimeoutMultiplier))
         );
     }
 
