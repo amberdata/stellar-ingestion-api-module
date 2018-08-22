@@ -177,7 +177,7 @@ public class ModelMapper {
     private Map<String, Object> signerProperty (AccountResponse.Signer signer) {
         Map<String, Object> optionalProperties = new HashMap<>();
 
-        optionalProperties.put("public_key", signer.getAccountId());
+        optionalProperties.put("public_key", signer.getKey());
         optionalProperties.put("weight", String.valueOf(signer.getWeight()));
 
         return optionalProperties;
