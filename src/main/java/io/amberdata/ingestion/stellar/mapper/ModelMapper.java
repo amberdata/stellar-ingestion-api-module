@@ -9,15 +9,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
@@ -79,6 +83,7 @@ public class ModelMapper {
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
+            .to(extractTo(operationResponses))
             //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
@@ -92,6 +97,28 @@ public class ModelMapper {
             transaction,
             ResourceState.from(Transaction.class.getSimpleName(), transactionResponse.getPagingToken())
         );
+    }
+
+    private String extractTo(List<OperationResponse> operationResponses) {
+        Set<String> tos = new HashSet<>();
+        for (OperationResponse operationResponse : operationResponses) {
+            try {
+                Method getTo = operationResponse.getClass().getMethod("getTo");
+                Object toKeyPairObj = getTo.invoke(operationResponse);
+                if (toKeyPairObj instanceof KeyPair) {
+                    tos.add(((KeyPair) toKeyPairObj).getAccountId());
+                }
+            } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+                    | InvocationTargetException e) {               
+            }
+        }
+        if (tos.isEmpty()) {
+            return "null";
+        } else if (tos.size() == 1) {
+            return new ArrayList<String>(tos).get(0);
+        } else {
+            return "_";
+        }
     }
 
     public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {

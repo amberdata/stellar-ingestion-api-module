@@ -57,13 +57,13 @@
         <dependency>
             <groupId>io.amberdata</groupId>
             <artifactId>java-spring-utilities</artifactId>
-            <version>0.0.1</version>
+            <version>0.0.5</version>
         </dependency>
 
         <dependency>
             <groupId>io.amberdata.ingestion</groupId>
             <artifactId>ingestion-domain</artifactId>
-            <version>0.1.5</version>
+            <version>0.1.8</version>
         </dependency>
 
         <dependency>
