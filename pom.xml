@@ -40,12 +40,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.amberdata</groupId>
-            <artifactId>java-spring-utilities</artifactId>
-            <version>0.0.1</version>
-        </dependency>
-
-        <dependency>
             <groupId>io.amberdata.ingestion</groupId>
             <artifactId>ingestion-domain</artifactId>
             <version>0.1.12</version>
@@ -198,6 +192,24 @@
                     <url>https://s3.amazonaws.com/amberdata-opensource/snapshots</url>
                 </repository>
             </repositories>
+        </profile>
+
+        <profile>
+            <id>amberdata_internal</id>
+
+            <activation>
+                <property>
+                    <name>amberdata_internal.activate</name>
+                </property>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>io.amberdata</groupId>
+                    <artifactId>java-spring-utilities</artifactId>
+                    <version>0.0.1</version>
+                </dependency>
+            </dependencies>
         </profile>
     </profiles>
 </project>
