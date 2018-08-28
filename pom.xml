@@ -40,12 +40,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.amberdata</groupId>
-            <artifactId>java-spring-utilities</artifactId>
-            <version>0.0.1</version>
-        </dependency>
-
-        <dependency>
             <groupId>io.amberdata.ingestion</groupId>
             <artifactId>ingestion-domain</artifactId>
             <version>0.1.12</version>
@@ -167,9 +161,17 @@
 
             <activation>
                 <property>
-                    <name>!repository_amberdata_s3.skip</name>
+                    <name>repository_amberdata_s3.activate</name>
                 </property>
             </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>io.amberdata</groupId>
+                    <artifactId>java-spring-utilities</artifactId>
+                    <version>0.0.1</version>
+                </dependency>
+            </dependencies>
 
             <distributionManagement>
                 <repository>
