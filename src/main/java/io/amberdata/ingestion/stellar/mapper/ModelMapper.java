@@ -2,12 +2,14 @@ package io.amberdata.ingestion.stellar.mapper;
 
 import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.state.entities.ResourceState;
+import io.amberdata.ingestion.domain.Order;
 import io.amberdata.ingestion.stellar.mapper.operations.OperationMapperManager;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +20,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.stellar.sdk.CreatePassiveOfferOperation;
 import org.stellar.sdk.responses.AccountResponse;
-import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
+import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.ingestion.domain.Address;
@@ -35,10 +39,12 @@ public class ModelMapper {
     private static final Logger LOG = LoggerFactory.getLogger(ModelMapper.class);
 
     private final OperationMapperManager operationMapperManager;
+    private final AssetMapper assetMapper;
 
     @Autowired
-    public ModelMapper (OperationMapperManager operationMapperManager) {
+    public ModelMapper (OperationMapperManager operationMapperManager, AssetMapper assetMapper) {
         this.operationMapperManager = operationMapperManager;
+        this.assetMapper = assetMapper;
     }
 
     public BlockchainEntityWithState<Block> map (LedgerResponse ledgerResponse) {
@@ -133,6 +139,38 @@ public class ModelMapper {
             address,
             ResourceState.from(Address.class.getSimpleName(), pagingToken)
         );
+    }
+
+    public List<Order> mapOrders (List<OperationResponse> operationResponses, Long ledger) {
+        List<Order> orders = new ArrayList<>();
+        for (int i = 0; i < operationResponses.size(); i++) {
+            OperationResponse operationResponse = operationResponses.get(i);
+            if (operationResponse.getClass() == ManageOfferOperationResponse.class ||
+                operationResponse.getClass() == CreatePassiveOfferOperationResponse.class) {
+                ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
+
+                Asset sellingAsset = assetMapper.map(response.getSellingAsset());
+                Asset buyingAsset  = assetMapper.map(response.getBuyingAsset());
+
+                Order order = new Order.Builder()
+                    .orderId(response.getOfferId().toString())
+                    .blockNumber(ledger)
+                    .transactionHash(response.getTransactionHash())
+                    .functionCallHash(String.valueOf(ledger) + "_" +
+                        operationResponse.getTransactionHash() + "_" +
+                        String.valueOf(i))
+                    .makerAddress(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
+                    .sellAsset(sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode())
+                    .buyAsset(buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode())
+                    .sellAmount(new BigDecimal(response.getAmount()))
+                    .timestamp(Instant.parse(response.getCreatedAt()).toEpochMilli())
+                    .meta(Collections.singletonMap("buying_price", response.getPrice()))
+                    .build();
+
+                orders.add(order);
+            }
+        }
+        return orders;
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
