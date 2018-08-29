@@ -171,7 +171,7 @@ public class AssetSubscriberConfiguration {
 
     private String getCursorPointer () {
         if (this.historicalManager.disabled()) {
-            return this.stateStorage.getStateToken(Transaction.class.getSimpleName(), () -> "now");
+            return this.stateStorage.getStateToken(Asset.class.getSimpleName(), () -> "now");
         } else {
             return this.historicalManager.transactionPagingToken();
         }
