@@ -77,13 +77,26 @@ public class ModelMapper {
 
     public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
                                                        List<OperationResponse> operationResponses) {
-
+        List<FunctionCall> functionCalls = this.map(operationResponses, transactionResponse.getLedger());
+        Set<String> tos = new HashSet<>();
+        for (FunctionCall functionCall : functionCalls) {
+            String to = functionCall.getTo();
+            if (to != null && !to.equals("null") && !to.isEmpty()) {
+                tos.add(to);
+            }
+        }
+        String to = null;
+        if (tos.size() == 1) {
+            to = tos.iterator().next();
+        } else if (tos.size() >= 2) {
+            to = "_";
+        }
         Transaction transaction = new Transaction.Builder()
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
-            .to(extractTo(operationResponses))
+            .to(to)
             //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
@@ -97,28 +110,6 @@ public class ModelMapper {
             transaction,
             ResourceState.from(Transaction.class.getSimpleName(), transactionResponse.getPagingToken())
         );
-    }
-
-    private String extractTo(List<OperationResponse> operationResponses) {
-        Set<String> tos = new HashSet<>();
-        for (OperationResponse operationResponse : operationResponses) {
-            try {
-                Method getTo = operationResponse.getClass().getMethod("getTo");
-                Object toKeyPairObj = getTo.invoke(operationResponse);
-                if (toKeyPairObj instanceof KeyPair) {
-                    tos.add(((KeyPair) toKeyPairObj).getAccountId());
-                }
-            } catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
-                    | InvocationTargetException e) {               
-            }
-        }
-        if (tos.isEmpty()) {
-            return "null";
-        } else if (tos.size() == 1) {
-            return new ArrayList<String>(tos).get(0);
-        } else {
-            return "_";
-        }
     }
 
     public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {

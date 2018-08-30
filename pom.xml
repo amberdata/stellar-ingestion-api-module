@@ -13,7 +13,7 @@
     <packaging>jar</packaging>
 
     <name>stellar-ingestion-module</name>
-    <description>Demo module for Stellar blockchain</description>
+    <description>Inbound Collection module for Stellar</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -38,32 +38,11 @@
         </repository>
     </repositories>
 
-    <distributionManagement>
-        <!-- Publish the versioned releases here -->
-        <repository>
-            <id>nexus-release</id>
-            <name>Release Repo</name>
-            <url>http://nexus.amberdata.internal:8081/repository/mvn-releases</url>
-        </repository>
-
-        <snapshotRepository>
-            <id>nexus</id>
-            <name>Snapshot Repo</name>
-            <url>http://nexus.amberdata.internal:8081/repository/mvn-snapshots</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <dependencies>
-        <dependency>
-            <groupId>io.amberdata</groupId>
-            <artifactId>java-spring-utilities</artifactId>
-            <version>0.0.5</version>
-        </dependency>
-
         <dependency>
             <groupId>io.amberdata.ingestion</groupId>
             <artifactId>ingestion-domain</artifactId>
-            <version>0.1.8</version>
+            <version>0.1.13</version>
         </dependency>
 
         <dependency>
@@ -105,7 +84,7 @@
             <artifactId>reactor-test</artifactId>
         </dependency>
 
-        <!--  This is needed for Java >= 9.0  -->
+        <!--  These 4 dependencies are needed for Java >= 9.0  -->
         <dependency>
             <groupId>javax.xml.bind</groupId>
             <artifactId>jaxb-api</artifactId>
@@ -129,9 +108,19 @@
             <artifactId>activation</artifactId>
             <version>1.1.1</version>
         </dependency>
+        <!--  These 4 dependencies are needed for Java >= 9.0  -->
     </dependencies>
 
     <build>
+        <!-- Publishing to Amberdata S3 Maven repository -->
+        <extensions>
+            <extension>
+                <groupId>org.springframework.build</groupId>
+                <artifactId>aws-maven</artifactId>
+                <version>5.0.0.RELEASE</version>
+            </extension>
+        </extensions>
+
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
@@ -166,4 +155,61 @@
         </plugins>
     </build>
 
+    <profiles>
+        <profile>
+            <id>repository_amberdata_s3</id>
+
+            <activation>
+                <property>
+                    <name>!repository_amberdata_s3.skip</name>
+                </property>
+            </activation>
+
+            <distributionManagement>
+                <repository>
+                    <id>maven-s3-release-repo</id>
+                    <name>AWS Release Repository</name>
+                    <url>s3://amberdata-opensource/releases</url>
+                </repository>
+
+                <snapshotRepository>
+                    <id>maven-s3-snapshot-repo</id>
+                    <name>AWS Snapshot Repository</name>
+                    <url>s3://amberdata-opensource/snapshots</url>
+                </snapshotRepository>
+
+            </distributionManagement>
+
+            <repositories>
+                <repository>
+                    <id>maven-s3-release-repo</id>
+                    <name>S3 Release Repository</name>
+                    <url>https://s3.amazonaws.com/amberdata-opensource/releases</url>
+                </repository>
+                <repository>
+                    <id>maven-s3-snapshot-repo</id>
+                    <name>S3 Snapshot Repository</name>
+                    <url>https://s3.amazonaws.com/amberdata-opensource/snapshots</url>
+                </repository>
+            </repositories>
+        </profile>
+
+        <profile>
+            <id>amberdata_internal</id>
+
+            <activation>
+                <property>
+                    <name>amberdata_internal.activate</name>
+                </property>
+            </activation>
+
+            <dependencies>
+                <dependency>
+                    <groupId>io.amberdata</groupId>
+                    <artifactId>java-spring-utilities</artifactId>
+                    <version>0.0.5</version>
+                </dependency>
+            </dependencies>
+        </profile>
+    </profiles>
 </project>
