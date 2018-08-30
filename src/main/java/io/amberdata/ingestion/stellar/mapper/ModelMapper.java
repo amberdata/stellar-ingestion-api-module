@@ -101,7 +101,7 @@ public class ModelMapper {
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-            .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
+            .functionCalls(functionCalls)
             .status("0x1")
             .value(BigDecimal.ZERO)
             .build();
