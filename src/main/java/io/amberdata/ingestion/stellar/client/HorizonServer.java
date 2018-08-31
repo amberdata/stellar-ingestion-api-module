@@ -47,6 +47,10 @@ public class HorizonServer {
     }
 
     public static class IncorrectRequestException extends RuntimeException {
+        public IncorrectRequestException (String message) {
+            super(message);
+        }
+
         public IncorrectRequestException (String message, Throwable cause) {
             super(message, cause);
         }

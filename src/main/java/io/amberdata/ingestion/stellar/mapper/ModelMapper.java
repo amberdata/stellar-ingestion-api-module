@@ -3,6 +3,7 @@ package io.amberdata.ingestion.stellar.mapper;
 import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.state.entities.ResourceState;
 import io.amberdata.ingestion.domain.Order;
+import io.amberdata.ingestion.domain.Trade;
 import io.amberdata.ingestion.stellar.mapper.operations.OperationMapperManager;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Component;
 import org.stellar.sdk.CreatePassiveOfferOperation;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.LedgerResponse;
+import org.stellar.sdk.responses.TradeResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
 import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
@@ -171,6 +173,26 @@ public class ModelMapper {
             }
         }
         return orders;
+    }
+
+    public List<Trade> mapTrades (List<TradeResponse> records) {
+        return records.stream()
+            .map(this::map)
+            .collect(Collectors.toList());
+    }
+
+    private Trade map (TradeResponse tradeResponse) {
+        String baseAccount = tradeResponse.getBaseAccount() != null ?
+            tradeResponse.getBaseAccount().getAccountId() : "";
+        String counterAccount = tradeResponse.getCounterAccount() != null ?
+            tradeResponse.getCounterAccount().getAccountId() : "";
+
+        Trade trade = new Trade.Builder()
+            .buyAddress(tradeResponse.isBaseSeller() ? counterAccount : baseAccount)
+            .sellAddress(tradeResponse.isBaseSeller() ? baseAccount : counterAccount)
+            .build();
+
+        return trade;
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {

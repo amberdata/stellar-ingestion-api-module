@@ -22,7 +22,6 @@ import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
 import io.amberdata.ingestion.core.state.ResourceStateStorage;
 import io.amberdata.ingestion.core.state.entities.ResourceState;
-import io.amberdata.ingestion.domain.Block;
 import io.amberdata.ingestion.domain.Order;
 import io.amberdata.ingestion.stellar.client.HorizonServer;
 import io.amberdata.ingestion.stellar.configuration.history.HistoricalManager;
@@ -90,7 +89,7 @@ public class OrdersSubscriberConfiguration {
     private void subscribe (Consumer<LedgerResponse> stellarSdkResponseConsumer) {
         String cursorPointer = getCursorPointer();
 
-        LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
+        LOG.info("Subscribing to orders using ledger cursor {}", cursorPointer);
 
         this.server.testConnection();
         testCursorCorrectness(cursorPointer);
