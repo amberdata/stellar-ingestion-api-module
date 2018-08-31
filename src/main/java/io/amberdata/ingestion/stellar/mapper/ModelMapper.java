@@ -89,6 +89,7 @@ public class ModelMapper {
 
         Transaction transaction = new Transaction.Builder()
             .hash(transactionResponse.getHash())
+            .transactionIndex(transactionResponse.getSourceAccountSequence())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
