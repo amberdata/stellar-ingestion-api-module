@@ -9,15 +9,19 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
@@ -73,17 +77,27 @@ public class ModelMapper {
 
     public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
                                                        List<OperationResponse> operationResponses) {
+        List<FunctionCall> functionCalls = this.map(operationResponses, transactionResponse.getLedger());
+        List<String> tos = functionCalls.stream().map(FunctionCall::getTo).collect(Collectors.toList());
+        String to = "";
+        if (tos.size() == 1) {
+            to = tos.get(0);
+        }
+        if (tos.size() > 1) {
+            to = "_";
+        }
 
         Transaction transaction = new Transaction.Builder()
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
-            //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
+            .to(to)
+            .tos(tos)
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-            .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
+            .functionCalls(functionCalls)
             .status("0x1")
             .value(BigDecimal.ZERO)
             .build();
