@@ -78,17 +78,22 @@ public class ModelMapper {
     public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
                                                        List<OperationResponse> operationResponses) {
         List<FunctionCall> functionCalls = this.map(operationResponses, transactionResponse.getLedger());
-        List<String> tos = new ArrayList<>();
-        for (FunctionCall functionCall : functionCalls) {          
-            tos.add(functionCall.getTo());
-        }        
+        List<String> tos = functionCalls.stream().map(FunctionCall::getTo).collect(Collectors.toList());
+        String to = "";
+        if (tos.size() == 1) {
+            to = tos.get(0);
+        }
+        if (tos.size() > 1) {
+            to = "_";
+        }
+
         Transaction transaction = new Transaction.Builder()
             .hash(transactionResponse.getHash())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
-            .to(tos)
-            //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
+            .to(to)
+            .tos(tos)
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
