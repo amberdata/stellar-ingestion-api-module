@@ -16,12 +16,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.stellar.sdk.CreatePassiveOfferOperation;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TradeResponse;
@@ -81,17 +79,28 @@ public class ModelMapper {
 
     public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
                                                        List<OperationResponse> operationResponses) {
+        List<FunctionCall> functionCalls = this.map(operationResponses, transactionResponse.getLedger());
+        List<String> tos = functionCalls.stream().map(FunctionCall::getTo).collect(Collectors.toList());
+        String to = "";
+        if (tos.size() == 1) {
+            to = tos.get(0);
+        }
+        if (tos.size() > 1) {
+            to = "_";
+        }
 
         Transaction transaction = new Transaction.Builder()
             .hash(transactionResponse.getHash())
+            .transactionIndex(transactionResponse.getSourceAccountSequence())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
-            //todo .gas(transactionResponse.) which property if max_fee doesn't exist????
+            .to(to)
+            .tos(tos)
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-            .functionCalls(this.map(operationResponses, transactionResponse.getLedger()))
+            .functionCalls(functionCalls)
             .status("0x1")
             .value(BigDecimal.ZERO)
             .build();
@@ -151,19 +160,34 @@ public class ModelMapper {
                 operationResponse.getClass() == CreatePassiveOfferOperationResponse.class) {
                 ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
 
+                if (response.getOfferId() == 0) {
+                    continue;
+                }
+
                 Asset sellingAsset = assetMapper.map(response.getSellingAsset());
                 Asset buyingAsset  = assetMapper.map(response.getBuyingAsset());
 
                 Order order = new Order.Builder()
+                    .type(0)
                     .orderId(response.getOfferId().toString())
                     .blockNumber(ledger)
                     .transactionHash(response.getTransactionHash())
                     .functionCallHash(String.valueOf(ledger) + "_" +
                         operationResponse.getTransactionHash() + "_" +
                         String.valueOf(i))
-                    .makerAddress(response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "")
-                    .sellAsset(sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode())
-                    .buyAsset(buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode())
+                    .makerAddress(response.getSourceAccount() != null
+                        ? response.getSourceAccount().getAccountId()
+                        : ""
+                    )
+                    .sellAsset(sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                        ? "native"
+                        : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
+                    )
+                    .buyAsset(buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                        ? "native"
+                        : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
+                    )
+                    .buyAmount(BigDecimal.ZERO)
                     .sellAmount(new BigDecimal(response.getAmount()))
                     .timestamp(Instant.parse(response.getCreatedAt()).toEpochMilli())
                     .meta(Collections.singletonMap("buying_price", response.getPrice()))
@@ -187,12 +211,41 @@ public class ModelMapper {
         String counterAccount = tradeResponse.getCounterAccount() != null ?
             tradeResponse.getCounterAccount().getAccountId() : "";
 
-        Trade trade = new Trade.Builder()
+        Asset buyAsset  = assetMapper.map(
+            tradeResponse.isBaseSeller() ? tradeResponse.getCounterAsset() : tradeResponse.getBaseAsset()
+        );
+        Asset sellAsset = assetMapper.map(
+            tradeResponse.isBaseSeller() ? tradeResponse.getBaseAsset() : tradeResponse.getCounterAsset()
+        );
+
+        BigDecimal buyAmount = new BigDecimal(
+            tradeResponse.isBaseSeller() ? tradeResponse.getCounterAmount() : tradeResponse.getBaseAmount()
+        );
+        BigDecimal sellAmount = new BigDecimal(
+            tradeResponse.isBaseSeller() ? tradeResponse.getBaseAmount() : tradeResponse.getCounterAmount()
+        );
+
+        return new Trade.Builder()
+            .tradeId(tradeResponse.getId())
+            .type(tradeResponse.isBaseSeller() ? 1 : 0)
             .buyAddress(tradeResponse.isBaseSeller() ? counterAccount : baseAccount)
             .sellAddress(tradeResponse.isBaseSeller() ? baseAccount : counterAccount)
+            .buyAsset(buyAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                ? "native"
+                : buyAsset.getIssuerAccount() + "." + buyAsset.getCode()
+            )
+            .sellAsset(sellAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                ? "native"
+                : sellAsset.getIssuerAccount() + "." + sellAsset.getCode()
+            )
+            .buyAmount(buyAmount)
+            .sellAmount(sellAmount)
+            .timestamp(Instant.parse(tradeResponse.getLedgerCloseTime()).toEpochMilli())
+            .orderId(tradeResponse.getOfferId())
+            .blockNumber(0L)
+            .transactionHash("n/a")
+            .functionCallHash("n/a")
             .build();
-
-        return trade;
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
