@@ -87,7 +87,7 @@ public class TradesSubscriberConfiguration {
         return this.fetchTrades().stream()
             .map(trade -> BlockchainEntityWithState.from(
                 trade,
-                ResourceState.from(Trade.class.getSimpleName(), "")
+                ResourceState.from(Trade.class.getSimpleName(), this.currentCursor)
             ));
     }
 
