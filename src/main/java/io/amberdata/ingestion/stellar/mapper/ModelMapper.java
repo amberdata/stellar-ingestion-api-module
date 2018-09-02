@@ -4,6 +4,7 @@ import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.state.entities.ResourceState;
 import io.amberdata.ingestion.domain.Order;
 import io.amberdata.ingestion.domain.Trade;
+import io.amberdata.ingestion.stellar.configuration.subscribers.ExtendedTradeResponse;
 import io.amberdata.ingestion.stellar.mapper.operations.OperationMapperManager;
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -199,13 +200,15 @@ public class ModelMapper {
         return orders;
     }
 
-    public List<Trade> mapTrades (List<TradeResponse> records) {
+    public List<Trade> mapTrades (List<ExtendedTradeResponse> records) {
         return records.stream()
             .map(this::map)
             .collect(Collectors.toList());
     }
 
-    private Trade map (TradeResponse tradeResponse) {
+    private Trade map (ExtendedTradeResponse extendedTradeResponse) {
+        TradeResponse tradeResponse = extendedTradeResponse.getTradeResponse();
+
         String baseAccount = tradeResponse.getBaseAccount() != null ?
             tradeResponse.getBaseAccount().getAccountId() : "";
         String counterAccount = tradeResponse.getCounterAccount() != null ?
@@ -242,9 +245,10 @@ public class ModelMapper {
             .sellAmount(sellAmount)
             .timestamp(Instant.parse(tradeResponse.getLedgerCloseTime()).toEpochMilli())
             .orderId(tradeResponse.getOfferId())
-            .blockNumber(0L)
-            .transactionHash("n/a")
-            .functionCallHash("n/a")
+            .blockNumber(extendedTradeResponse.getLedger())
+            .transactionHash(extendedTradeResponse.getTransactionHash())
+            .functionCallHash(extendedTradeResponse.getOperationHash())
+            .meta(Collections.singletonMap("price", tradeResponse.getPrice()))
             .build();
     }
 

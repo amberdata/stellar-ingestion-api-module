@@ -1,5 +1,6 @@
 package io.amberdata.ingestion.stellar.configuration.subscribers;
 
+import okhttp3.HttpUrl;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
@@ -9,6 +10,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -20,6 +22,8 @@ import org.stellar.sdk.requests.RequestBuilder;
 import org.stellar.sdk.requests.TradesRequestBuilder;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.TradeResponse;
+import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.ingestion.core.client.BlockchainEntityWithState;
 import io.amberdata.ingestion.core.client.IngestionApiClient;
@@ -122,12 +126,47 @@ public class TradesSubscriberConfiguration {
                 return Collections.emptyList();
             }
 
+            List<ExtendedTradeResponse> enrichedRecords = enrichRecords(records);
+
             this.currentCursor = records.get(records.size() - 1).getPagingToken();
-            return this.modelMapper.mapTrades(records);
+            return this.modelMapper.mapTrades(enrichedRecords);
         }
         catch (IOException e) {
             throw new HorizonServer.IncorrectRequestException("Failed to get trades", e);
         }
+    }
+
+    private List<ExtendedTradeResponse> enrichRecords (List<TradeResponse> records) {
+        return records.stream()
+            .map(this::enrichRecord)
+            .collect(Collectors.toList());
+    }
+
+    private ExtendedTradeResponse enrichRecord (TradeResponse tradeResponse) {
+        Long ledger = 0L;
+        String transactionHash = "";
+        String operationHash = "";
+        try {
+            HttpUrl httpUrl = HttpUrl.get(tradeResponse.getLinks().getOperation().getUri());
+
+            OperationResponse operationResponse = this.server.horizonServer()
+                .operations()
+                .operation(httpUrl);
+
+            transactionHash = operationResponse.getTransactionHash();
+            operationHash = operationResponse.getId().toString();
+
+            TransactionResponse transactionResponse = this.server.horizonServer()
+                .transactions()
+                .transaction(transactionHash);
+
+            ledger = transactionResponse.getLedger();
+        }
+        catch (Exception e) {
+            LOG.error("Failed to get additional information for trade: {}", tradeResponse.getId());
+        }
+
+        return ExtendedTradeResponse.from(tradeResponse, ledger, transactionHash, operationHash);
     }
 
     private String getCursorPointer () {
