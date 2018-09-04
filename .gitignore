@@ -42,4 +42,4 @@ screenlog.0
 /application.pid
 
 # State embedded database
-/ingestion-module-state*
+/inbound-module-state*

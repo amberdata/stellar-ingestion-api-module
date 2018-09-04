@@ -7,13 +7,13 @@
 >
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.amberdata.ingestion-api</groupId>
-    <artifactId>stellar-ingestion-module</artifactId>
+    <groupId>io.amberdata.inbound</groupId>
+    <artifactId>stellar-inbound-module</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>stellar-ingestion-module</name>
-    <description>Inbound Collection module for Stellar</description>
+    <name>stellar-inbound-module</name>
+    <description>Stellar Inbound Collection Module</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -40,19 +40,19 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.amberdata.ingestion</groupId>
-            <artifactId>ingestion-domain</artifactId>
-            <version>0.1.16</version>
+            <groupId>io.amberdata.inbound</groupId>
+            <artifactId>inbound-domain-model</artifactId>
+            <version>0.1.19</version>
         </dependency>
 
         <dependency>
-            <groupId>io.amberdata.ingestion</groupId>
-            <artifactId>ingestion-core</artifactId>
-            <version>0.0.4</version>
+            <groupId>io.amberdata.inbound</groupId>
+            <artifactId>inbound-core</artifactId>
+            <version>0.0.5</version>
             <exclusions>
                 <exclusion>
-                    <groupId>io.amberdata.ingestion</groupId>
-                    <artifactId>ingestion-domain</artifactId>
+                    <groupId>io.amberdata.inbound</groupId>
+                    <artifactId>inbound-domain-model</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>

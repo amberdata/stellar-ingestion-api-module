@@ -15,4 +15,4 @@ java -jar \
     ${JAVA_OPTS} \
     ${PARAMETER_STORE_PATH} \
     -Djava.security.egd=file:/dev/./urandom /app.jar \
-    --spring.config.location=classpath:/application.properties,classpath:/ingestion-defaults.properties
+    --spring.config.location=classpath:/application.properties,classpath:/inbound-defaults.properties
