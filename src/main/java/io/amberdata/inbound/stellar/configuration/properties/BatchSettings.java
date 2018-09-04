@@ -10,6 +10,8 @@ public class BatchSettings {
     private String transactionsInChunk;
     private String addressesInChunk;
     private String assetsInChunk;
+    private String ordersInChunk;
+    private String tradesInChunk;
 
     public String getBlocksInChunk () {
         return this.blocksInChunk;
@@ -28,7 +30,7 @@ public class BatchSettings {
     }
 
     public String getAddressesInChunk () {
-        return addressesInChunk;
+        return this.addressesInChunk;
     }
 
     public void setAddressesInChunk (String addressesInChunk) {
@@ -36,11 +38,27 @@ public class BatchSettings {
     }
 
     public String getAssetsInChunk () {
-        return assetsInChunk;
+        return this.assetsInChunk;
     }
 
     public void setAssetsInChunk (String assetsInChunk) {
         this.assetsInChunk = assetsInChunk;
+    }
+
+    public String getOrdersInChunk () {
+        return this.ordersInChunk;
+    }
+
+    public void setOrdersInChunk (String ordersInChunk) {
+        this.ordersInChunk = ordersInChunk;
+    }
+
+    public String getTradesInChunk () {
+        return this.tradesInChunk;
+    }
+
+    public void setTradesInChunk (String tradesInChunk) {
+        this.tradesInChunk = tradesInChunk;
     }
 
     public int blocksInChunk() {
@@ -59,13 +77,23 @@ public class BatchSettings {
         return Integer.parseInt(getAssetsInChunk());
     }
 
+    public int ordersInChunk() {
+        return Integer.parseInt(getOrdersInChunk());
+    }
+
+    public int tradesInChunk() {
+        return Integer.parseInt(getTradesInChunk());
+    }
+
     @Override
     public String toString () {
         return "BatchSettings{" +
-            "blocksInChunk='" + this.blocksInChunk + '\'' +
-            ", transactionsInChunk='" + this.transactionsInChunk + '\'' +
-            ", addressesInChunk='" + this.addressesInChunk + '\'' +
-            ", assetsInChunk='" + this.assetsInChunk + '\'' +
+            "blocksInChunk='" + blocksInChunk + '\'' +
+            ", transactionsInChunk='" + transactionsInChunk + '\'' +
+            ", addressesInChunk='" + addressesInChunk + '\'' +
+            ", assetsInChunk='" + assetsInChunk + '\'' +
+            ", ordersInChunk='" + ordersInChunk + '\'' +
+            ", tradesInChunk='" + tradesInChunk + '\'' +
             '}';
     }
 }

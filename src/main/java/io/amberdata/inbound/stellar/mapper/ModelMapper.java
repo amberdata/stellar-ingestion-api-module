@@ -5,6 +5,7 @@ import java.math.BigInteger;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,7 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.LedgerResponse;
+import org.stellar.sdk.responses.TradeResponse;
 import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
+import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import io.amberdata.inbound.core.client.BlockchainEntityWithState;
@@ -25,7 +29,10 @@ import io.amberdata.inbound.domain.Address;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.Block;
 import io.amberdata.inbound.domain.FunctionCall;
+import io.amberdata.inbound.domain.Order;
+import io.amberdata.inbound.domain.Trade;
 import io.amberdata.inbound.domain.Transaction;
+import io.amberdata.inbound.stellar.configuration.subscribers.ExtendedTradeResponse;
 import io.amberdata.inbound.stellar.mapper.operations.OperationMapperManager;
 
 @Component
@@ -33,10 +40,12 @@ public class ModelMapper {
     private static final Logger LOG = LoggerFactory.getLogger(ModelMapper.class);
 
     private final OperationMapperManager operationMapperManager;
+    private final AssetMapper assetMapper;
 
     @Autowired
-    public ModelMapper (OperationMapperManager operationMapperManager) {
+    public ModelMapper (OperationMapperManager operationMapperManager, AssetMapper assetMapper) {
         this.operationMapperManager = operationMapperManager;
+        this.assetMapper = assetMapper;
     }
 
     public BlockchainEntityWithState<Block> map (LedgerResponse ledgerResponse) {
@@ -142,6 +151,105 @@ public class ModelMapper {
             address,
             ResourceState.from(Address.class.getSimpleName(), pagingToken)
         );
+    }
+
+    public List<Order> mapOrders (List<OperationResponse> operationResponses, Long ledger) {
+        List<Order> orders = new ArrayList<>();
+        for (int i = 0; i < operationResponses.size(); i++) {
+            OperationResponse operationResponse = operationResponses.get(i);
+            if (operationResponse.getClass() == ManageOfferOperationResponse.class ||
+                operationResponse.getClass() == CreatePassiveOfferOperationResponse.class) {
+                ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
+
+                if (response.getOfferId() == 0) {
+                    continue;
+                }
+
+                Asset sellingAsset = assetMapper.map(response.getSellingAsset());
+                Asset buyingAsset  = assetMapper.map(response.getBuyingAsset());
+
+                Order order = new Order.Builder()
+                    .type(0)
+                    .orderId(response.getOfferId().toString())
+                    .blockNumber(ledger)
+                    .transactionHash(response.getTransactionHash())
+                    .functionCallHash(String.valueOf(ledger) + "_" +
+                        operationResponse.getTransactionHash() + "_" +
+                        String.valueOf(i))
+                    .makerAddress(response.getSourceAccount() != null
+                        ? response.getSourceAccount().getAccountId()
+                        : ""
+                    )
+                    .sellAsset(sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                        ? "native"
+                        : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
+                    )
+                    .buyAsset(buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                        ? "native"
+                        : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
+                    )
+                    .buyAmount(BigDecimal.ZERO)
+                    .sellAmount(new BigDecimal(response.getAmount()))
+                    .timestamp(Instant.parse(response.getCreatedAt()).toEpochMilli())
+                    .meta(Collections.singletonMap("buying_price", response.getPrice()))
+                    .build();
+
+                orders.add(order);
+            }
+        }
+        return orders;
+    }
+
+    public List<Trade> mapTrades (List<ExtendedTradeResponse> records) {
+        return records.stream()
+            .map(this::map)
+            .collect(Collectors.toList());
+    }
+
+    private Trade map (ExtendedTradeResponse extendedTradeResponse) {
+        TradeResponse tradeResponse = extendedTradeResponse.getTradeResponse();
+
+        String baseAccount = tradeResponse.getBaseAccount() != null ?
+            tradeResponse.getBaseAccount().getAccountId() : "";
+        String counterAccount = tradeResponse.getCounterAccount() != null ?
+            tradeResponse.getCounterAccount().getAccountId() : "";
+
+        Asset buyAsset  = assetMapper.map(
+            tradeResponse.isBaseSeller() ? tradeResponse.getCounterAsset() : tradeResponse.getBaseAsset()
+        );
+        Asset sellAsset = assetMapper.map(
+            tradeResponse.isBaseSeller() ? tradeResponse.getBaseAsset() : tradeResponse.getCounterAsset()
+        );
+
+        BigDecimal buyAmount = new BigDecimal(
+            tradeResponse.isBaseSeller() ? tradeResponse.getCounterAmount() : tradeResponse.getBaseAmount()
+        );
+        BigDecimal sellAmount = new BigDecimal(
+            tradeResponse.isBaseSeller() ? tradeResponse.getBaseAmount() : tradeResponse.getCounterAmount()
+        );
+
+        return new Trade.Builder()
+            .tradeId(tradeResponse.getId())
+            .type(tradeResponse.isBaseSeller() ? 1 : 0)
+            .buyAddress(tradeResponse.isBaseSeller() ? counterAccount : baseAccount)
+            .sellAddress(tradeResponse.isBaseSeller() ? baseAccount : counterAccount)
+            .buyAsset(buyAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                ? "native"
+                : buyAsset.getIssuerAccount() + "." + buyAsset.getCode()
+            )
+            .sellAsset(sellAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                ? "native"
+                : sellAsset.getIssuerAccount() + "." + sellAsset.getCode()
+            )
+            .buyAmount(buyAmount)
+            .sellAmount(sellAmount)
+            .timestamp(Instant.parse(tradeResponse.getLedgerCloseTime()).toEpochMilli())
+            .orderId(tradeResponse.getOfferId())
+            .blockNumber(extendedTradeResponse.getLedger())
+            .transactionHash(extendedTradeResponse.getTransactionHash())
+            .functionCallHash(extendedTradeResponse.getOperationHash())
+            .meta(Collections.singletonMap("price", tradeResponse.getPrice()))
+            .build();
     }
 
     private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {

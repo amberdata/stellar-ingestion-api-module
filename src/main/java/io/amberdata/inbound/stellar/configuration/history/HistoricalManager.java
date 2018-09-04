@@ -123,7 +123,7 @@ public class HistoricalManager {
     private void waitBeforeNextLedgerProcessing () {
         long sleepTime = 100L;
         try {
-            LOG.info("Sleeping for {}ms before request the next ledger in seqence", sleepTime);
+            LOG.info("Sleeping for {}ms before request the next ledger in sequence", sleepTime);
             TimeUnit.MILLISECONDS.sleep(sleepTime);
         }
         catch (InterruptedException e) {
