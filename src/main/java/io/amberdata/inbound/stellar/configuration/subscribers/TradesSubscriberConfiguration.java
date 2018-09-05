@@ -82,7 +82,7 @@ public class TradesSubscriberConfiguration {
             .buffer(this.batchSettings.tradesInChunk())
             .retryWhen(errorsHandler::onError)
             .subscribe(
-                entities -> this.apiClient.publish("/trades", entities),
+                entities -> this.apiClient.publishWithState("/trades", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }

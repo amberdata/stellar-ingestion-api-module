@@ -57,11 +57,11 @@ public class LedgersSubscriberConfiguration {
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
             .timeout(this.errorsHandler.timeoutDuration())
-            .map(this.modelMapper::map)
+            .map(this.modelMapper::mapLedgerWithState)
             .buffer(this.batchSettings.blocksInChunk())
             .retryWhen(errorsHandler::onError)
             .subscribe(
-                entities -> this.apiClient.publish("/blocks", entities),
+                entities -> this.apiClient.publishWithState("/blocks", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }

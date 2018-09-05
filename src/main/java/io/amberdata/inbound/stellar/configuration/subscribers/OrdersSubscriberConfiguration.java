@@ -70,7 +70,7 @@ public class OrdersSubscriberConfiguration {
             .buffer(this.batchSettings.ordersInChunk())
             .retryWhen(errorsHandler::onError)
             .subscribe(
-                entities -> this.apiClient.publish("/orders", entities),
+                entities -> this.apiClient.publishWithState("/orders", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }

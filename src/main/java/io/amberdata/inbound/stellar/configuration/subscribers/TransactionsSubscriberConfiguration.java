@@ -66,14 +66,14 @@ public class TransactionsSubscriberConfiguration {
             .buffer(this.batchSettings.transactionsInChunk())
             .retryWhen(errorsHandler::onError)
             .subscribe(
-                entities -> this.apiClient.publish("/transactions", entities),
+                entities -> this.apiClient.publishWithState("/transactions", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
 
     private BlockchainEntityWithState<Transaction> enrichTransaction (TransactionResponse transactionResponse) {
         List<OperationResponse> operationResponses = fetchOperationsForTransaction(transactionResponse);
-        return this.modelMapper.map(transactionResponse, operationResponses);
+        return this.modelMapper.mapTransactionWithState(transactionResponse, operationResponses);
     }
 
     private List<OperationResponse> fetchOperationsForTransaction (TransactionResponse transactionResponse) {

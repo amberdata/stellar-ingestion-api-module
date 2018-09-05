@@ -9,6 +9,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.slf4j.Logger;
@@ -48,56 +49,48 @@ public class ModelMapper {
         this.assetMapper = assetMapper;
     }
 
-    public BlockchainEntityWithState<Block> map (LedgerResponse ledgerResponse) {
-        Block block = new Block.Builder()
+    public Block mapLedger (LedgerResponse ledgerResponse) {
+        return new Block.Builder()
             .number(BigInteger.valueOf(ledgerResponse.getSequence()))
             .hash(ledgerResponse.getHash())
             .parentHash(ledgerResponse.getPrevHash())
             .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
             .numTransactions(ledgerResponse.getTransactionCount())
             .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
-            .meta(blockOptionalProperties(ledgerResponse))
+            .meta(blockMetaProperties(ledgerResponse))
             .build();
+    }
 
+    public BlockchainEntityWithState<Block> mapLedgerWithState (LedgerResponse ledgerResponse) {
         return BlockchainEntityWithState.from(
-            block,
+            this.mapLedger(ledgerResponse),
             ResourceState.from(Block.class.getSimpleName(), ledgerResponse.getPagingToken())
         );
     }
 
-    private Map<String, Object> blockOptionalProperties (LedgerResponse ledgerResponse) {
-        Map<String, Object> optionalProperties = new HashMap<>();
+    public Transaction mapTransaction (
+        TransactionResponse transactionResponse,
+        List<OperationResponse> operationResponses
+    ) {
+        List<FunctionCall> functionCalls = this.mapOperations(operationResponses, transactionResponse.getLedger());
+        Set<String> tos = functionCalls.stream().map(FunctionCall::getTo).collect(Collectors.toSet());
 
-        optionalProperties.put("operation_count", ledgerResponse.getOperationCount());
-        optionalProperties.put("total_coins", ledgerResponse.getTotalCoins());
-        optionalProperties.put("base_fee_in_stroops", ledgerResponse.getBaseFeeInStroops());
-        optionalProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
-        optionalProperties.put("max_tx_set_size", ledgerResponse.getMaxTxSetSize());
-        optionalProperties.put("sequence", ledgerResponse.getSequence());
-
-        return optionalProperties;
-    }
-
-    public BlockchainEntityWithState<Transaction> map (TransactionResponse transactionResponse,
-                                                       List<OperationResponse> operationResponses) {
-        List<FunctionCall> functionCalls = this.map(operationResponses, transactionResponse.getLedger());
-        List<String> tos = functionCalls.stream().map(FunctionCall::getTo).collect(Collectors.toList());
         String to = "";
         if (tos.size() == 1) {
-            to = tos.get(0);
+            to = tos.iterator().next();
         }
         if (tos.size() > 1) {
             to = "_";
         }
 
-        Transaction transaction = new Transaction.Builder()
+        return new Transaction.Builder()
             .hash(transactionResponse.getHash())
             .transactionIndex(transactionResponse.getSourceAccountSequence())
             .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
             .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
             .from(transactionResponse.getSourceAccount().getAccountId())
             .to(to)
-            .tos(tos)
+            .tos(new ArrayList<>(tos))
             .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
             .numLogs(transactionResponse.getOperationCount())
             .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
@@ -105,14 +98,19 @@ public class ModelMapper {
             .status("0x1")
             .value(BigDecimal.ZERO)
             .build();
+    }
 
+    public BlockchainEntityWithState<Transaction> mapTransactionWithState (
+        TransactionResponse transactionResponse,
+        List<OperationResponse> operationResponses
+    ) {
         return BlockchainEntityWithState.from(
-            transaction,
+            this.mapTransaction(transactionResponse, operationResponses),
             ResourceState.from(Transaction.class.getSimpleName(), transactionResponse.getPagingToken())
         );
     }
 
-    public List<FunctionCall> map (List<OperationResponse> operationResponses, Long ledger) {
+    public List<FunctionCall> mapOperations (List<OperationResponse> operationResponses, Long ledger) {
         return IntStream
             .range(0, operationResponses.size())
             .mapToObj(index -> this.operationMapperManager.map(operationResponses.get(index), ledger, index))
@@ -123,14 +121,13 @@ public class ModelMapper {
         List<Asset> allAssets = new ArrayList<>();
         for (int i = 0; i < operationResponses.size(); i++) {
             OperationResponse operationResponse = operationResponses.get(i);
-            List<Asset> assets = this.operationMapperManager.mapAssets(operationResponse);
+            String transactionHash = operationResponse.getTransactionHash();
+            List<Asset> assets = this.operationMapperManager.mapAssets(ledger, operationResponse);
             for (Asset asset : assets) {
                 asset.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
-                asset.setTransactionHash(operationResponse.getTransactionHash());
+                asset.setTransactionHash(transactionHash);
                 asset.setFunctionCallHash(
-                    String.valueOf(ledger) + "_" +
-                        operationResponse.getTransactionHash() + "_" +
-                        String.valueOf(i)
+                    this.operationMapperManager.generateOperationHash(ledger, transactionHash, i)
                 );
             }
             allAssets.addAll(assets);
@@ -138,19 +135,84 @@ public class ModelMapper {
         return allAssets;
     }
 
-    public BlockchainEntityWithState<Address> map (AccountResponse accountResponse,
-                                                   String pagingToken,
-                                                   Long timestamp) {
-        Address address = new Address.Builder()
+    public Address mapAccount (AccountResponse accountResponse, Long timestamp) {
+        return new Address.Builder()
             .hash(accountResponse.getKeypair().getAccountId())
             .timestamp(timestamp)
-            .meta(addressOptionalProperties(accountResponse))
+            .meta(addressMetaProperties(accountResponse))
             .build();
+    }
 
+    public BlockchainEntityWithState<Address> mapAccountWithState (
+        AccountResponse accountResponse,
+        Long timestamp,
+        String pagingToken
+    ) {
         return BlockchainEntityWithState.from(
-            address,
+            this.mapAccount(accountResponse, timestamp),
             ResourceState.from(Address.class.getSimpleName(), pagingToken)
         );
+    }
+
+    private Map<String, Object> blockMetaProperties (LedgerResponse ledgerResponse) {
+        Map<String, Object> metaProperties = new HashMap<>();
+
+        metaProperties.put("operation_count", ledgerResponse.getOperationCount());
+        metaProperties.put("total_coins", ledgerResponse.getTotalCoins());
+        metaProperties.put("base_fee_in_stroops", ledgerResponse.getBaseFeeInStroops());
+        metaProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
+        metaProperties.put("max_tx_set_size", ledgerResponse.getMaxTxSetSize());
+        metaProperties.put("sequence", ledgerResponse.getSequence());
+
+        return metaProperties;
+    }
+
+    private Map<String, Object> addressMetaProperties (AccountResponse accountResponse) {
+        Map<String, Object> metaProperties = new HashMap<>();
+
+        metaProperties.put("sequence", accountResponse.getSequenceNumber());
+        metaProperties.put("subentry_count", accountResponse.getSubentryCount());
+        metaProperties.put("threshold_low", accountResponse.getThresholds().getLowThreshold());
+        metaProperties.put("threshold_med", accountResponse.getThresholds().getMedThreshold());
+        metaProperties.put("threshold_high", accountResponse.getThresholds().getHighThreshold());
+        metaProperties.put("flag_auth_required", accountResponse.getFlags().getAuthRequired());
+        metaProperties.put("flag_auth_revocable", accountResponse.getFlags().getAuthRevocable());
+        metaProperties.put("balances", Arrays.stream(accountResponse.getBalances())
+            .map(this::balanceProperty)
+            .collect(Collectors.toList()));
+        metaProperties.put("signers", Arrays.stream(accountResponse.getSigners())
+            .map(this::signerProperty)
+            .collect(Collectors.toList()));
+
+        return metaProperties;
+    }
+
+    private Map<String, Object> balanceProperty (AccountResponse.Balance balance) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+
+        optionalProperties.put("balance", balance.getBalance());
+        optionalProperties.put("limit", balance.getLimit());
+        optionalProperties.put("asset_type", balance.getAssetType());
+        if (!balance.getAssetType().equals("native")) {
+            optionalProperties.put("asset_code", balance.getAssetCode());
+            if (balance.getAssetIssuer() == null) {
+                LOG.warn("AssetIssuer in mapping balance property is null");
+            }
+            else {
+                optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+            }
+        }
+
+        return optionalProperties;
+    }
+
+    private Map<String, Object> signerProperty (AccountResponse.Signer signer) {
+        Map<String, Object> optionalProperties = new HashMap<>();
+
+        optionalProperties.put("public_key", signer.getKey());
+        optionalProperties.put("weight", String.valueOf(signer.getWeight()));
+
+        return optionalProperties;
     }
 
     public List<Order> mapOrders (List<OperationResponse> operationResponses, Long ledger) {
@@ -202,11 +264,11 @@ public class ModelMapper {
 
     public List<Trade> mapTrades (List<ExtendedTradeResponse> records) {
         return records.stream()
-            .map(this::map)
+            .map(this::mapTrade)
             .collect(Collectors.toList());
     }
 
-    private Trade map (ExtendedTradeResponse extendedTradeResponse) {
+    private Trade mapTrade (ExtendedTradeResponse extendedTradeResponse) {
         TradeResponse tradeResponse = extendedTradeResponse.getTradeResponse();
 
         String baseAccount = tradeResponse.getBaseAccount() != null ?
@@ -250,53 +312,5 @@ public class ModelMapper {
             .functionCallHash(extendedTradeResponse.getOperationHash())
             .meta(Collections.singletonMap("price", tradeResponse.getPrice()))
             .build();
-    }
-
-    private Map<String, Object> addressOptionalProperties (AccountResponse accountResponse) {
-        Map<String, Object> optionalProperties = new HashMap<>();
-
-        optionalProperties.put("sequence", accountResponse.getSequenceNumber());
-        optionalProperties.put("subentry_count", accountResponse.getSubentryCount());
-        optionalProperties.put("threshold_low", accountResponse.getThresholds().getLowThreshold());
-        optionalProperties.put("threshold_med", accountResponse.getThresholds().getMedThreshold());
-        optionalProperties.put("threshold_high", accountResponse.getThresholds().getHighThreshold());
-        optionalProperties.put("flag_auth_required", accountResponse.getFlags().getAuthRequired());
-        optionalProperties.put("flag_auth_revocable", accountResponse.getFlags().getAuthRevocable());
-        optionalProperties.put("balances", Arrays.stream(accountResponse.getBalances())
-            .map(this::balanceProperty)
-            .collect(Collectors.toList()));
-        optionalProperties.put("signers", Arrays.stream(accountResponse.getSigners())
-            .map(this::signerProperty)
-            .collect(Collectors.toList()));
-
-        return optionalProperties;
-    }
-
-    private Map<String, Object> balanceProperty (AccountResponse.Balance balance) {
-        Map<String, Object> optionalProperties = new HashMap<>();
-
-        optionalProperties.put("balance", balance.getBalance());
-        optionalProperties.put("limit", balance.getLimit());
-        optionalProperties.put("asset_type", balance.getAssetType());
-        if (!balance.getAssetType().equals("native")) {
-            optionalProperties.put("asset_code", balance.getAssetCode());
-            if (balance.getAssetIssuer() == null) {
-                LOG.warn("AssetIssuer in mapping balance property is null");
-            }
-            else {
-                optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
-            }
-        }
-
-        return optionalProperties;
-    }
-
-    private Map<String, Object> signerProperty (AccountResponse.Signer signer) {
-        Map<String, Object> optionalProperties = new HashMap<>();
-
-        optionalProperties.put("public_key", signer.getKey());
-        optionalProperties.put("weight", String.valueOf(signer.getWeight()));
-
-        return optionalProperties;
     }
 }

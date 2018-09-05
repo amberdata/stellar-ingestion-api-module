@@ -73,7 +73,7 @@ public class AssetSubscriberConfiguration {
             .buffer(this.batchSettings.assetsInChunk())
             .retryWhen(errorsHandler::onError)
             .subscribe(
-                entities -> this.apiClient.publish("/assets", entities),
+                entities -> this.apiClient.publishWithState("/assets", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
@@ -90,7 +90,7 @@ public class AssetSubscriberConfiguration {
     }
 
     private List<Asset> processAssets (List<OperationResponse> operationResponses, Long ledger) {
-        return modelMapper.mapAssets(operationResponses, ledger).stream()
+        return this.modelMapper.mapAssets(operationResponses, ledger).stream()
             .distinct()
             .map(this::enrichAsset)
             .collect(Collectors.toList());

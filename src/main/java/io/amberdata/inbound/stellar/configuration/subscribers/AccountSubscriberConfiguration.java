@@ -70,7 +70,7 @@ public class AccountSubscriberConfiguration {
             .buffer(this.batchSettings.addressesInChunk())
             .retryWhen(errorsHandler::onError)
             .subscribe(
-                entities -> this.apiClient.publish("/addresses", entities),
+                entities -> this.apiClient.publishWithState("/addresses", entities),
                 SubscriberErrorsHandler::handleFatalApplicationError
             );
     }
@@ -82,26 +82,26 @@ public class AccountSubscriberConfiguration {
 
     private Stream<BlockchainEntityWithState<Address>> processAccounts (List<OperationResponse> operationResponses,
                                                                         TransactionResponse transactionResponse) {
-        return this.modelMapper.map(operationResponses, null).stream()
+        return this.modelMapper.mapOperations(operationResponses, null).stream()
             .flatMap(functionCall -> {
                 Stream.Builder<BlockchainEntityWithState<Address>> stream = Stream.builder();
                 if (functionCall.getFrom() != null) {
                     AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getFrom());
                     if (accountResponse != null) {
-                        stream.add(this.modelMapper.map(
+                        stream.add(this.modelMapper.mapAccountWithState(
                             accountResponse,
-                            transactionResponse.getPagingToken(),
-                            functionCall.getTimestamp()
+                            functionCall.getTimestamp(),
+                            transactionResponse.getPagingToken()
                         ));
                     }
                 }
                 if (functionCall.getTo() != null) {
                     AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getTo());
                     if (accountResponse != null) {
-                        stream.add(this.modelMapper.map(
+                        stream.add(this.modelMapper.mapAccountWithState(
                             accountResponse,
-                            transactionResponse.getPagingToken(),
-                            functionCall.getTimestamp()
+                            functionCall.getTimestamp(),
+                            transactionResponse.getPagingToken()
                         ));
                     }
                 }

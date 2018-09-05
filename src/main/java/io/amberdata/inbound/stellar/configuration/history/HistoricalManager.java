@@ -41,7 +41,6 @@ public class HistoricalManager {
         }
 
         this.horizonServer = horizonServer.horizonServer();
-
     }
 
     public boolean disabled () {

@@ -59,43 +59,57 @@ public class OperationMapperManager {
         this.server = server;
     }
 
+    public String generateOperationHash (long ledgerNumber, String transactionHash, int transactionIndex) {
+        return
+            String.valueOf(ledgerNumber) + "_" +
+            transactionHash + "_" +
+            String.valueOf(transactionIndex);
+    }
+
     public FunctionCall map (OperationResponse operationResponse, Long ledger, Integer index) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
 
         List<String> effects = fetchEffectsForOperation(operationResponse);
 
+        String transactionHash = operationResponse.getTransactionHash();
+
         FunctionCall functionCall;
         if (operationMapper == null) {
-            LOG.warn("An unknown operation has been introduced which is not implemented: " +
-                operationResponse.getClass().getSimpleName());
+            LOG.warn(
+                "An unknown operation for ledger " + ledger + " and transaction " +
+                transactionHash + " has been introduced which is not implemented: " +
+                operationResponse.getClass().getSimpleName()
+            );
             functionCall = new FunctionCall();
             functionCall.setName("unknown");
             functionCall.setSignature("unknown_operation");
             functionCall.setArguments(Collections.emptyList());
-        } else {
+        }
+        else {
             functionCall = operationMapper.map(operationResponse);
         }
 
         functionCall.setBlockNumber(ledger);
-        functionCall.setTransactionHash(operationResponse.getTransactionHash());
+        functionCall.setTransactionHash(transactionHash);
         functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
         functionCall.setDepth(0);
         functionCall.setIndex(index);
         functionCall.setHash(
-            String.valueOf(ledger) + "_" +
-            operationResponse.getTransactionHash() + "_" +
-            String.valueOf(index)
+            this.generateOperationHash(ledger, transactionHash, index)
         );
         functionCall.setResult(String.join(",", effects));
 
         return functionCall;
     }
 
-    public List<Asset> mapAssets (OperationResponse operationResponse) {
+    public List<Asset> mapAssets (long ledger, OperationResponse operationResponse) {
         OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
         if (operationMapper == null) {
-            LOG.warn("An unknown operation has been introduced which is not implemented: " +
-                operationResponse.getClass().getSimpleName());
+            LOG.warn(
+                "An unknown operation for ledger " + ledger + " and transaction " +
+                operationResponse.getTransactionHash() + " has been introduced which is not implemented: " +
+                operationResponse.getClass().getSimpleName()
+            );
             return Collections.emptyList();
         }
 
