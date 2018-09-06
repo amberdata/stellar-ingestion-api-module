@@ -71,10 +71,10 @@ public class StellarSubscriberConfiguration {
 
         Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
             .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
-//            .timeout(this.errorsHandler.timeoutDuration())
+            .timeout(this.errorsHandler.timeoutDuration())
             .map(this.modelMapper::mapLedgerWithState)
             .buffer(this.batchSettings.blocksInChunk())
-//            .retryWhen(errorsHandler::onError)
+            .retryWhen(errorsHandler::onError)
             .subscribe(
                 this::processLedgers,
                 SubscriberErrorsHandler::handleFatalApplicationError
