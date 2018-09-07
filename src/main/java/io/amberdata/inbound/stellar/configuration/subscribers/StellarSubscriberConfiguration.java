@@ -144,8 +144,13 @@ public class StellarSubscriberConfiguration {
           Transaction transaction = this.enrichTransaction(transactionResponse, operations.getOrDefault(transactionResponse.getHash(), Collections.emptyList()));
           transactions.add(transaction);
 
+          long tAddresses = System.currentTimeMillis();
           addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
+          LOG.info("[PERFORMANCE] getAddresses: " + (System.currentTimeMillis() - tAddresses) + " ms");
+
+          long tAssets = System.currentTimeMillis();
           assets.addAll(this.collectAssets(operationResponses, ledger));
+          LOG.info("[PERFORMANCE] getAssets: " + (System.currentTimeMillis() - tAssets) + " ms");
         }
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
