@@ -36,8 +36,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -106,45 +108,69 @@ public class StellarSubscriberConfiguration {
   }
 
   private void processLedgers(List<BlockchainEntityWithState<Block>> blocks) {
+    long tLedgers = System.currentTimeMillis();
+
     for (BlockchainEntityWithState<Block> block : blocks) {
+      long tLedger = System.currentTimeMillis();
+
       long ledger = block.getEntity().getNumber().longValue();
 
       List<Transaction> transactions = new ArrayList<>();
 
+      Set<Address> addresses = new HashSet<>();
+      Set<Asset> assets = new HashSet<>();
+
       try {
+        long tTransactions = System.currentTimeMillis();
         List<TransactionResponse> transactionResponses = this.server.horizonServer()
             .transactions()
             .forLedger(ledger)
             .execute()
             .getRecords();
+        LOG.info("[PERFORMANCE] getTransactions: " + (System.currentTimeMillis() - tTransactions) + " ms");
 
         for (TransactionResponse transactionResponse : transactionResponses) {
+          long tOperations = System.currentTimeMillis();
           List<OperationResponse> operationResponses =
               this.fetchOperationsForTransaction(transactionResponse);
+          LOG.info("[PERFORMANCE] getOperations: " + (System.currentTimeMillis() - tOperations) + " ms");
 
           Transaction transaction = this.enrichTransaction(transactionResponse, operationResponses);
           transactions.add(transaction);
 
-          Collection<Address> addresses = this.collectAddresses(transaction.getFunctionCalls());
-          if (!addresses.isEmpty()) {
-            this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-          }
-
-          List<Asset> assets = this.collectAssets(operationResponses, ledger);
-          if (!assets.isEmpty()) {
-            this.apiClient.publish("/assets", assets);
-          }
+          addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
+          assets.addAll(this.collectAssets(operationResponses, ledger));
         }
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
       }
 
-      if (!transactions.isEmpty()) {
-        this.apiClient.publish("/transactions", transactions);
+      if (!addresses.isEmpty()) {
+        long tPublishAddresses = System.currentTimeMillis();
+        this.apiClient.publish("/addresses", new ArrayList<>(addresses));
+        LOG.info("[PERFORMANCE] publishAddresses (" + addresses.size() + "): " + (System.currentTimeMillis() - tPublishAddresses) + " ms");
       }
+
+      if (!assets.isEmpty()) {
+        long tPublishAssets = System.currentTimeMillis();
+        this.apiClient.publish("/assets", new ArrayList<>(assets));
+        LOG.info("[PERFORMANCE] publishAssets (" + assets.size() + "): " + (System.currentTimeMillis() - tPublishAssets) + " ms");
+      }
+
+      if (!transactions.isEmpty()) {
+        long tPublishTransactions = System.currentTimeMillis();
+        this.apiClient.publish("/transactions", transactions);
+        LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - tPublishTransactions) + " ms");
+      }
+
+      LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - tLedger) + " ms");
     }
 
+    long tPublishLedgers = System.currentTimeMillis();
     this.apiClient.publishWithState("/blocks", blocks);
+    LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - tPublishLedgers) + " ms");
+
+    LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - tLedgers) + " ms");
   }
 
   private Transaction enrichTransaction(
