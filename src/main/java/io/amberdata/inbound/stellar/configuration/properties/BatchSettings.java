@@ -6,94 +6,96 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @ConfigurationProperties("inbound.api.batch")
 public class BatchSettings {
-    private String blocksInChunk;
-    private String transactionsInChunk;
-    private String addressesInChunk;
-    private String assetsInChunk;
-    private String ordersInChunk;
-    private String tradesInChunk;
 
-    public String getBlocksInChunk () {
-        return this.blocksInChunk;
-    }
+  private String blocksInChunk;
+  private String transactionsInChunk;
+  private String addressesInChunk;
+  private String assetsInChunk;
+  private String ordersInChunk;
+  private String tradesInChunk;
 
-    public void setBlocksInChunk (String blocksInChunk) {
-        this.blocksInChunk = blocksInChunk;
-    }
+  public String getBlocksInChunk() {
+    return this.blocksInChunk;
+  }
 
-    public String getTransactionsInChunk () {
-        return this.transactionsInChunk;
-    }
+  public void setBlocksInChunk(String blocksInChunk) {
+    this.blocksInChunk = blocksInChunk;
+  }
 
-    public void setTransactionsInChunk (String transactionsInChunk) {
-        this.transactionsInChunk = transactionsInChunk;
-    }
+  public String getTransactionsInChunk() {
+    return this.transactionsInChunk;
+  }
 
-    public String getAddressesInChunk () {
-        return this.addressesInChunk;
-    }
+  public void setTransactionsInChunk(String transactionsInChunk) {
+    this.transactionsInChunk = transactionsInChunk;
+  }
 
-    public void setAddressesInChunk (String addressesInChunk) {
-        this.addressesInChunk = addressesInChunk;
-    }
+  public String getAddressesInChunk() {
+    return this.addressesInChunk;
+  }
 
-    public String getAssetsInChunk () {
-        return this.assetsInChunk;
-    }
+  public void setAddressesInChunk(String addressesInChunk) {
+    this.addressesInChunk = addressesInChunk;
+  }
 
-    public void setAssetsInChunk (String assetsInChunk) {
-        this.assetsInChunk = assetsInChunk;
-    }
+  public String getAssetsInChunk() {
+    return this.assetsInChunk;
+  }
 
-    public String getOrdersInChunk () {
-        return this.ordersInChunk;
-    }
+  public void setAssetsInChunk(String assetsInChunk) {
+    this.assetsInChunk = assetsInChunk;
+  }
 
-    public void setOrdersInChunk (String ordersInChunk) {
-        this.ordersInChunk = ordersInChunk;
-    }
+  public String getOrdersInChunk() {
+    return this.ordersInChunk;
+  }
 
-    public String getTradesInChunk () {
-        return this.tradesInChunk;
-    }
+  public void setOrdersInChunk(String ordersInChunk) {
+    this.ordersInChunk = ordersInChunk;
+  }
 
-    public void setTradesInChunk (String tradesInChunk) {
-        this.tradesInChunk = tradesInChunk;
-    }
+  public String getTradesInChunk() {
+    return this.tradesInChunk;
+  }
 
-    public int blocksInChunk() {
-        return Integer.parseInt(getBlocksInChunk());
-    }
+  public void setTradesInChunk(String tradesInChunk) {
+    this.tradesInChunk = tradesInChunk;
+  }
 
-    public int transactionsInChunk() {
-        return Integer.parseInt(getTransactionsInChunk());
-    }
+  public int blocksInChunk() {
+    return Integer.parseInt(getBlocksInChunk());
+  }
 
-    public int addressesInChunk() {
-        return Integer.parseInt(getAddressesInChunk());
-    }
+  public int transactionsInChunk() {
+    return Integer.parseInt(getTransactionsInChunk());
+  }
 
-    public int assetsInChunk() {
-        return Integer.parseInt(getAssetsInChunk());
-    }
+  public int addressesInChunk() {
+    return Integer.parseInt(getAddressesInChunk());
+  }
 
-    public int ordersInChunk() {
-        return Integer.parseInt(getOrdersInChunk());
-    }
+  public int assetsInChunk() {
+    return Integer.parseInt(getAssetsInChunk());
+  }
 
-    public int tradesInChunk() {
-        return Integer.parseInt(getTradesInChunk());
-    }
+  public int ordersInChunk() {
+    return Integer.parseInt(getOrdersInChunk());
+  }
 
-    @Override
-    public String toString () {
-        return "BatchSettings{" +
-            "blocksInChunk='" + blocksInChunk + '\'' +
-            ", transactionsInChunk='" + transactionsInChunk + '\'' +
-            ", addressesInChunk='" + addressesInChunk + '\'' +
-            ", assetsInChunk='" + assetsInChunk + '\'' +
-            ", ordersInChunk='" + ordersInChunk + '\'' +
-            ", tradesInChunk='" + tradesInChunk + '\'' +
-            '}';
-    }
+  public int tradesInChunk() {
+    return Integer.parseInt(getTradesInChunk());
+  }
+
+  @Override
+  public String toString() {
+    return
+        "BatchSettings{"
+        + "blocksInChunk='" + blocksInChunk + '\''
+        + ", transactionsInChunk='" + transactionsInChunk + '\''
+        + ", addressesInChunk='" + addressesInChunk + '\''
+        + ", assetsInChunk='" + assetsInChunk + '\''
+        + ", ordersInChunk='" + ordersInChunk + '\''
+        + ", tradesInChunk='" + tradesInChunk + '\''
+        + '}';
+  }
 }

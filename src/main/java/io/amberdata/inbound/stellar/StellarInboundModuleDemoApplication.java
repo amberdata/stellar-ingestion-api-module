@@ -1,7 +1,6 @@
 package io.amberdata.inbound.stellar;
 
-import java.util.Arrays;
-import java.util.concurrent.CountDownLatch;
+import io.amberdata.inbound.core.InboundCore;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
@@ -13,41 +12,43 @@ import org.springframework.boot.context.ApplicationPidFileWriter;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.core.env.Environment;
 
-import io.amberdata.inbound.core.InboundCore;
+import java.util.Arrays;
+import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
 @ComponentScan(basePackageClasses = {InboundCore.class, StellarInboundModuleDemoApplication.class})
 public class StellarInboundModuleDemoApplication implements CommandLineRunner {
-    private static CountDownLatch EXIT_LATCH;
+  private static CountDownLatch EXIT_LATCH;
 
-    private final Environment environment;
+  private final Environment environment;
 
-    @Autowired
-    public StellarInboundModuleDemoApplication(Environment environment) {
-        this.environment = environment;
+  @Autowired
+  public StellarInboundModuleDemoApplication(Environment environment) {
+    this.environment = environment;
+  }
+
+  @Override
+  public void run(String... args) throws Exception {
+    boolean testProfileDisabled = Arrays
+        .stream(this.environment.getActiveProfiles())
+        .noneMatch(profile -> profile.equalsIgnoreCase("test"));
+
+    if (testProfileDisabled) {
+      EXIT_LATCH = new CountDownLatch(1);
+      EXIT_LATCH.await();
     }
+  }
 
-    @Override
-    public void run (String... args) throws Exception {
-        boolean testProfileDisabled = Arrays.stream(this.environment.getActiveProfiles())
-            .noneMatch(profile -> profile.equalsIgnoreCase("test"));
+  public static void main(String[] args) {
+    SpringApplication app = new SpringApplication(StellarInboundModuleDemoApplication.class);
+    app.setWebApplicationType(WebApplicationType.NONE);
+    app.addListeners(new ApplicationPidFileWriter());
+    app.run(args);
+  }
 
-        if (testProfileDisabled) {
-            EXIT_LATCH = new CountDownLatch(1);
-            EXIT_LATCH.await();
-        }
+  public static void shutdown() {
+    if (EXIT_LATCH != null) {
+      EXIT_LATCH.countDown();
     }
-
-    public static void main (String[] args) {
-        SpringApplication app = new SpringApplication(StellarInboundModuleDemoApplication.class);
-        app.setWebApplicationType(WebApplicationType.NONE);
-        app.addListeners(new ApplicationPidFileWriter());
-        app.run(args);
-    }
-
-    public static void shutdown () {
-        if (EXIT_LATCH != null) {
-            EXIT_LATCH.countDown();
-        }
-    }
+  }
 }

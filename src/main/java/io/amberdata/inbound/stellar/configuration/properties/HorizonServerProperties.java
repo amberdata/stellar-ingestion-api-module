@@ -1,64 +1,65 @@
 package io.amberdata.inbound.stellar.configuration.properties;
 
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
-
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationUnit;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 @Configuration
 @ConfigurationProperties("stellar.horizon")
 public class HorizonServerProperties {
-    private String server;
-    private Integer retriesOnError;
 
-    @DurationUnit(ChronoUnit.MILLIS)
-    private Duration backOffTimeoutInitial;
+  private String server;
+  private Integer retriesOnError;
 
-    @DurationUnit(ChronoUnit.MILLIS)
-    private Duration backOffTimeoutMax;
+  @DurationUnit(ChronoUnit.MILLIS)
+  private Duration backOffTimeoutInitial;
 
-    private Double idleTimeoutMultiplier;
+  @DurationUnit(ChronoUnit.MILLIS)
+  private Duration backOffTimeoutMax;
 
-    public String getServer () {
-        return this.server;
-    }
+  private Double idleTimeoutMultiplier;
 
-    public void setServer (String server) {
-        this.server = server;
-    }
+  public String getServer() {
+    return this.server;
+  }
 
-    public Integer getRetriesOnError () {
-        return this.retriesOnError;
-    }
+  public void setServer(String server) {
+    this.server = server;
+  }
 
-    public void setRetriesOnError (Integer retriesOnError) {
-        this.retriesOnError = retriesOnError;
-    }
+  public Integer getRetriesOnError() {
+    return this.retriesOnError;
+  }
 
-    public Duration getBackOffTimeoutInitial () {
-        return this.backOffTimeoutInitial;
-    }
+  public void setRetriesOnError(Integer retriesOnError) {
+    this.retriesOnError = retriesOnError;
+  }
 
-    public void setBackOffTimeoutInitial (Duration backOffTimeoutInitial) {
-        this.backOffTimeoutInitial = backOffTimeoutInitial;
-    }
+  public Duration getBackOffTimeoutInitial() {
+    return this.backOffTimeoutInitial;
+  }
 
-    public Duration getBackOffTimeoutMax () {
-        return this.backOffTimeoutMax;
-    }
+  public void setBackOffTimeoutInitial(Duration backOffTimeoutInitial) {
+    this.backOffTimeoutInitial = backOffTimeoutInitial;
+  }
 
-    public void setBackOffTimeoutMax (Duration backOffTimeoutMax) {
-        this.backOffTimeoutMax = backOffTimeoutMax;
-    }
+  public Duration getBackOffTimeoutMax() {
+    return this.backOffTimeoutMax;
+  }
 
-    public Double getIdleTimeoutMultiplier () {
-        return idleTimeoutMultiplier;
-    }
+  public void setBackOffTimeoutMax(Duration backOffTimeoutMax) {
+    this.backOffTimeoutMax = backOffTimeoutMax;
+  }
 
-    public void setIdleTimeoutMultiplier (Double idleTimeoutMultiplier) {
-        this.idleTimeoutMultiplier = idleTimeoutMultiplier;
-    }
+  public Double getIdleTimeoutMultiplier() {
+    return idleTimeoutMultiplier;
+  }
+
+  public void setIdleTimeoutMultiplier(Double idleTimeoutMultiplier) {
+    this.idleTimeoutMultiplier = idleTimeoutMultiplier;
+  }
 }
 
