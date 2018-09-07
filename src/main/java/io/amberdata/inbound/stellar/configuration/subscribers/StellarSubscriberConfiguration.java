@@ -13,6 +13,13 @@ import io.amberdata.inbound.stellar.configuration.history.HistoricalManager;
 import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.mapper.ModelMapper;
 
+import org.ehcache.Cache;
+import org.ehcache.CacheManager;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ExpiryPolicyBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +38,8 @@ import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
 import java.io.IOException;
+
+import java.time.Duration;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -58,6 +67,7 @@ public class StellarSubscriberConfiguration {
   private final HorizonServer server;
   private final BatchSettings batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
+  private final Cache<String, Asset> cache;
 
   public StellarSubscriberConfiguration(
       ResourceStateStorage stateStorage,
@@ -75,6 +85,20 @@ public class StellarSubscriberConfiguration {
     this.server = server;
     this.batchSettings = batchSettings;
     this.errorsHandler = errorsHandler;
+
+    CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build();
+    cacheManager.init();
+
+    this.cache = cacheManager.createCache(
+        "assets",
+        CacheConfigurationBuilder
+            .newCacheConfigurationBuilder(
+                String.class,
+                Asset.class,
+                ResourcePoolsBuilder.heap(10000)
+            )
+            .withExpiry(ExpiryPolicyBuilder.timeToLiveExpiration(Duration.ofHours(24)))
+    );
   }
 
   @PostConstruct
@@ -184,72 +208,6 @@ public class StellarSubscriberConfiguration {
     LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - tLedgers) + " ms");
   }
 
-  private void processLedgersOld(List<BlockchainEntityWithState<Block>> blocks) {
-    long tLedgers = System.currentTimeMillis();
-
-    for (BlockchainEntityWithState<Block> block : blocks) {
-      long tLedger = System.currentTimeMillis();
-
-      long ledger = block.getEntity().getNumber().longValue();
-
-      List<Transaction> transactions = new ArrayList<>();
-
-      Set<Address> addresses = new HashSet<>();
-      Set<Asset> assets = new HashSet<>();
-
-      try {
-        long tTransactions = System.currentTimeMillis();
-        List<TransactionResponse> transactionResponses = this.server.horizonServer()
-            .transactions()
-            .forLedger(ledger)
-            .execute()
-            .getRecords();
-        LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - tTransactions) + " ms");
-
-        for (TransactionResponse transactionResponse : transactionResponses) {
-          long tOperations = System.currentTimeMillis();
-          List<OperationResponse> operationResponses =
-              this.fetchOperationsForTransaction(transactionResponse);
-          LOG.info("[PERFORMANCE] getOperations (" + operationResponses.size() + "): " + (System.currentTimeMillis() - tOperations) + " ms");
-
-          Transaction transaction = this.enrichTransaction(transactionResponse, operationResponses);
-          transactions.add(transaction);
-
-          addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
-          assets.addAll(this.collectAssets(operationResponses, ledger));
-        }
-      } catch (IOException ioe) {
-        LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
-      }
-
-      if (!addresses.isEmpty()) {
-        long tPublishAddresses = System.currentTimeMillis();
-        this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-        LOG.info("[PERFORMANCE] publishAddresses (" + addresses.size() + "): " + (System.currentTimeMillis() - tPublishAddresses) + " ms");
-      }
-
-      if (!assets.isEmpty()) {
-        long tPublishAssets = System.currentTimeMillis();
-        this.apiClient.publish("/assets", new ArrayList<>(assets));
-        LOG.info("[PERFORMANCE] publishAssets (" + assets.size() + "): " + (System.currentTimeMillis() - tPublishAssets) + " ms");
-      }
-
-      if (!transactions.isEmpty()) {
-        long tPublishTransactions = System.currentTimeMillis();
-        this.apiClient.publish("/transactions", transactions);
-        LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - tPublishTransactions) + " ms");
-      }
-
-      LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - tLedger) + " ms");
-    }
-
-    long tPublishLedgers = System.currentTimeMillis();
-    this.apiClient.publishWithState("/blocks", blocks);
-    LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - tPublishLedgers) + " ms");
-
-    LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - tLedgers) + " ms");
-  }
-
   private Transaction enrichTransaction(
       TransactionResponse transactionResponse,
       List<OperationResponse> operationResponses
@@ -270,25 +228,6 @@ public class StellarSubscriberConfiguration {
     } catch (IOException | FormatException ex) {
       LOG.error(
           "Unable to fetch information about operations for ledger " + ledger,
-          ex
-      );
-      return Collections.emptyList();
-    }
-  }
-
-  private List<OperationResponse> fetchOperationsForTransaction(
-      TransactionResponse transactionResponse
-  ) {
-    try {
-      return this.server.horizonServer()
-          .operations()
-          .forTransaction(transactionResponse.getHash())
-          .execute()
-          .getRecords();
-    } catch (IOException | FormatException ex) {
-      LOG.error(
-          "Unable to fetch information about operations for transaction "
-          + transactionResponse.getHash(),
           ex
       );
       return Collections.emptyList();
@@ -349,6 +288,11 @@ public class StellarSubscriberConfiguration {
   }
 
   private Asset enrichAsset(Asset asset) {
+    String assetHash = asset.getType() + "_" + asset.getCode() + "_" + asset.getIssuerAccount();
+    if ( this.cache.containsKey(assetHash) ) {
+      return this.cache.get(assetHash);
+    }
+
     try {
       List<AssetResponse> records = this.server
           .horizonServer()
@@ -373,6 +317,8 @@ public class StellarSubscriberConfiguration {
     if (asset.getAmount() == null || !isNumeric(asset.getAmount())) {
       asset.setAmount("0");
     }
+
+    this.cache.put(assetHash, asset);
 
     return asset;
   }

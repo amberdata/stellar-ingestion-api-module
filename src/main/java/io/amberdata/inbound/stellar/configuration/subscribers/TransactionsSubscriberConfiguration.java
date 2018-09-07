@@ -34,8 +34,9 @@ import javax.annotation.PostConstruct;
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-transactions")
 public class TransactionsSubscriberConfiguration {
 
-  private static final Logger LOG = LoggerFactory
-      .getLogger(TransactionsSubscriberConfiguration.class);
+  private static final Logger LOG = LoggerFactory.getLogger(
+      TransactionsSubscriberConfiguration.class
+  );
 
   private final ResourceStateStorage stateStorage;
   private final InboundApiClient apiClient;

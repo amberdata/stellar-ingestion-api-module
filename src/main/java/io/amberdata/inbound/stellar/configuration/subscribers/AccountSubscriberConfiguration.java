@@ -151,7 +151,8 @@ public class AccountSubscriberConfiguration {
   }
 
   private List<OperationResponse> fetchOperationsForTransaction(
-      TransactionResponse transactionResponse) {
+      TransactionResponse transactionResponse
+  ) {
     try {
       return this.server.horizonServer()
           .operations()
@@ -161,7 +162,7 @@ public class AccountSubscriberConfiguration {
     } catch (IOException | FormatException ex) {
       LOG.error(
           "Unable to fetch information about operations for transaction "
-              + transactionResponse.getHash(),
+          + transactionResponse.getHash(),
           ex
       );
       return Collections.emptyList();

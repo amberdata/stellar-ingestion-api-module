@@ -165,6 +165,66 @@ public class ModelMapper {
     );
   }
 
+  public List<Order> mapOrders(List<OperationResponse> operationResponses, Long ledger) {
+    List<Order> orders = new ArrayList<>();
+    for (int i = 0; i < operationResponses.size(); i++) {
+      OperationResponse operationResponse = operationResponses.get(i);
+      if (
+          operationResponse.getClass() == ManageOfferOperationResponse.class
+              || operationResponse.getClass() == CreatePassiveOfferOperationResponse.class
+          ) {
+        ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
+
+        if (response.getOfferId() == 0) {
+          continue;
+        }
+
+        Asset sellingAsset = assetMapper.map(response.getSellingAsset());
+        Asset buyingAsset = assetMapper.map(response.getBuyingAsset());
+
+        Order order = new Order.Builder()
+            .type(0)
+            .orderId(response.getOfferId().toString())
+            .blockNumber(ledger)
+            .transactionHash(response.getTransactionHash())
+            .functionCallHash(
+                String.valueOf(ledger) + "_"
+                    + operationResponse.getTransactionHash() + "_"
+                    + String.valueOf(i)
+            )
+            .makerAddress(
+                response.getSourceAccount() != null
+                    ? response.getSourceAccount().getAccountId()
+                    : ""
+            )
+            .sellAsset(
+                sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                    ? "native"
+                    : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
+            )
+            .buyAsset(
+                buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                    ? "native"
+                    : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
+            )
+            .buyAmount(BigDecimal.ZERO)
+            .sellAmount(new BigDecimal(response.getAmount()))
+            .timestamp(Instant.parse(response.getCreatedAt()).toEpochMilli())
+            .meta(Collections.singletonMap("buying_price", response.getPrice()))
+            .build();
+
+        orders.add(order);
+      }
+    }
+    return orders;
+  }
+
+  public List<Trade> mapTrades(List<ExtendedTradeResponse> records) {
+    return records.stream()
+        .map(this::mapTrade)
+        .collect(Collectors.toList());
+  }
+
   private Map<String, Object> blockMetaProperties(LedgerResponse ledgerResponse) {
     Map<String, Object> metaProperties = new HashMap<>();
 
@@ -231,66 +291,6 @@ public class ModelMapper {
     optionalProperties.put("weight", String.valueOf(signer.getWeight()));
 
     return optionalProperties;
-  }
-
-  public List<Order> mapOrders(List<OperationResponse> operationResponses, Long ledger) {
-    List<Order> orders = new ArrayList<>();
-    for (int i = 0; i < operationResponses.size(); i++) {
-      OperationResponse operationResponse = operationResponses.get(i);
-      if (
-          operationResponse.getClass() == ManageOfferOperationResponse.class
-          || operationResponse.getClass() == CreatePassiveOfferOperationResponse.class
-      ) {
-        ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
-
-        if (response.getOfferId() == 0) {
-          continue;
-        }
-
-        Asset sellingAsset = assetMapper.map(response.getSellingAsset());
-        Asset buyingAsset = assetMapper.map(response.getBuyingAsset());
-
-        Order order = new Order.Builder()
-            .type(0)
-            .orderId(response.getOfferId().toString())
-            .blockNumber(ledger)
-            .transactionHash(response.getTransactionHash())
-            .functionCallHash(
-              String.valueOf(ledger) + "_"
-                + operationResponse.getTransactionHash() + "_"
-                + String.valueOf(i)
-            )
-            .makerAddress(
-              response.getSourceAccount() != null
-                ? response.getSourceAccount().getAccountId()
-                : ""
-            )
-            .sellAsset(
-              sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-                ? "native"
-                : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
-            )
-            .buyAsset(
-              buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-                ? "native"
-                : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
-            )
-            .buyAmount(BigDecimal.ZERO)
-            .sellAmount(new BigDecimal(response.getAmount()))
-            .timestamp(Instant.parse(response.getCreatedAt()).toEpochMilli())
-            .meta(Collections.singletonMap("buying_price", response.getPrice()))
-            .build();
-
-        orders.add(order);
-      }
-    }
-    return orders;
-  }
-
-  public List<Trade> mapTrades(List<ExtendedTradeResponse> records) {
-    return records.stream()
-        .map(this::mapTrade)
-        .collect(Collectors.toList());
   }
 
   private Trade mapTrade(ExtendedTradeResponse extendedTradeResponse) {
