@@ -239,7 +239,7 @@
 
             <activation>
                 <property>
-                    <name>repository_amberdata_s3.activate</name>
+                    <name>!repository_amberdata_s3.skip</name>
                 </property>
             </activation>
 
@@ -295,7 +295,7 @@
 
             <activation>
                 <property>
-                    <name>!repository_sonatype.skip</name>
+                    <name>repository_sonatype.activate</name>
                 </property>
             </activation>
 
