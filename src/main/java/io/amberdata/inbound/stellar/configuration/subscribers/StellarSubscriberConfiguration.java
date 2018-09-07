@@ -129,6 +129,78 @@ public class StellarSubscriberConfiguration {
             .getRecords();
         LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - tTransactions) + " ms");
 
+        long tOperations = System.currentTimeMillis();
+        List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
+        LOG.info("[PERFORMANCE] getOperations (" + operationResponses.size() + "): " + (System.currentTimeMillis() - tOperations) + " ms");
+
+        Map<String, List<OperationResponse>> operations = new HashMap<>();
+        for (OperationResponse operationResponse : operationResponses) {
+          String transactionHash = operationResponse.getTransactionHash();
+          List<OperationResponse> ops = operations.computeIfAbsent(transactionHash, k -> new ArrayList<>());
+          ops.add(operationResponse);
+        }
+
+        for (TransactionResponse transactionResponse : transactionResponses) {
+          Transaction transaction = this.enrichTransaction(transactionResponse, operations.getOrDefault(transactionResponse.getHash(), Collections.emptyList()));
+          transactions.add(transaction);
+
+          addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
+          assets.addAll(this.collectAssets(operationResponses, ledger));
+        }
+      } catch (IOException ioe) {
+        LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
+      }
+
+      if (!addresses.isEmpty()) {
+        long tPublishAddresses = System.currentTimeMillis();
+        this.apiClient.publish("/addresses", new ArrayList<>(addresses));
+        LOG.info("[PERFORMANCE] publishAddresses (" + addresses.size() + "): " + (System.currentTimeMillis() - tPublishAddresses) + " ms");
+      }
+
+      if (!assets.isEmpty()) {
+        long tPublishAssets = System.currentTimeMillis();
+        this.apiClient.publish("/assets", new ArrayList<>(assets));
+        LOG.info("[PERFORMANCE] publishAssets (" + assets.size() + "): " + (System.currentTimeMillis() - tPublishAssets) + " ms");
+      }
+
+      if (!transactions.isEmpty()) {
+        long tPublishTransactions = System.currentTimeMillis();
+        this.apiClient.publish("/transactions", transactions);
+        LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - tPublishTransactions) + " ms");
+      }
+
+      LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - tLedger) + " ms");
+    }
+
+    long tPublishLedgers = System.currentTimeMillis();
+    this.apiClient.publishWithState("/blocks", blocks);
+    LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - tPublishLedgers) + " ms");
+
+    LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - tLedgers) + " ms");
+  }
+
+  private void processLedgersOld(List<BlockchainEntityWithState<Block>> blocks) {
+    long tLedgers = System.currentTimeMillis();
+
+    for (BlockchainEntityWithState<Block> block : blocks) {
+      long tLedger = System.currentTimeMillis();
+
+      long ledger = block.getEntity().getNumber().longValue();
+
+      List<Transaction> transactions = new ArrayList<>();
+
+      Set<Address> addresses = new HashSet<>();
+      Set<Asset> assets = new HashSet<>();
+
+      try {
+        long tTransactions = System.currentTimeMillis();
+        List<TransactionResponse> transactionResponses = this.server.horizonServer()
+            .transactions()
+            .forLedger(ledger)
+            .execute()
+            .getRecords();
+        LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - tTransactions) + " ms");
+
         for (TransactionResponse transactionResponse : transactionResponses) {
           long tOperations = System.currentTimeMillis();
           List<OperationResponse> operationResponses =
@@ -181,6 +253,22 @@ public class StellarSubscriberConfiguration {
         transactionResponse,
         operationResponses
     );
+  }
+
+  private List<OperationResponse> fetchOperationsForLedger(long ledger) {
+    try {
+      return this.server.horizonServer()
+          .operations()
+          .forLedger(ledger)
+          .execute()
+          .getRecords();
+    } catch (IOException | FormatException ex) {
+      LOG.error(
+          "Unable to fetch information about operations for ledger " + ledger,
+          ex
+      );
+      return Collections.emptyList();
+    }
   }
 
   private List<OperationResponse> fetchOperationsForTransaction(
