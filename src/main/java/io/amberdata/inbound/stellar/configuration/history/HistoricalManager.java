@@ -144,18 +144,18 @@ public class HistoricalManager {
   }
 
   private Long getLedgerSequenceNumber(InboundApiProperties apiProperties) {
-    WebClient webClient = WebClient.builder()
-        .baseUrl(apiProperties.getUrl())
-        .defaultHeaders(httpHeaders -> this.defaultHttpHeaders(apiProperties, httpHeaders))
-        .build();
-
-    String response = webClient.get()
-        .uri("/blocks/last")
-        .retrieve()
-        .bodyToMono(String.class)
-        .block();
-
     try {
+      WebClient webClient = WebClient.builder()
+          .baseUrl(apiProperties.getUrl())
+          .defaultHeaders(httpHeaders -> this.defaultHttpHeaders(apiProperties, httpHeaders))
+          .build();
+
+      String response = webClient.get()
+          .uri("/blocks/last")
+          .retrieve()
+          .bodyToMono(String.class)
+          .block();
+
       @SuppressWarnings({"rawtypes", "unchecked"})
       Map<String, Object> payload = (Map<String, Object>) new ObjectMapper().readValue(
           response,
