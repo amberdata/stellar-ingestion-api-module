@@ -127,13 +127,13 @@ public class StellarSubscriberConfiguration {
             .forLedger(ledger)
             .execute()
             .getRecords();
-        LOG.info("[PERFORMANCE] getTransactions: " + (System.currentTimeMillis() - tTransactions) + " ms");
+        LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - tTransactions) + " ms");
 
         for (TransactionResponse transactionResponse : transactionResponses) {
           long tOperations = System.currentTimeMillis();
           List<OperationResponse> operationResponses =
               this.fetchOperationsForTransaction(transactionResponse);
-          LOG.info("[PERFORMANCE] getOperations: " + (System.currentTimeMillis() - tOperations) + " ms");
+          LOG.info("[PERFORMANCE] getOperations (" + operationResponses.stream() + "): " + (System.currentTimeMillis() - tOperations) + " ms");
 
           Transaction transaction = this.enrichTransaction(transactionResponse, operationResponses);
           transactions.add(transaction);
