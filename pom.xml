@@ -48,7 +48,7 @@
         <dependency>
             <groupId>io.amberdata.inbound</groupId>
             <artifactId>inbound-core</artifactId>
-            <version>0.0.6</version>
+            <version>0.0.7</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.amberdata.inbound</groupId>

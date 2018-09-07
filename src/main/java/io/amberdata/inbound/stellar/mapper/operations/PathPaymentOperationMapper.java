@@ -61,7 +61,7 @@ public class PathPaymentOperationMapper implements OperationMapper {
                 FunctionCall.Argument.from("destination", fetchAccountId(response.getTo())),
                 FunctionCall.Argument.from("destination_asset", asset.getCode()),
                 FunctionCall.Argument.from("destination_amount", response.getAmount())
-                // FunctionCall.Argument.from("path", "") - no path in response
+            // FunctionCall.Argument.from("path", "") - no path in response
             )
         )
         .build();

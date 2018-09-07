@@ -1,6 +1,6 @@
 package io.amberdata.inbound.stellar.configuration.subscribers;
 
-import io.amberdata.inbound.stellar.StellarInboundModuleDemoApplication;
+import io.amberdata.inbound.stellar.StellarInboundApplication;
 import io.amberdata.inbound.stellar.configuration.properties.HorizonServerProperties;
 
 import org.slf4j.Logger;
@@ -105,6 +105,6 @@ public class SubscriberErrorsHandler {
   public static void handleFatalApplicationError(Throwable throwable) {
     LOG.error("Fatal error when calling API", throwable);
 
-    StellarInboundModuleDemoApplication.shutdown();
+    StellarInboundApplication.shutdown();
   }
 }

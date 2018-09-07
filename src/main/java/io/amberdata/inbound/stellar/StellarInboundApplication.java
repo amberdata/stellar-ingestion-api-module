@@ -16,14 +16,14 @@ import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 
 @SpringBootApplication(exclude = {GsonAutoConfiguration.class})
-@ComponentScan(basePackageClasses = {InboundCore.class, StellarInboundModuleDemoApplication.class})
-public class StellarInboundModuleDemoApplication implements CommandLineRunner {
+@ComponentScan(basePackageClasses = {InboundCore.class, StellarInboundApplication.class})
+public class StellarInboundApplication implements CommandLineRunner {
   private static CountDownLatch EXIT_LATCH;
 
   private final Environment environment;
 
   @Autowired
-  public StellarInboundModuleDemoApplication(Environment environment) {
+  public StellarInboundApplication(Environment environment) {
     this.environment = environment;
   }
 
@@ -40,7 +40,7 @@ public class StellarInboundModuleDemoApplication implements CommandLineRunner {
   }
 
   public static void main(String[] args) {
-    SpringApplication app = new SpringApplication(StellarInboundModuleDemoApplication.class);
+    SpringApplication app = new SpringApplication(StellarInboundApplication.class);
     app.setWebApplicationType(WebApplicationType.NONE);
     app.addListeners(new ApplicationPidFileWriter());
     app.run(args);
