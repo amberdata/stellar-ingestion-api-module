@@ -133,7 +133,7 @@ public class StellarSubscriberConfiguration {
           long tOperations = System.currentTimeMillis();
           List<OperationResponse> operationResponses =
               this.fetchOperationsForTransaction(transactionResponse);
-          LOG.info("[PERFORMANCE] getOperations (" + operationResponses.stream() + "): " + (System.currentTimeMillis() - tOperations) + " ms");
+          LOG.info("[PERFORMANCE] getOperations (" + operationResponses.size() + "): " + (System.currentTimeMillis() - tOperations) + " ms");
 
           Transaction transaction = this.enrichTransaction(transactionResponse, operationResponses);
           transactions.add(transaction);
