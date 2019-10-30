@@ -3,16 +3,16 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.stellar.sdk.ManageDataOperation;
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
-
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
 
 public class ManageDataOperationMapper implements OperationMapper {
 
@@ -27,12 +27,12 @@ public class ManageDataOperationMapper implements OperationMapper {
     }
 
     return new FunctionCall.Builder()
-        .from(fetchAccountId(response))
+        .from(this.fetchAccountId(response))
         .type(ManageDataOperation.class.getSimpleName())
         .signature("manage_data(string, binary_data)")
         .arguments(
             Arrays.asList(
-                FunctionCall.Argument.from("name", response.getName()),
+                FunctionCall.Argument.from("name",  response.getName()),
                 FunctionCall.Argument.from("value", response.getValue())
             )
         )
@@ -40,11 +40,12 @@ public class ManageDataOperationMapper implements OperationMapper {
   }
 
   private String fetchAccountId(ManageDataOperationResponse response) {
-    return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
+    return response.getSourceAccount() != null ? response.getSourceAccount() : "";
   }
 
   @Override
   public List<Asset> getAssets(OperationResponse operationResponse) {
     return Collections.emptyList();
   }
+
 }

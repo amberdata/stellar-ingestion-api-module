@@ -3,16 +3,15 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.stellar.sdk.AccountMergeOperation;
-import org.stellar.sdk.KeyPair;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
-
-import java.util.Collections;
-import java.util.List;
 
 public class AccountMergeOperationMapper implements OperationMapper {
 
@@ -31,24 +30,25 @@ public class AccountMergeOperationMapper implements OperationMapper {
     }
 
     return new FunctionCall.Builder()
-      .from(fetchAccountId(response.getAccount()))
-      .to(fetchAccountId(response.getInto()))
+      .from(this.fetchAccountId(response.getAccount()))
+      .to(this.fetchAccountId(response.getInto()))
       .type(AccountMergeOperation.class.getSimpleName())
       .signature("account_merge(account_id)")
       .arguments(
         Collections.singletonList(
-          FunctionCall.Argument.from("destination", fetchAccountId(response.getInto()))
+          FunctionCall.Argument.from("destination", this.fetchAccountId(response.getInto()))
         )
       )
       .build();
   }
 
-  private String fetchAccountId(KeyPair account) {
-    return account != null ? account.getAccountId() : "";
+  private String fetchAccountId(String account) {
+    return account != null ? account : "";
   }
 
   @Override
   public List<Asset> getAssets(OperationResponse operationResponse) {
     return Collections.emptyList();
   }
+
 }

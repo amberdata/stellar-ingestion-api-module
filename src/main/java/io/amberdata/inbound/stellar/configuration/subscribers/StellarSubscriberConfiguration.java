@@ -13,30 +13,6 @@ import io.amberdata.inbound.stellar.configuration.history.HistoricalManager;
 import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.mapper.ModelMapper;
 
-import org.ehcache.Cache;
-import org.ehcache.CacheManager;
-import org.ehcache.config.builders.CacheConfigurationBuilder;
-import org.ehcache.config.builders.CacheManagerBuilder;
-import org.ehcache.config.builders.ExpiryPolicyBuilder;
-import org.ehcache.config.builders.ResourcePoolsBuilder;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Configuration;
-
-import org.stellar.sdk.FormatException;
-import org.stellar.sdk.KeyPair;
-import org.stellar.sdk.responses.AccountResponse;
-import org.stellar.sdk.responses.AssetResponse;
-import org.stellar.sdk.responses.LedgerResponse;
-import org.stellar.sdk.responses.TransactionResponse;
-import org.stellar.sdk.responses.operations.OperationResponse;
-
-import reactor.core.publisher.Flux;
-import reactor.core.scheduler.Schedulers;
-
 import java.io.IOException;
 
 import java.time.Duration;
@@ -54,37 +30,63 @@ import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 
+import org.ehcache.Cache;
+import org.ehcache.CacheManager;
+import org.ehcache.config.builders.CacheConfigurationBuilder;
+import org.ehcache.config.builders.CacheManagerBuilder;
+import org.ehcache.config.builders.ExpiryPolicyBuilder;
+import org.ehcache.config.builders.ResourcePoolsBuilder;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.annotation.Configuration;
+
+import org.stellar.sdk.FormatException;
+import org.stellar.sdk.requests.EventListener;
+import org.stellar.sdk.responses.AccountResponse;
+import org.stellar.sdk.responses.AssetResponse;
+import org.stellar.sdk.responses.LedgerResponse;
+import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
+
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
+
+import shadow.com.google.common.base.Optional;
+
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
 
-  private final ResourceStateStorage stateStorage;
-  private final InboundApiClient apiClient;
-  private final ModelMapper modelMapper;
-  private final HistoricalManager historicalManager;
-  private final HorizonServer server;
-  private final BatchSettings batchSettings;
+  private final ResourceStateStorage    stateStorage;
+  private final InboundApiClient        apiClient;
+  private final ModelMapper             modelMapper;
+  private final HistoricalManager       historicalManager;
+  private final HorizonServer           server;
+  private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
-  private final Cache<String, Asset> cache;
+  private final Cache<String, Asset>    cache;
 
   public StellarSubscriberConfiguration(
-      ResourceStateStorage stateStorage,
-      InboundApiClient apiClient,
-      ModelMapper modelMapper,
-      HistoricalManager historicalManager,
-      HorizonServer server,
-      BatchSettings batchSettings,
+      ResourceStateStorage    stateStorage,
+      InboundApiClient        apiClient,
+      ModelMapper             modelMapper,
+      HistoricalManager       historicalManager,
+      HorizonServer           server,
+      BatchSettings           batchSettings,
       SubscriberErrorsHandler errorsHandler
   ) {
-    this.stateStorage = stateStorage;
-    this.apiClient = apiClient;
-    this.modelMapper = modelMapper;
+    this.stateStorage      = stateStorage;
+    this.apiClient         = apiClient;
+    this.modelMapper       = modelMapper;
     this.historicalManager = historicalManager;
-    this.server = server;
-    this.batchSettings = batchSettings;
-    this.errorsHandler = errorsHandler;
+    this.server            = server;
+    this.batchSettings     = batchSettings;
+    this.errorsHandler     = errorsHandler;
 
     CacheManager cacheManager = CacheManagerBuilder.newCacheManagerBuilder().build();
     cacheManager.init();
@@ -105,7 +107,12 @@ public class StellarSubscriberConfiguration {
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Ledgers stream");
 
-    Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
+    Flux
+        .<LedgerResponse>push(
+            sink -> this.subscribe(
+              sink::next,
+              SubscriberErrorsHandler::handleFatalApplicationError)
+        )
         .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
         .map(this.modelMapper::mapLedgerWithState)
@@ -114,48 +121,60 @@ public class StellarSubscriberConfiguration {
         .subscribe(
             this::processLedgers,
             SubscriberErrorsHandler::handleFatalApplicationError
-        );
+      );
   }
 
-  private void subscribe(Consumer<LedgerResponse> stellarSdkResponseConsumer) {
-    String cursorPointer = getCursorPointer();
+  private void subscribe(Consumer<LedgerResponse>    responseConsumer,
+                         Consumer<? super Throwable> errorConsumer) {
+    String cursorPointer = this.getCursorPointer();
 
     LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
 
     this.server.testConnection();
-    testCursorCorrectness(cursorPointer);
+    this.testCursorCorrectness(cursorPointer);
 
     this.server.horizonServer()
         .ledgers()
         .cursor(cursorPointer)
-        .stream(stellarSdkResponseConsumer::accept);
+        .stream(new EventListener<LedgerResponse>() {
+          @Override
+          public void onEvent(LedgerResponse ledgerResponse) {
+            responseConsumer.accept(ledgerResponse);
+          }
+
+          @Override
+          public void onFailure(Optional<Throwable> optional, Optional<Integer> optional1) {
+            if (optional.isPresent()) {
+              errorConsumer.accept(optional.get());
+            }
+          }
+        });
   }
 
   private void processLedgers(List<BlockchainEntityWithState<Block>> blocks) {
-    long tLedgers = System.currentTimeMillis();
+    long timeLedgers = System.currentTimeMillis();
 
     for (BlockchainEntityWithState<Block> block : blocks) {
-      long tLedger = System.currentTimeMillis();
+      long timeLedger = System.currentTimeMillis();
 
       long ledger = block.getEntity().getNumber().longValue();
 
       List<Transaction> transactions = new ArrayList<>();
-
-      Set<Address> addresses = new HashSet<>();
-      Set<Asset> assets = new HashSet<>();
+      Set<Address>      addresses    = new HashSet<>();
+      Set<Asset>        assets       = new HashSet<>();
 
       try {
-        long tTransactions = System.currentTimeMillis();
+        long timeTransactions = System.currentTimeMillis();
         List<TransactionResponse> transactionResponses = this.server.horizonServer()
             .transactions()
             .forLedger(ledger)
             .execute()
             .getRecords();
-        LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - tTransactions) + " ms");
+        LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - timeTransactions) + " ms");
 
-        long tOperations = System.currentTimeMillis();
+        long timeOperations = System.currentTimeMillis();
         List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
-        LOG.info("[PERFORMANCE] getOperations (" + operationResponses.size() + "): " + (System.currentTimeMillis() - tOperations) + " ms");
+        LOG.info("[PERFORMANCE] getOperations (" + operationResponses.size() + "): " + (System.currentTimeMillis() - timeOperations) + " ms");
 
         Map<String, List<OperationResponse>> operations = new HashMap<>();
         for (OperationResponse operationResponse : operationResponses) {
@@ -168,48 +187,48 @@ public class StellarSubscriberConfiguration {
           Transaction transaction = this.enrichTransaction(transactionResponse, operations.getOrDefault(transactionResponse.getHash(), Collections.emptyList()));
           transactions.add(transaction);
 
-          long tAddresses = System.currentTimeMillis();
+          long timeAddresses = System.currentTimeMillis();
           addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
-          LOG.info("[PERFORMANCE] getAddresses: " + (System.currentTimeMillis() - tAddresses) + " ms");
+          LOG.info("[PERFORMANCE] getAddresses: " + (System.currentTimeMillis() - timeAddresses) + " ms");
 
-          long tAssets = System.currentTimeMillis();
+          long timeAssets = System.currentTimeMillis();
           assets.addAll(this.collectAssets(operationResponses, ledger));
-          LOG.info("[PERFORMANCE] getAssets: " + (System.currentTimeMillis() - tAssets) + " ms");
+          LOG.info("[PERFORMANCE] getAssets: " + (System.currentTimeMillis() - timeAssets) + " ms");
         }
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
       }
 
       if (!addresses.isEmpty()) {
-        long tPublishAddresses = System.currentTimeMillis();
+        long timePublishAddresses = System.currentTimeMillis();
         this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-        LOG.info("[PERFORMANCE] publishAddresses (" + addresses.size() + "): " + (System.currentTimeMillis() - tPublishAddresses) + " ms");
+        LOG.info("[PERFORMANCE] publishAddresses (" + addresses.size() + "): " + (System.currentTimeMillis() - timePublishAddresses) + " ms");
       }
 
       if (!assets.isEmpty()) {
-        long tPublishAssets = System.currentTimeMillis();
+        long timePublishAssets = System.currentTimeMillis();
         this.apiClient.publish("/assets", new ArrayList<>(assets));
-        LOG.info("[PERFORMANCE] publishAssets (" + assets.size() + "): " + (System.currentTimeMillis() - tPublishAssets) + " ms");
+        LOG.info("[PERFORMANCE] publishAssets (" + assets.size() + "): " + (System.currentTimeMillis() - timePublishAssets) + " ms");
       }
 
       if (!transactions.isEmpty()) {
-        long tPublishTransactions = System.currentTimeMillis();
+        long timePublishTransactions = System.currentTimeMillis();
         this.apiClient.publish("/transactions", transactions);
-        LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - tPublishTransactions) + " ms");
+        LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - timePublishTransactions) + " ms");
       }
 
-      LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - tLedger) + " ms");
+      LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - timeLedger) + " ms");
     }
 
-    long tPublishLedgers = System.currentTimeMillis();
+    long timePublishLedgers = System.currentTimeMillis();
     this.apiClient.publishWithState("/blocks", blocks);
-    LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - tPublishLedgers) + " ms");
+    LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - timePublishLedgers) + " ms");
 
-    LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - tLedgers) + " ms");
+    LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - timeLedgers) + " ms");
   }
 
   private Transaction enrichTransaction(
-      TransactionResponse transactionResponse,
+      TransactionResponse     transactionResponse,
       List<OperationResponse> operationResponses
   ) {
     return this.modelMapper.mapTransaction(
@@ -225,10 +244,10 @@ public class StellarSubscriberConfiguration {
           .forLedger(ledger)
           .execute()
           .getRecords();
-    } catch (IOException | FormatException ex) {
+    } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for ledger " + ledger,
-          ex
+          e
       );
       return Collections.emptyList();
     }
@@ -273,9 +292,9 @@ public class StellarSubscriberConfiguration {
     try {
       return this.server.horizonServer()
           .accounts()
-          .account(KeyPair.fromAccountId(accountId));
-    } catch (Exception ex) {
-      LOG.error("Unable to get details for account " + accountId, ex);
+          .account(accountId);
+    } catch (Exception e) {
+      LOG.error("Unable to get details for account " + accountId, e);
       return null;
     }
   }
@@ -289,7 +308,7 @@ public class StellarSubscriberConfiguration {
 
   private Asset enrichAsset(Asset asset) {
     String assetHash = asset.getType() + "_" + asset.getCode() + "_" + asset.getIssuerAccount();
-    if ( this.cache.containsKey(assetHash) ) {
+    if (this.cache.containsKey(assetHash)) {
       return this.cache.get(assetHash);
     }
 
@@ -310,11 +329,11 @@ public class StellarSubscriberConfiguration {
         asset.setAmount(assetResponse.getAmount());
         asset.setMeta(assetOptionalProperties(assetResponse));
       }
-    } catch (Exception ex) {
-      LOG.error("Error during fetching an asset: " + asset.getCode(), ex);
+    } catch (Exception e) {
+      LOG.error("Error during fetching an asset: " + asset.getCode(), e);
     }
 
-    if (asset.getAmount() == null || !isNumeric(asset.getAmount())) {
+    if (asset.getAmount() == null || !this.isNumeric(asset.getAmount())) {
       asset.setAmount("0");
     }
 
@@ -326,8 +345,8 @@ public class StellarSubscriberConfiguration {
   private Map<String, Object> assetOptionalProperties(AssetResponse assetResponse) {
     Map<String, Object> optionalProperties = new HashMap<>();
 
-    optionalProperties.put("num_accounts", assetResponse.getNumAccounts());
-    optionalProperties.put("flag_auth_required", assetResponse.getFlags().isAuthRequired());
+    optionalProperties.put("num_accounts",        assetResponse.getNumAccounts());
+    optionalProperties.put("flag_auth_required",  assetResponse.getFlags().isAuthRequired());
     optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
 
     return optionalProperties;
@@ -355,4 +374,5 @@ public class StellarSubscriberConfiguration {
       );
     }
   }
+
 }

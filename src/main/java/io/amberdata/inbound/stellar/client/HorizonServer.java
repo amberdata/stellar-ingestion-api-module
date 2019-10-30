@@ -1,5 +1,7 @@
 package io.amberdata.inbound.stellar.client;
 
+import java.io.IOException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,8 +9,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import org.stellar.sdk.Server;
-
-import java.io.IOException;
 
 @Component
 public class HorizonServer {
@@ -35,7 +35,7 @@ public class HorizonServer {
 
   public void testConnection() {
     try {
-      this.horizonServer.root().getProtocolVersion();
+      this.horizonServer.root().getCurrentProtocolVersion();
     } catch (IOException ioe) {
       throw new ServerConnectionException("Cannot resolve connection to Horizon server", ioe);
     }
@@ -56,4 +56,5 @@ public class HorizonServer {
       super(message, cause);
     }
   }
+
 }

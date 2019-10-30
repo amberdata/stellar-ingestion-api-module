@@ -8,22 +8,25 @@ import io.amberdata.inbound.stellar.configuration.history.HistoricalManager;
 import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.mapper.ModelMapper;
 
+import java.io.IOException;
+
+import java.util.function.Consumer;
+
+import javax.annotation.PostConstruct;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
+import org.stellar.sdk.requests.EventListener;
 import org.stellar.sdk.responses.LedgerResponse;
 
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
-import java.io.IOException;
-
-import java.util.function.Consumer;
-
-import javax.annotation.PostConstruct;
+import shadow.com.google.common.base.Optional;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-ledgers")
@@ -31,37 +34,43 @@ public class LedgersSubscriberConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(LedgersSubscriberConfiguration.class);
 
-  private final ResourceStateStorage stateStorage;
-  private final InboundApiClient apiClient;
-  private final ModelMapper modelMapper;
-  private final HistoricalManager historicalManager;
-  private final HorizonServer server;
-  private final BatchSettings batchSettings;
+  private final ResourceStateStorage    stateStorage;
+  private final InboundApiClient        apiClient;
+  private final ModelMapper             modelMapper;
+  private final HistoricalManager       historicalManager;
+  private final HorizonServer           server;
+  private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
   public LedgersSubscriberConfiguration(
-      ResourceStateStorage stateStorage,
-      InboundApiClient apiClient,
-      ModelMapper modelMapper,
-      HistoricalManager historicalManager,
-      HorizonServer server,
-      BatchSettings batchSettings,
+      ResourceStateStorage    stateStorage,
+      InboundApiClient        apiClient,
+      ModelMapper             modelMapper,
+      HistoricalManager       historicalManager,
+      HorizonServer           server,
+      BatchSettings           batchSettings,
       SubscriberErrorsHandler errorsHandler
   ) {
-    this.stateStorage = stateStorage;
-    this.apiClient = apiClient;
-    this.modelMapper = modelMapper;
+    this.stateStorage      = stateStorage;
+    this.apiClient         = apiClient;
+    this.modelMapper       = modelMapper;
     this.historicalManager = historicalManager;
-    this.server = server;
-    this.batchSettings = batchSettings;
-    this.errorsHandler = errorsHandler;
+    this.server            = server;
+    this.batchSettings     = batchSettings;
+    this.errorsHandler     = errorsHandler;
   }
 
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Ledgers stream");
 
-    Flux.<LedgerResponse>push(sink -> subscribe(sink::next))
+    Flux
+        .<LedgerResponse>push(
+            sink -> subscribe(
+              sink::next,
+              SubscriberErrorsHandler::handleFatalApplicationError
+            )
+        )
         .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
         .map(this.modelMapper::mapLedgerWithState)
@@ -70,21 +79,34 @@ public class LedgersSubscriberConfiguration {
         .subscribe(
             entities -> this.apiClient.publishWithState("/blocks", entities),
             SubscriberErrorsHandler::handleFatalApplicationError
-        );
+      );
   }
 
-  private void subscribe(Consumer<LedgerResponse> stellarSdkResponseConsumer) {
-    String cursorPointer = getCursorPointer();
+  private void subscribe(Consumer<LedgerResponse>    responseConsumer,
+                         Consumer<? super Throwable> errorConsumer) {
+    String cursorPointer = this.getCursorPointer();
 
     LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
 
     this.server.testConnection();
-    testCursorCorrectness(cursorPointer);
+    this.testCursorCorrectness(cursorPointer);
 
     this.server.horizonServer()
         .ledgers()
         .cursor(cursorPointer)
-        .stream(stellarSdkResponseConsumer::accept);
+        .stream(new EventListener<LedgerResponse>() {
+          @Override
+          public void onEvent(LedgerResponse ledgerResponse) {
+            responseConsumer.accept(ledgerResponse);
+          }
+
+          @Override
+          public void onFailure(Optional<Throwable> optional, Optional<Integer> optional1) {
+            if (optional.isPresent()) {
+              errorConsumer.accept(optional.get());
+            }
+          }
+        });
   }
 
   private String getCursorPointer() {
@@ -105,4 +127,5 @@ public class LedgersSubscriberConfiguration {
       );
     }
   }
+
 }

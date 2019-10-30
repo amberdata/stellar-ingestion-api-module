@@ -12,20 +12,6 @@ import io.amberdata.inbound.domain.Transaction;
 import io.amberdata.inbound.stellar.configuration.subscribers.ExtendedTradeResponse;
 import io.amberdata.inbound.stellar.mapper.operations.OperationMapperManager;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
-
-import org.stellar.sdk.responses.AccountResponse;
-import org.stellar.sdk.responses.LedgerResponse;
-import org.stellar.sdk.responses.TradeResponse;
-import org.stellar.sdk.responses.TransactionResponse;
-import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
-import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
-import org.stellar.sdk.responses.operations.OperationResponse;
-
 import java.math.BigDecimal;
 import java.math.BigInteger;
 
@@ -41,18 +27,33 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import org.stellar.sdk.responses.AccountResponse;
+import org.stellar.sdk.responses.LedgerResponse;
+import org.stellar.sdk.responses.TradeResponse;
+import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.operations.CreatePassiveSellOfferOperationResponse;
+import org.stellar.sdk.responses.operations.ManageBuyOfferOperationResponse;
+import org.stellar.sdk.responses.operations.ManageSellOfferOperationResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
+
 @Component
 public class ModelMapper {
 
   private static final Logger LOG = LoggerFactory.getLogger(ModelMapper.class);
 
   private final OperationMapperManager operationMapperManager;
-  private final AssetMapper assetMapper;
+  private final AssetMapper            assetMapper;
 
   @Autowired
   public ModelMapper(OperationMapperManager operationMapperManager, AssetMapper assetMapper) {
     this.operationMapperManager = operationMapperManager;
-    this.assetMapper = assetMapper;
+    this.assetMapper            = assetMapper;
   }
 
   public Block mapLedger(LedgerResponse ledgerResponse) {
@@ -61,7 +62,10 @@ public class ModelMapper {
         .hash(ledgerResponse.getHash())
         .parentHash(ledgerResponse.getPrevHash())
         .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
-        .numTransactions(ledgerResponse.getTransactionCount())
+        .numTransactions(
+            ledgerResponse.getSuccessfulTransactionCount()
+            + ledgerResponse.getFailedTransactionCount()
+        )
         .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
         .meta(blockMetaProperties(ledgerResponse))
         .build();
@@ -75,7 +79,7 @@ public class ModelMapper {
   }
 
   public Transaction mapTransaction(
-      TransactionResponse transactionResponse,
+      TransactionResponse     transactionResponse,
       List<OperationResponse> operationResponses
   ) {
     List<FunctionCall> functionCalls = this.mapOperations(
@@ -97,7 +101,7 @@ public class ModelMapper {
         .transactionIndex(transactionResponse.getSourceAccountSequence())
         .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
         .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
-        .from(transactionResponse.getSourceAccount().getAccountId())
+        .from(transactionResponse.getSourceAccount())
         .to(to)
         .tos(new ArrayList<>(tos))
         .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
@@ -110,7 +114,7 @@ public class ModelMapper {
   }
 
   public BlockchainEntityWithState<Transaction> mapTransactionWithState(
-      TransactionResponse transactionResponse,
+      TransactionResponse     transactionResponse,
       List<OperationResponse> operationResponses
   ) {
     return BlockchainEntityWithState.from(
@@ -130,7 +134,7 @@ public class ModelMapper {
 
   public List<Asset> mapAssets(List<OperationResponse> operationResponses, Long ledger) {
     List<Asset> allAssets = new ArrayList<>();
-    for (int i = 0; i < operationResponses.size(); i++) {
+    for (int i = 0; i < operationResponses.size(); ++i) {
       OperationResponse operationResponse = operationResponses.get(i);
       String transactionHash = operationResponse.getTransactionHash();
       List<Asset> assets = this.operationMapperManager.mapAssets(ledger, operationResponse);
@@ -148,7 +152,7 @@ public class ModelMapper {
 
   public Address mapAccount(AccountResponse accountResponse, Long timestamp) {
     return new Address.Builder()
-        .hash(accountResponse.getKeypair().getAccountId())
+        .hash(accountResponse.getAccountId())
         .timestamp(timestamp)
         .meta(addressMetaProperties(accountResponse))
         .build();
@@ -156,8 +160,8 @@ public class ModelMapper {
 
   public BlockchainEntityWithState<Address> mapAccountWithState(
       AccountResponse accountResponse,
-      Long timestamp,
-      String pagingToken
+      Long            timestamp,
+      String          pagingToken
   ) {
     return BlockchainEntityWithState.from(
         this.mapAccount(accountResponse, timestamp),
@@ -167,20 +171,23 @@ public class ModelMapper {
 
   public List<Order> mapOrders(List<OperationResponse> operationResponses, Long ledger) {
     List<Order> orders = new ArrayList<>();
-    for (int i = 0; i < operationResponses.size(); i++) {
+    for (int i = 0; i < operationResponses.size(); ++i) {
       OperationResponse operationResponse = operationResponses.get(i);
       if (
-          operationResponse.getClass() == ManageOfferOperationResponse.class
-              || operationResponse.getClass() == CreatePassiveOfferOperationResponse.class
-          ) {
-        ManageOfferOperationResponse response = (ManageOfferOperationResponse) operationResponse;
+          operationResponse.getClass() == ManageBuyOfferOperationResponse.class
+          || operationResponse.getClass() == ManageSellOfferOperationResponse.class
+          || operationResponse.getClass() == CreatePassiveSellOfferOperationResponse.class
+      ) {
+        // Pick one at random??
+        ManageBuyOfferOperationResponse response =
+            (ManageBuyOfferOperationResponse) operationResponse;
 
         if (response.getOfferId() == 0) {
           continue;
         }
 
-        Asset sellingAsset = assetMapper.map(response.getSellingAsset());
-        Asset buyingAsset = assetMapper.map(response.getBuyingAsset());
+        Asset sellingAsset = this.assetMapper.map(response.getSellingAsset());
+        Asset buyingAsset  = this.assetMapper.map(response.getBuyingAsset());
 
         Order order = new Order.Builder()
             .type(0)
@@ -194,7 +201,7 @@ public class ModelMapper {
             )
             .makerAddress(
                 response.getSourceAccount() != null
-                    ? response.getSourceAccount().getAccountId()
+                    ? response.getSourceAccount()
                     : ""
             )
             .sellAsset(
@@ -228,12 +235,12 @@ public class ModelMapper {
   private Map<String, Object> blockMetaProperties(LedgerResponse ledgerResponse) {
     Map<String, Object> metaProperties = new HashMap<>();
 
-    metaProperties.put("operation_count", ledgerResponse.getOperationCount());
-    metaProperties.put("total_coins", ledgerResponse.getTotalCoins());
-    metaProperties.put("base_fee_in_stroops", ledgerResponse.getBaseFeeInStroops());
+    metaProperties.put("operation_count",         ledgerResponse.getOperationCount());
+    metaProperties.put("total_coins",             ledgerResponse.getTotalCoins());
+    metaProperties.put("base_fee_in_stroops",     ledgerResponse.getBaseFeeInStroops());
     metaProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
-    metaProperties.put("max_tx_set_size", ledgerResponse.getMaxTxSetSize());
-    metaProperties.put("sequence", ledgerResponse.getSequence());
+    metaProperties.put("max_tx_set_size",         ledgerResponse.getMaxTxSetSize());
+    metaProperties.put("sequence",                ledgerResponse.getSequence());
 
     return metaProperties;
   }
@@ -241,12 +248,12 @@ public class ModelMapper {
   private Map<String, Object> addressMetaProperties(AccountResponse accountResponse) {
     Map<String, Object> metaProperties = new HashMap<>();
 
-    metaProperties.put("sequence", accountResponse.getSequenceNumber());
-    metaProperties.put("subentry_count", accountResponse.getSubentryCount());
-    metaProperties.put("threshold_low", accountResponse.getThresholds().getLowThreshold());
-    metaProperties.put("threshold_med", accountResponse.getThresholds().getMedThreshold());
-    metaProperties.put("threshold_high", accountResponse.getThresholds().getHighThreshold());
-    metaProperties.put("flag_auth_required", accountResponse.getFlags().getAuthRequired());
+    metaProperties.put("sequence",            accountResponse.getSequenceNumber());
+    metaProperties.put("subentry_count",      accountResponse.getSubentryCount());
+    metaProperties.put("threshold_low",       accountResponse.getThresholds().getLowThreshold());
+    metaProperties.put("threshold_med",       accountResponse.getThresholds().getMedThreshold());
+    metaProperties.put("threshold_high",      accountResponse.getThresholds().getHighThreshold());
+    metaProperties.put("flag_auth_required",  accountResponse.getFlags().getAuthRequired());
     metaProperties.put("flag_auth_revocable", accountResponse.getFlags().getAuthRevocable());
     metaProperties.put(
         "balances",
@@ -269,15 +276,15 @@ public class ModelMapper {
   private Map<String, Object> balanceProperty(AccountResponse.Balance balance) {
     Map<String, Object> optionalProperties = new HashMap<>();
 
-    optionalProperties.put("balance", balance.getBalance());
-    optionalProperties.put("limit", balance.getLimit());
+    optionalProperties.put("balance",    balance.getBalance());
+    optionalProperties.put("limit",      balance.getLimit());
     optionalProperties.put("asset_type", balance.getAssetType());
     if (!balance.getAssetType().equals("native")) {
       optionalProperties.put("asset_code", balance.getAssetCode());
       if (balance.getAssetIssuer() == null) {
         LOG.warn("AssetIssuer in mapping balance property is null");
       } else {
-        optionalProperties.put("asset_issuer", balance.getAssetIssuer().getAccountId());
+        optionalProperties.put("asset_issuer", balance.getAssetIssuer());
       }
     }
 
@@ -288,7 +295,7 @@ public class ModelMapper {
     Map<String, Object> optionalProperties = new HashMap<>();
 
     optionalProperties.put("public_key", signer.getKey());
-    optionalProperties.put("weight", String.valueOf(signer.getWeight()));
+    optionalProperties.put("weight",     String.valueOf(signer.getWeight()));
 
     return optionalProperties;
   }
@@ -297,10 +304,10 @@ public class ModelMapper {
     TradeResponse tradeResponse = extendedTradeResponse.getTradeResponse();
 
     String baseAccount = tradeResponse.getBaseAccount() != null
-        ? tradeResponse.getBaseAccount().getAccountId()
+        ? tradeResponse.getBaseAccount()
         : "";
     String counterAccount = tradeResponse.getCounterAccount() != null
-        ? tradeResponse.getCounterAccount().getAccountId()
+        ? tradeResponse.getCounterAccount()
         : "";
 
     Asset buyAsset = assetMapper.map(
@@ -350,4 +357,5 @@ public class ModelMapper {
       .meta(Collections.singletonMap("price", tradeResponse.getPrice()))
       .build();
   }
+
 }
