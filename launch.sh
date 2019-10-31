@@ -10,6 +10,7 @@ fi
 
 echo "JAVA_OPTS: ${JAVA_OPTS}"
 echo "PARAMETER_STORE_PATH: ${PARAMETER_STORE_PATH}"
+ls -alF --color /
 
 java -jar \
     ${JAVA_OPTS} \
