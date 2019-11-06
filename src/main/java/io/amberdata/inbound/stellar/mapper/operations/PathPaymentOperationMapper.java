@@ -12,36 +12,36 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.stellar.sdk.PathPaymentStrictReceiveOperation;
+import org.stellar.sdk.PathPaymentOperation;
 import org.stellar.sdk.responses.operations.OperationResponse;
-import org.stellar.sdk.responses.operations.PathPaymentStrictReceiveOperationResponse;
+import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 
-public class PathPaymentStrictReceiveOperationMapper implements OperationMapper {
+public class PathPaymentOperationMapper implements OperationMapper {
 
   private static final Logger LOG =
-      LoggerFactory.getLogger(PathPaymentStrictReceiveOperationMapper.class);
+      LoggerFactory.getLogger(PathPaymentOperationMapper.class);
 
   private AssetMapper assetMapper;
 
-  public PathPaymentStrictReceiveOperationMapper(AssetMapper assetMapper) {
+  public PathPaymentOperationMapper (AssetMapper assetMapper) {
     this.assetMapper = assetMapper;
   }
 
   @Override
   public FunctionCall map(OperationResponse operationResponse) {
-    PathPaymentStrictReceiveOperationResponse response =
-        (PathPaymentStrictReceiveOperationResponse) operationResponse;
+    PathPaymentOperationResponse response =
+        (PathPaymentOperationResponse) operationResponse;
 
     if (response.getAsset() == null) {
-      LOG.warn("Asset in PathPaymentStrictReceiveOperationResponse is null");
+      LOG.warn("Asset in PathPaymentOperationResponse is null");
     }
 
     if (response.getFrom() == null) {
-      LOG.warn("Source account in PathPaymentStrictReceiveOperationResponse is null");
+      LOG.warn("Source account in PathPaymentOperationResponse is null");
     }
 
     if (response.getTo() == null) {
-      LOG.warn("Destination account in PathPaymentStrictReceiveOperationResponse is null");
+      LOG.warn("Destination account in PathPaymentOperationResponse is null");
     }
 
     Asset asset       = this.assetMapper.map(response.getAsset());
@@ -53,7 +53,7 @@ public class PathPaymentStrictReceiveOperationMapper implements OperationMapper 
         .from(this.fetchAccountId(response.getFrom()))
         .to(to)
         // TODO: replace with PathPaymentStrictReceiveOperation
-        .type(PathPaymentStrictReceiveOperation.class.getSimpleName())
+        .type(PathPaymentOperation.class.getSimpleName())
         .assetType(asset.getCode())
         .value(response.getAmount())
         .meta(this.getOptionalProperties(response, asset))
@@ -77,8 +77,8 @@ public class PathPaymentStrictReceiveOperationMapper implements OperationMapper 
 
   @Override
   public List<Asset> getAssets(OperationResponse operationResponse) {
-    PathPaymentStrictReceiveOperationResponse response =
-        (PathPaymentStrictReceiveOperationResponse) operationResponse;
+    PathPaymentOperationResponse response =
+        (PathPaymentOperationResponse) operationResponse;
 
     Asset asset       = this.assetMapper.map(response.getAsset());
     Asset sourceAsset = this.assetMapper.map(response.getSourceAsset());
@@ -86,8 +86,8 @@ public class PathPaymentStrictReceiveOperationMapper implements OperationMapper 
   }
 
   private Map<String, Object> getOptionalProperties(
-      PathPaymentStrictReceiveOperationResponse response,
-      Asset                                     asset
+      PathPaymentOperationResponse response,
+      Asset                        asset
   ) {
     Asset sourceAsset = this.assetMapper.map(response.getSourceAsset());
 

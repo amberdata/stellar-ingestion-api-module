@@ -31,6 +31,7 @@ import org.stellar.sdk.responses.operations.ManageBuyOfferOperationResponse;
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
 import org.stellar.sdk.responses.operations.ManageSellOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
+import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentStrictReceiveOperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
@@ -61,6 +62,10 @@ public class OperationMapperManager {
     this.add(
         ManageSellOfferOperationResponse.class,
         new ManageSellOfferOperationMapper(assetMapper)
+    );
+    this.add(
+        PathPaymentOperationResponse.class,
+        new PathPaymentOperationMapper(assetMapper)
     );
     this.add(
         PathPaymentStrictReceiveOperationResponse.class,
