@@ -18,6 +18,11 @@ public class HorizonServer {
   private final Server horizonServer;
   private final String serverUrl;
 
+  /**
+   * Default constructor.
+   *
+   * @param serverUrl the url of the server
+   */
   public HorizonServer(@Value("${stellar.horizon.server}") String serverUrl) {
     LOG.info("Horizon server URL {}", serverUrl);
 
@@ -25,14 +30,27 @@ public class HorizonServer {
     this.horizonServer = new Server(serverUrl);
   }
 
+  /**
+   * Returns the url of the server.
+   *
+   * @return the url of the server.
+   */
   public String getServerUrl() {
     return this.serverUrl;
   }
 
+  /**
+   * Returns the Horizon server.
+   *
+   * @return the Horizon server.
+   */
   public Server horizonServer() {
     return this.horizonServer;
   }
 
+  /**
+   * Tests the connection to the server.
+   */
   public void testConnection() {
     try {
       this.horizonServer.root().getCurrentProtocolVersion();
@@ -53,6 +71,16 @@ public class HorizonServer {
     }
 
     public IncorrectRequestException(String message, Throwable cause) {
+      super(message, cause);
+    }
+  }
+
+  public static class StellarException extends RuntimeException {
+    public StellarException(String message) {
+      super(message);
+    }
+
+    public StellarException(String message, Throwable cause) {
       super(message, cause);
     }
   }

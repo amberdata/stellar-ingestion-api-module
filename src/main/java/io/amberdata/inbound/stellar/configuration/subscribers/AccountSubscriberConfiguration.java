@@ -49,6 +49,17 @@ public class AccountSubscriberConfiguration {
   private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
+  /**
+   * Default constrcutor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param historicalManager the historical manager
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public AccountSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -67,6 +78,9 @@ public class AccountSubscriberConfiguration {
     this.errorsHandler     = errorsHandler;
   }
 
+  /**
+   * Creates the account pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Accounts stream through Transactions stream");
@@ -85,8 +99,8 @@ public class AccountSubscriberConfiguration {
         .buffer(this.batchSettings.addressesInChunk())
         .retryWhen(errorsHandler::onError)
         .subscribe(
-            entities -> this.apiClient.publishWithState("/addresses", entities),
-            SubscriberErrorsHandler::handleFatalApplicationError
+          entities -> this.apiClient.publishWithState("/addresses", entities),
+          SubscriberErrorsHandler::handleFatalApplicationError
       );
   }
 
@@ -102,38 +116,38 @@ public class AccountSubscriberConfiguration {
       TransactionResponse     transactionResponse
   ) {
     return this.modelMapper.mapOperations(operationResponses, null)
-        .stream()
-        .flatMap(
-            functionCall -> {
-              Stream.Builder<BlockchainEntityWithState<Address>> stream = Stream.builder();
-              if (functionCall.getFrom() != null) {
-                AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getFrom());
-                if (accountResponse != null) {
-                  stream.add(
-                      this.modelMapper.mapAccountWithState(
-                        accountResponse,
-                        functionCall.getTimestamp(),
-                        transactionResponse.getPagingToken()
-                      )
-                  );
-                }
-              }
-              if (functionCall.getTo() != null) {
-                AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getTo());
-                if (accountResponse != null) {
-                  stream.add(
-                      this.modelMapper.mapAccountWithState(
-                        accountResponse,
-                        functionCall.getTimestamp(),
-                        transactionResponse.getPagingToken()
-                      )
-                  );
-                }
-              }
-              return stream.build();
+      .stream()
+      .flatMap(
+        functionCall -> {
+          Stream.Builder<BlockchainEntityWithState<Address>> stream = Stream.builder();
+          if (functionCall.getFrom() != null) {
+            AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getFrom());
+            if (accountResponse != null) {
+              stream.add(
+                  this.modelMapper.mapAccountWithState(
+                    accountResponse,
+                    functionCall.getTimestamp(),
+                    transactionResponse.getPagingToken()
+                  )
+              );
             }
-        )
-        .distinct();
+          }
+          if (functionCall.getTo() != null) {
+            AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getTo());
+            if (accountResponse != null) {
+              stream.add(
+                  this.modelMapper.mapAccountWithState(
+                    accountResponse,
+                    functionCall.getTimestamp(),
+                    transactionResponse.getPagingToken()
+                  )
+              );
+            }
+          }
+          return stream.build();
+        }
+      )
+      .distinct();
   }
 
   private void subscribe(Consumer<TransactionResponse> responseConsumer,
@@ -175,11 +189,14 @@ public class AccountSubscriberConfiguration {
       TransactionResponse transactionResponse
   ) {
     try {
-      return this.server.horizonServer()
+      return StellarSubscriberConfiguration.getObjects(
+        this.server,
+        this.server.horizonServer()
           .operations()
           .forTransaction(transactionResponse.getHash())
+          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
-          .getRecords();
+      );
     } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for transaction "
@@ -193,8 +210,8 @@ public class AccountSubscriberConfiguration {
   private AccountResponse fetchAccountDetails(String accountId) {
     try {
       return this.server.horizonServer()
-          .accounts()
-          .account(accountId);
+        .accounts()
+        .account(accountId);
     } catch (Exception e) {
       LOG.error("Unable to get details for account " + accountId, e);
       return null;
@@ -206,8 +223,8 @@ public class AccountSubscriberConfiguration {
       this.server.horizonServer().transactions().cursor(cursorPointer).limit(1).execute();
     } catch (IOException ioe) {
       throw new HorizonServer.IncorrectRequestException(
-          "Failed to test if cursor value is valid",
-          ioe
+        "Failed to test if cursor value is valid",
+        ioe
       );
     }
   }

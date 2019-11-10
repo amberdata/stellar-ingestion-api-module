@@ -5,6 +5,7 @@ import java.util.Objects;
 import org.stellar.sdk.responses.TradeResponse;
 
 public class ExtendedTradeResponse {
+
   private TradeResponse tradeResponse;
   private Long          ledger;
   private String        transactionHash;
@@ -59,10 +60,10 @@ public class ExtendedTradeResponse {
 
     ExtendedTradeResponse that = (ExtendedTradeResponse) object;
     return
-        Objects.equals(this.tradeResponse, that.tradeResponse)
-            && Objects.equals(this.ledger, that.ledger)
-            && Objects.equals(this.transactionHash, that.transactionHash)
-            && Objects.equals(this.operationHash, that.operationHash);
+         Objects.equals(this.tradeResponse,   that.tradeResponse)
+      && Objects.equals(this.ledger,          that.ledger)
+      && Objects.equals(this.transactionHash, that.transactionHash)
+      && Objects.equals(this.operationHash,   that.operationHash);
   }
 
   @Override
@@ -73,12 +74,12 @@ public class ExtendedTradeResponse {
   @Override
   public String toString() {
     return
-        "ExtendedTradeResponse{"
-        + "tradeResponse=" + this.tradeResponse
-        + ", ledger=" + this.ledger
-        + ", transactionHash='" + this.transactionHash + '\''
-        + ", operationHash='" + this.operationHash + '\''
-        + '}';
+      "ExtendedTradeResponse{"
+      + "tradeResponse="      + this.tradeResponse
+      + ", ledger="           + this.ledger
+      + ", transactionHash='" + this.transactionHash + '\''
+      + ", operationHash='"   + this.operationHash   + '\''
+      + '}';
   }
 
 }

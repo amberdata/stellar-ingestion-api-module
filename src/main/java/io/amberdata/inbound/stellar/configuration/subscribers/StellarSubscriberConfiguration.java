@@ -15,6 +15,7 @@ import io.amberdata.inbound.stellar.mapper.ModelMapper;
 
 import java.io.IOException;
 
+import java.net.URISyntaxException;
 import java.time.Duration;
 
 import java.util.ArrayList;
@@ -48,6 +49,7 @@ import org.stellar.sdk.requests.EventListener;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
+import org.stellar.sdk.responses.Page;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -60,7 +62,109 @@ import shadow.com.google.common.base.Optional;
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
 
+  /* package */ static final int DEFAULT_LIMIT = 10000;
+
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
+
+  /* package */ static void subscribeToLedgers(HorizonServer               server,
+                                               String                      cursorPointer,
+                                               Consumer<LedgerResponse>    responseConsumer,
+                                               Consumer<? super Throwable> errorConsumer) {
+    LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
+
+    server.testConnection();
+    StellarSubscriberConfiguration.testCursorCorrectness(server, cursorPointer);
+
+    // LedgerResponse ledgerResponse = this.server.horizonServer().ledgers().ledger(0L);
+
+    server.horizonServer()
+        .ledgers()
+        .cursor(cursorPointer)
+        .stream(new EventListener<LedgerResponse>() {
+          @Override
+          public void onEvent(LedgerResponse ledgerResponse) {
+            responseConsumer.accept(ledgerResponse);
+          }
+
+          @Override
+          public void onFailure(Optional<Throwable> optional, Optional<Integer> optional1) {
+            if (optional.isPresent()) {
+              errorConsumer.accept(optional.get());
+            }
+          }
+        });
+  }
+
+  /* package */ static Asset enrichAsset(HorizonServer server, Asset asset) {
+    try {
+      List<AssetResponse> records = StellarSubscriberConfiguration.getObjects(
+          server,
+          server
+              .horizonServer()
+              .assets()
+              .assetCode(asset.getCode())
+              .assetIssuer(asset.getIssuerAccount())
+              .execute()
+      );
+
+      if (records.size() > 0) {
+        AssetResponse assetResponse = records.get(0);
+        asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
+        asset.setCode(assetResponse.getAssetCode());
+        asset.setIssuerAccount(assetResponse.getAssetIssuer());
+        asset.setAmount(assetResponse.getAmount());
+        asset.setMeta(StellarSubscriberConfiguration.assetOptionalProperties(assetResponse));
+      }
+    } catch (Exception e) {
+      LOG.error("Error during fetching an asset: " + asset.getCode(), e);
+    }
+
+    if (asset.getAmount() == null || !StellarSubscriberConfiguration.isNumeric(asset.getAmount())) {
+      asset.setAmount("0");
+    }
+
+    return asset;
+  }
+
+  /* package */ static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
+    List<T> list = new ArrayList<>();
+
+    try {
+      do {
+        list.addAll(page.getRecords());
+        page = page.getNextPage(server.horizonServer().getHttpClient());
+      } while (page != null);
+    } catch (IOException | URISyntaxException e) {
+      throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
+    }
+
+    return list;
+  }
+
+  private static Map<String, Object> assetOptionalProperties(AssetResponse assetResponse) {
+    Map<String, Object> optionalProperties = new HashMap<>();
+
+    optionalProperties.put("num_accounts",        assetResponse.getNumAccounts());
+    optionalProperties.put("flag_auth_required",  assetResponse.getFlags().isAuthRequired());
+    optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
+
+    return optionalProperties;
+  }
+
+  private static boolean isNumeric(String string) {
+    return string.matches("\\d+(\\.\\d+)?");
+  }
+
+  private static void testCursorCorrectness(HorizonServer server, String cursorPointer) {
+    try {
+      server.horizonServer().ledgers().cursor(cursorPointer).limit(1).execute();
+    } catch (IOException ioe) {
+      throw new HorizonServer.IncorrectRequestException(
+          "Failed to test if cursor value is valid",
+          ioe
+      );
+    }
+  }
 
   private final ResourceStateStorage    stateStorage;
   private final InboundApiClient        apiClient;
@@ -71,6 +175,17 @@ public class StellarSubscriberConfiguration {
   private final SubscriberErrorsHandler errorsHandler;
   private final Cache<String, Asset>    cache;
 
+  /**
+   * Default constructor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param historicalManager the historical manager
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public StellarSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -92,26 +207,32 @@ public class StellarSubscriberConfiguration {
     cacheManager.init();
 
     this.cache = cacheManager.createCache(
-        "assets",
-        CacheConfigurationBuilder
-            .newCacheConfigurationBuilder(
-                String.class,
-                Asset.class,
-                ResourcePoolsBuilder.heap(10000)
-            )
-            .withExpiry(ExpiryPolicyBuilder.timeToLiveExpiration(Duration.ofHours(24)))
+      "assets",
+      CacheConfigurationBuilder
+        .newCacheConfigurationBuilder(
+          String.class,
+          Asset.class,
+          ResourcePoolsBuilder.heap(10000)
+        )
+        .withExpiry(ExpiryPolicyBuilder.timeToLiveExpiration(Duration.ofHours(24)))
     );
   }
 
+  /**
+   * Creates the global pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Ledgers stream");
 
     Flux
         .<LedgerResponse>push(
-            sink -> this.subscribe(
-              sink::next,
-              SubscriberErrorsHandler::handleFatalApplicationError)
+          sink -> StellarSubscriberConfiguration.subscribeToLedgers(
+            this.server,
+            this.getCursorPointer(),
+            sink::next,
+            SubscriberErrorsHandler::handleFatalApplicationError
+          )
         )
         .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
@@ -119,36 +240,9 @@ public class StellarSubscriberConfiguration {
         .buffer(this.batchSettings.blocksInChunk())
         .retryWhen(errorsHandler::onError)
         .subscribe(
-            this::processLedgers,
-            SubscriberErrorsHandler::handleFatalApplicationError
+          this::processLedgers,
+          SubscriberErrorsHandler::handleFatalApplicationError
       );
-  }
-
-  private void subscribe(Consumer<LedgerResponse>    responseConsumer,
-                         Consumer<? super Throwable> errorConsumer) {
-    String cursorPointer = this.getCursorPointer();
-
-    LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
-
-    this.server.testConnection();
-    this.testCursorCorrectness(cursorPointer);
-
-    this.server.horizonServer()
-        .ledgers()
-        .cursor(cursorPointer)
-        .stream(new EventListener<LedgerResponse>() {
-          @Override
-          public void onEvent(LedgerResponse ledgerResponse) {
-            responseConsumer.accept(ledgerResponse);
-          }
-
-          @Override
-          public void onFailure(Optional<Throwable> optional, Optional<Integer> optional1) {
-            if (optional.isPresent()) {
-              errorConsumer.accept(optional.get());
-            }
-          }
-        });
   }
 
   private void processLedgers(List<BlockchainEntityWithState<Block>> blocks) {
@@ -165,11 +259,14 @@ public class StellarSubscriberConfiguration {
 
       try {
         long timeTransactions = System.currentTimeMillis();
-        List<TransactionResponse> transactionResponses = this.server.horizonServer()
-            .transactions()
-            .forLedger(ledger)
-            .execute()
-            .getRecords();
+        List<TransactionResponse> transactionResponses = StellarSubscriberConfiguration.getObjects(
+            this.server,
+            this.server.horizonServer()
+              .transactions()
+              .forLedger(ledger)
+              .limit(DEFAULT_LIMIT)
+              .execute()
+        );
         LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - timeTransactions) + " ms");
 
         long timeOperations = System.currentTimeMillis();
@@ -232,18 +329,21 @@ public class StellarSubscriberConfiguration {
       List<OperationResponse> operationResponses
   ) {
     return this.modelMapper.mapTransaction(
-        transactionResponse,
-        operationResponses
+      transactionResponse,
+      operationResponses
     );
   }
 
   private List<OperationResponse> fetchOperationsForLedger(long ledger) {
     try {
-      return this.server.horizonServer()
+      return StellarSubscriberConfiguration.getObjects(
+        this.server,
+        this.server.horizonServer()
           .operations()
           .forLedger(ledger)
+          .limit(DEFAULT_LIMIT)
           .execute()
-          .getRecords();
+      );
     } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for ledger " + ledger,
@@ -291,8 +391,8 @@ public class StellarSubscriberConfiguration {
   private AccountResponse fetchAccountDetails(String accountId) {
     try {
       return this.server.horizonServer()
-          .accounts()
-          .account(accountId);
+        .accounts()
+        .account(accountId);
     } catch (Exception e) {
       LOG.error("Unable to get details for account " + accountId, e);
       return null;
@@ -300,10 +400,11 @@ public class StellarSubscriberConfiguration {
   }
 
   private List<Asset> collectAssets(List<OperationResponse> operationResponses, Long ledger) {
-    return this.modelMapper.mapAssets(operationResponses, ledger).stream()
-        .distinct()
-        .map(this::enrichAsset)
-        .collect(Collectors.toList());
+    return this.modelMapper.mapAssets(operationResponses, ledger)
+      .stream()
+      .distinct()
+      .map(this::enrichAsset)
+      .collect(Collectors.toList());
   }
 
   private Asset enrichAsset(Asset asset) {
@@ -312,48 +413,11 @@ public class StellarSubscriberConfiguration {
       return this.cache.get(assetHash);
     }
 
-    try {
-      List<AssetResponse> records = this.server
-          .horizonServer()
-          .assets()
-          .assetCode(asset.getCode())
-          .assetIssuer(asset.getIssuerAccount())
-          .execute()
-          .getRecords();
-
-      if (records.size() > 0) {
-        AssetResponse assetResponse = records.get(0);
-        asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
-        asset.setCode(assetResponse.getAssetCode());
-        asset.setIssuerAccount(assetResponse.getAssetIssuer());
-        asset.setAmount(assetResponse.getAmount());
-        asset.setMeta(assetOptionalProperties(assetResponse));
-      }
-    } catch (Exception e) {
-      LOG.error("Error during fetching an asset: " + asset.getCode(), e);
-    }
-
-    if (asset.getAmount() == null || !this.isNumeric(asset.getAmount())) {
-      asset.setAmount("0");
-    }
+    asset = StellarSubscriberConfiguration.enrichAsset(this.server, asset);
 
     this.cache.put(assetHash, asset);
 
     return asset;
-  }
-
-  private Map<String, Object> assetOptionalProperties(AssetResponse assetResponse) {
-    Map<String, Object> optionalProperties = new HashMap<>();
-
-    optionalProperties.put("num_accounts",        assetResponse.getNumAccounts());
-    optionalProperties.put("flag_auth_required",  assetResponse.getFlags().isAuthRequired());
-    optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
-
-    return optionalProperties;
-  }
-
-  private boolean isNumeric(String string) {
-    return string.matches("\\d+(\\.\\d+)?");
   }
 
   private String getCursorPointer() {
@@ -361,17 +425,6 @@ public class StellarSubscriberConfiguration {
       return this.stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
     } else {
       return this.historicalManager.ledgerPagingToken();
-    }
-  }
-
-  private void testCursorCorrectness(String cursorPointer) {
-    try {
-      this.server.horizonServer().ledgers().cursor(cursorPointer).limit(1).execute();
-    } catch (IOException ioe) {
-      throw new HorizonServer.IncorrectRequestException(
-          "Failed to test if cursor value is valid",
-          ioe
-      );
     }
   }
 

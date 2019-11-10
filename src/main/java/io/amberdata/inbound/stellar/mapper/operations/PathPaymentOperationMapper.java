@@ -23,7 +23,7 @@ public class PathPaymentOperationMapper implements OperationMapper {
 
   private AssetMapper assetMapper;
 
-  public PathPaymentOperationMapper (AssetMapper assetMapper) {
+  public PathPaymentOperationMapper(AssetMapper assetMapper) {
     this.assetMapper = assetMapper;
   }
 

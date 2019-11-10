@@ -8,10 +8,6 @@ import io.amberdata.inbound.stellar.configuration.history.HistoricalManager;
 import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.mapper.ModelMapper;
 
-import java.io.IOException;
-
-import java.util.function.Consumer;
-
 import javax.annotation.PostConstruct;
 
 import org.slf4j.Logger;
@@ -20,13 +16,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
-import org.stellar.sdk.requests.EventListener;
 import org.stellar.sdk.responses.LedgerResponse;
 
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
-
-import shadow.com.google.common.base.Optional;
 
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-ledgers")
@@ -42,6 +35,17 @@ public class LedgersSubscriberConfiguration {
   private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
+  /**
+   * Default constrcutor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param historicalManager the historical manager
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public LedgersSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -60,16 +64,21 @@ public class LedgersSubscriberConfiguration {
     this.errorsHandler     = errorsHandler;
   }
 
+  /**
+   * Creates the ledger pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Ledgers stream");
 
     Flux
         .<LedgerResponse>push(
-            sink -> subscribe(
-              sink::next,
-              SubscriberErrorsHandler::handleFatalApplicationError
-            )
+          sink -> StellarSubscriberConfiguration.subscribeToLedgers(
+            this.server,
+            this.getCursorPointer(),
+            sink::next,
+            SubscriberErrorsHandler::handleFatalApplicationError
+          )
         )
         .publishOn(Schedulers.newElastic("ledgers-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
@@ -77,36 +86,9 @@ public class LedgersSubscriberConfiguration {
         .buffer(this.batchSettings.blocksInChunk())
         .retryWhen(errorsHandler::onError)
         .subscribe(
-            entities -> this.apiClient.publishWithState("/blocks", entities),
-            SubscriberErrorsHandler::handleFatalApplicationError
+          entities -> this.apiClient.publishWithState("/blocks", entities),
+          SubscriberErrorsHandler::handleFatalApplicationError
       );
-  }
-
-  private void subscribe(Consumer<LedgerResponse>    responseConsumer,
-                         Consumer<? super Throwable> errorConsumer) {
-    String cursorPointer = this.getCursorPointer();
-
-    LOG.info("Subscribing to ledgers using cursor {}", cursorPointer);
-
-    this.server.testConnection();
-    this.testCursorCorrectness(cursorPointer);
-
-    this.server.horizonServer()
-        .ledgers()
-        .cursor(cursorPointer)
-        .stream(new EventListener<LedgerResponse>() {
-          @Override
-          public void onEvent(LedgerResponse ledgerResponse) {
-            responseConsumer.accept(ledgerResponse);
-          }
-
-          @Override
-          public void onFailure(Optional<Throwable> optional, Optional<Integer> optional1) {
-            if (optional.isPresent()) {
-              errorConsumer.accept(optional.get());
-            }
-          }
-        });
   }
 
   private String getCursorPointer() {
@@ -114,17 +96,6 @@ public class LedgersSubscriberConfiguration {
       return this.stateStorage.getStateToken(Block.class.getSimpleName(), () -> "now");
     } else {
       return this.historicalManager.ledgerPagingToken();
-    }
-  }
-
-  private void testCursorCorrectness(String cursorPointer) {
-    try {
-      this.server.horizonServer().ledgers().cursor(cursorPointer).limit(1).execute();
-    } catch (IOException ioe) {
-      throw new HorizonServer.IncorrectRequestException(
-          "Failed to test if cursor value is valid",
-          ioe
-      );
     }
   }
 

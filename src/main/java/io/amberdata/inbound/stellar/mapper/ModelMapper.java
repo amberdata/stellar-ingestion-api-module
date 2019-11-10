@@ -50,34 +50,62 @@ public class ModelMapper {
   private final OperationMapperManager operationMapperManager;
   private final AssetMapper            assetMapper;
 
+  /**
+   * Default constructor.
+   *
+   * @param operationMapperManager the manager for the mapping of operations
+   * @param assetMapper            the asset mapper
+   */
   @Autowired
   public ModelMapper(OperationMapperManager operationMapperManager, AssetMapper assetMapper) {
     this.operationMapperManager = operationMapperManager;
     this.assetMapper            = assetMapper;
   }
 
+  /**
+   * Extracts ledger from the server response.
+   *
+   * @param ledgerResponse the record from the server
+   *
+   * @return the extracted ledger.
+   */
   public Block mapLedger(LedgerResponse ledgerResponse) {
     return new Block.Builder()
-        .number(BigInteger.valueOf(ledgerResponse.getSequence()))
-        .hash(ledgerResponse.getHash())
-        .parentHash(ledgerResponse.getPrevHash())
-        .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
-        .numTransactions(
-            ledgerResponse.getSuccessfulTransactionCount()
-            + ledgerResponse.getFailedTransactionCount()
-        )
-        .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
-        .meta(blockMetaProperties(ledgerResponse))
-        .build();
+      .number(BigInteger.valueOf(ledgerResponse.getSequence()))
+      .hash(ledgerResponse.getHash())
+      .parentHash(ledgerResponse.getPrevHash())
+      .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
+      .numTransactions(
+        ledgerResponse.getSuccessfulTransactionCount()
+        + ledgerResponse.getFailedTransactionCount()
+      )
+      .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
+      .meta(blockMetaProperties(ledgerResponse))
+      .build();
   }
 
+  /**
+   * Extracts ledger from the server response.
+   *
+   * @param ledgerResponse the record from the server
+   *
+   * @return the extracted ledger.
+   */
   public BlockchainEntityWithState<Block> mapLedgerWithState(LedgerResponse ledgerResponse) {
     return BlockchainEntityWithState.from(
-        this.mapLedger(ledgerResponse),
-        ResourceState.from(Block.class.getSimpleName(), ledgerResponse.getPagingToken())
+      this.mapLedger(ledgerResponse),
+      ResourceState.from(Block.class.getSimpleName(), ledgerResponse.getPagingToken())
     );
   }
 
+  /**
+   * Extracts transaction from the server response.
+   *
+   * @param transactionResponse the record from the server
+   * @param operationResponses  the operations associated to the transaction
+   *
+   * @return the extracted transaction.
+   */
   public Transaction mapTransaction(
       TransactionResponse     transactionResponse,
       List<OperationResponse> operationResponses
@@ -97,41 +125,65 @@ public class ModelMapper {
     }
 
     return new Transaction.Builder()
-        .hash(transactionResponse.getHash())
-        .transactionIndex(transactionResponse.getSourceAccountSequence())
-        .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
-        .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
-        .from(transactionResponse.getSourceAccount())
-        .to(to)
-        .tos(new ArrayList<>(tos))
-        .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
-        .numLogs(transactionResponse.getOperationCount())
-        .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-        .functionCalls(functionCalls)
-        .status("0x1")
-        .value(BigDecimal.ZERO)
-        .build();
+      .hash(transactionResponse.getHash())
+      .transactionIndex(transactionResponse.getSourceAccountSequence())
+      .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
+      .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
+      .from(transactionResponse.getSourceAccount())
+      .to(to)
+      .tos(new ArrayList<>(tos))
+      .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
+      .numLogs(transactionResponse.getOperationCount())
+      .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
+      .functionCalls(functionCalls)
+      .status("0x1")
+      .value(BigDecimal.ZERO)
+      .build();
   }
 
+  /**
+   * Extracts transaction from the server response.
+   *
+   * @param transactionResponse the record from the server
+   * @param operationResponses  the operations associated to the transaction
+   *
+   * @return the extracted transaction.
+   */
   public BlockchainEntityWithState<Transaction> mapTransactionWithState(
       TransactionResponse     transactionResponse,
       List<OperationResponse> operationResponses
   ) {
     return BlockchainEntityWithState.from(
-        this.mapTransaction(transactionResponse, operationResponses),
-        ResourceState.from(Transaction.class.getSimpleName(), transactionResponse.getPagingToken())
+      this.mapTransaction(transactionResponse, operationResponses),
+      ResourceState.from(Transaction.class.getSimpleName(), transactionResponse.getPagingToken())
     );
   }
 
+  /**
+   * Extracts operations from the server response.
+   *
+   * @param operationResponses the records from the server
+   * @param ledger             the ledger number
+   *
+   * @return the extracted operations.
+   */
   public List<FunctionCall> mapOperations(List<OperationResponse> operationResponses, Long ledger) {
     return IntStream
-        .range(0, operationResponses.size())
-        .mapToObj(
-            index -> this.operationMapperManager.map(operationResponses.get(index), ledger, index)
-        )
-        .collect(Collectors.toList());
+      .range(0, operationResponses.size())
+      .mapToObj(
+        index -> this.operationMapperManager.map(operationResponses.get(index), ledger, index)
+      )
+      .collect(Collectors.toList());
   }
 
+  /**
+   * Extracts assets from the server response.
+   *
+   * @param operationResponses the records from the server
+   * @param ledger             the ledger number
+   *
+   * @return the extracted assets.
+   */
   public List<Asset> mapAssets(List<OperationResponse> operationResponses, Long ledger) {
     List<Asset> allAssets = new ArrayList<>();
     for (int i = 0; i < operationResponses.size(); ++i) {
@@ -150,25 +202,50 @@ public class ModelMapper {
     return allAssets;
   }
 
+  /**
+   * Extracts account from the server response.
+   *
+   * @param accountResponse the record from the server
+   * @param timestamp       the timestamp
+   *
+   * @return the extracted account.
+   */
   public Address mapAccount(AccountResponse accountResponse, Long timestamp) {
     return new Address.Builder()
-        .hash(accountResponse.getAccountId())
-        .timestamp(timestamp)
-        .meta(addressMetaProperties(accountResponse))
-        .build();
+      .hash(accountResponse.getAccountId())
+      .timestamp(timestamp)
+      .meta(addressMetaProperties(accountResponse))
+      .build();
   }
 
+  /**
+   * Extracts account from the server response.
+   *
+   * @param accountResponse the record from the server
+   * @param timestamp       the timestamp
+   * @param pagingToken     the pagination token
+   *
+   * @return the extracted account.
+   */
   public BlockchainEntityWithState<Address> mapAccountWithState(
       AccountResponse accountResponse,
       Long            timestamp,
       String          pagingToken
   ) {
     return BlockchainEntityWithState.from(
-        this.mapAccount(accountResponse, timestamp),
-        ResourceState.from(Address.class.getSimpleName(), pagingToken)
+      this.mapAccount(accountResponse, timestamp),
+      ResourceState.from(Address.class.getSimpleName(), pagingToken)
     );
   }
 
+  /**
+   * Extracts orders from the server response.
+   *
+   * @param operationResponses the records from the server
+   * @param ledger             the ledger number
+   *
+   * @return the extracted orders.
+   */
   public List<Order> mapOrders(List<OperationResponse> operationResponses, Long ledger) {
     List<Order> orders = new ArrayList<>();
     for (int i = 0; i < operationResponses.size(); ++i) {
@@ -195,24 +272,24 @@ public class ModelMapper {
             .blockNumber(ledger)
             .transactionHash(response.getTransactionHash())
             .functionCallHash(
-                String.valueOf(ledger) + "_"
-                    + operationResponse.getTransactionHash() + "_"
-                    + String.valueOf(i)
+              String.valueOf(ledger) + "_"
+              + operationResponse.getTransactionHash() + "_"
+              + String.valueOf(i)
             )
             .makerAddress(
-                response.getSourceAccount() != null
-                    ? response.getSourceAccount()
-                    : ""
+              response.getSourceAccount() != null
+                ? response.getSourceAccount()
+                : ""
             )
             .sellAsset(
-                sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-                    ? "native"
-                    : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
+              sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                ? "native"
+                : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
             )
             .buyAsset(
-                buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-                    ? "native"
-                    : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
+              buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+                ? "native"
+                : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
             )
             .buyAmount(BigDecimal.ZERO)
             .sellAmount(new BigDecimal(response.getAmount()))
@@ -226,10 +303,18 @@ public class ModelMapper {
     return orders;
   }
 
+  /**
+   * Extracts trades from the server response.
+   *
+   * @param records the records from the server
+   *
+   * @return the extracted trades.
+   */
   public List<Trade> mapTrades(List<ExtendedTradeResponse> records) {
-    return records.stream()
-        .map(this::mapTrade)
-        .collect(Collectors.toList());
+    return records
+      .stream()
+      .map(this::mapTrade)
+      .collect(Collectors.toList());
   }
 
   private Map<String, Object> blockMetaProperties(LedgerResponse ledgerResponse) {

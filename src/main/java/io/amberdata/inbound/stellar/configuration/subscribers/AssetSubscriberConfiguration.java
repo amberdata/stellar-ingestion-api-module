@@ -13,9 +13,7 @@ import io.amberdata.inbound.stellar.mapper.ModelMapper;
 import java.io.IOException;
 
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -30,7 +28,6 @@ import org.springframework.context.annotation.Configuration;
 
 import org.stellar.sdk.FormatException;
 import org.stellar.sdk.requests.EventListener;
-import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -53,6 +50,17 @@ public class AssetSubscriberConfiguration {
   private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
+  /**
+   * Default constrcutor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param historicalManager the historical manager
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public AssetSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -71,6 +79,9 @@ public class AssetSubscriberConfiguration {
     this.errorsHandler     = errorsHandler;
   }
 
+  /**
+   * Creates the asset pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Assets stream through Transactions stream");
@@ -88,8 +99,8 @@ public class AssetSubscriberConfiguration {
         .buffer(this.batchSettings.assetsInChunk())
         .retryWhen(errorsHandler::onError)
         .subscribe(
-            entities -> this.apiClient.publishWithState("/assets", entities),
-            SubscriberErrorsHandler::handleFatalApplicationError
+          entities -> this.apiClient.publishWithState("/assets", entities),
+          SubscriberErrorsHandler::handleFatalApplicationError
       );
   }
 
@@ -97,34 +108,38 @@ public class AssetSubscriberConfiguration {
       TransactionResponse transactionResponse
   ) {
     return this.processAssets(
-        this.fetchOperationsForTransaction(transactionResponse),
-        transactionResponse.getLedger()
+      this.fetchOperationsForTransaction(transactionResponse),
+      transactionResponse.getLedger()
     )
-        .stream()
-        .map(
-            asset -> BlockchainEntityWithState.from(
-              asset,
-              ResourceState.from(Asset.class.getSimpleName(), transactionResponse.getPagingToken())
-            )
-        );
+      .stream()
+      .map(
+        asset -> BlockchainEntityWithState.from(
+          asset,
+          ResourceState.from(Asset.class.getSimpleName(), transactionResponse.getPagingToken())
+        )
+      );
   }
 
   private List<Asset> processAssets(List<OperationResponse> operationResponses, Long ledger) {
-    return this.modelMapper.mapAssets(operationResponses, ledger).stream()
-        .distinct()
-        .map(this::enrichAsset)
-        .collect(Collectors.toList());
+    return this.modelMapper.mapAssets(operationResponses, ledger)
+      .stream()
+      .distinct()
+      .map(asset -> StellarSubscriberConfiguration.enrichAsset(this.server, asset))
+      .collect(Collectors.toList());
   }
 
   private List<OperationResponse> fetchOperationsForTransaction(
       TransactionResponse transactionResponse
   ) {
     try {
-      return this.server.horizonServer()
+      return StellarSubscriberConfiguration.getObjects(
+        this.server,
+        this.server.horizonServer()
           .operations()
           .forTransaction(transactionResponse.getHash())
+          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
-          .getRecords();
+      );
     } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for transaction "
@@ -135,49 +150,6 @@ public class AssetSubscriberConfiguration {
     }
   }
 
-  private Asset enrichAsset(Asset asset) {
-    try {
-      List<AssetResponse> records = this.server
-          .horizonServer()
-          .assets()
-          .assetCode(asset.getCode())
-          .assetIssuer(asset.getIssuerAccount())
-          .execute()
-          .getRecords();
-
-      if (records.size() > 0) {
-        AssetResponse assetResponse = records.get(0);
-        asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
-        asset.setCode(assetResponse.getAssetCode());
-        asset.setIssuerAccount(assetResponse.getAssetIssuer());
-        asset.setAmount(assetResponse.getAmount());
-        asset.setMeta(assetOptionalProperties(assetResponse));
-      }
-    } catch (Exception e) {
-      LOG.error("Error during fetching an asset: " + asset.getCode(), e);
-    }
-
-    if (asset.getAmount() == null || !this.isNumeric(asset.getAmount())) {
-      asset.setAmount("0");
-    }
-
-    return asset;
-  }
-
-  private boolean isNumeric(String string) {
-    return string.matches("\\d+(\\.\\d+)?");
-  }
-
-  private Map<String, Object> assetOptionalProperties(AssetResponse assetResponse) {
-    Map<String, Object> optionalProperties = new HashMap<>();
-
-    optionalProperties.put("num_accounts",        assetResponse.getNumAccounts());
-    optionalProperties.put("flag_auth_required",  assetResponse.getFlags().isAuthRequired());
-    optionalProperties.put("flag_auth_revocable", assetResponse.getFlags().isAuthRevocable());
-
-    return optionalProperties;
-  }
-
   private void subscribe(Consumer<TransactionResponse> responseConsumer,
                          Consumer<? super Throwable>   errorConsumer) {
     String cursorPointer = getCursorPointer();
@@ -185,7 +157,7 @@ public class AssetSubscriberConfiguration {
     LOG.info("Subscribing to assets using transactions cursor {}", cursorPointer);
 
     this.server.testConnection();
-    testCursorCorrectness(cursorPointer);
+    this.testCursorCorrectness(cursorPointer);
 
     this.server.horizonServer()
         .transactions()

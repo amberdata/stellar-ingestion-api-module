@@ -48,6 +48,17 @@ public class OrdersSubscriberConfiguration {
   private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
+  /**
+   * Default constrcutor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param historicalManager the historical manager
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public OrdersSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -66,16 +77,19 @@ public class OrdersSubscriberConfiguration {
     this.errorsHandler     = errorsHandler;
   }
 
+  /**
+   * Creates the order pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar DEX Orders stream through Ledgers stream");
 
     Flux
         .<LedgerResponse>push(
-            sink -> subscribe(
-              sink::next,
-              SubscriberErrorsHandler::handleFatalApplicationError
-            )
+          sink -> subscribe(
+            sink::next,
+            SubscriberErrorsHandler::handleFatalApplicationError
+          )
         )
         .publishOn(Schedulers.newElastic("orders-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
@@ -84,23 +98,23 @@ public class OrdersSubscriberConfiguration {
         .buffer(this.batchSettings.ordersInChunk())
         .retryWhen(errorsHandler::onError)
         .subscribe(
-            entities -> this.apiClient.publishWithState("/orders", entities),
-            SubscriberErrorsHandler::handleFatalApplicationError
+          entities -> this.apiClient.publishWithState("/orders", entities),
+          SubscriberErrorsHandler::handleFatalApplicationError
       );
   }
 
   private Stream<BlockchainEntityWithState<Order>> toOrdersStream(LedgerResponse ledgerResponse) {
     return this.modelMapper.mapOrders(
-        this.fetchOperationsForLedger(ledgerResponse),
-        ledgerResponse.getSequence()
+      this.fetchOperationsForLedger(ledgerResponse),
+      ledgerResponse.getSequence()
     )
-        .stream()
-        .map(
-            order -> BlockchainEntityWithState.from(
-              order,
-              ResourceState.from(Order.class.getSimpleName(), ledgerResponse.getPagingToken())
-            )
-        );
+      .stream()
+      .map(
+        order -> BlockchainEntityWithState.from(
+          order,
+          ResourceState.from(Order.class.getSimpleName(), ledgerResponse.getPagingToken())
+        )
+      );
   }
 
   private void subscribe(Consumer<LedgerResponse>    responseConsumer,
@@ -132,11 +146,14 @@ public class OrdersSubscriberConfiguration {
 
   private List<OperationResponse> fetchOperationsForLedger(LedgerResponse ledgerResponse) {
     try {
-      return this.server.horizonServer()
+      return StellarSubscriberConfiguration.getObjects(
+        this.server,
+        this.server.horizonServer()
           .operations()
           .forLedger(ledgerResponse.getSequence())
+          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
-          .getRecords();
+      );
     } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for ledger " + ledgerResponse.getSequence(),

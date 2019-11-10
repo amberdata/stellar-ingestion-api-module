@@ -37,6 +37,13 @@ public class HistoricalManager {
   private String lastLedgerToken;
   private String lastTransactionToken;
 
+  /**
+   * Default constructor.
+   *
+   * @param ledgerSequenceNumber the ledger number to start the historicla manager from
+   * @param horizonServer        the Horizon server
+   * @param apiProperties        the API properties
+   */
   public HistoricalManager(
       @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumber,
       HorizonServer        horizonServer,
@@ -53,10 +60,20 @@ public class HistoricalManager {
     this.horizonServer = horizonServer.horizonServer();
   }
 
+  /**
+   * Returns true if the historical manager is not enabled.
+   *
+   * @return True if the historical manager is disabled.
+   */
   public boolean disabled() {
     return !this.isActive;
   }
 
+  /**
+   * Returns the token to paginate ledgers.
+   *
+   * @return The token to paginate ledgers.
+   */
   public synchronized String ledgerPagingToken() {
     this.ensureIsActive();
 
@@ -85,6 +102,11 @@ public class HistoricalManager {
     }
   }
 
+  /**
+   * Returns the token to paginate transactions.
+   *
+   * @return the token to paginate transactions.
+   */
   public synchronized String transactionPagingToken() {
     this.ensureIsActive();
 

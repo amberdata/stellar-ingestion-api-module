@@ -8,6 +8,13 @@ import org.stellar.sdk.AssetTypeCreditAlphaNum;
 @Component
 public class AssetMapper {
 
+  /**
+   * Maps a Stellar asset to an Amberdata asset.
+   *
+   * @param asset the asset to convert
+   *
+   * @return the converted asset.
+   */
   public Asset map(org.stellar.sdk.Asset asset) {
     final Asset.AssetType assetType;
     final String          code;
@@ -40,10 +47,10 @@ public class AssetMapper {
     }
 
     return new Asset.Builder()
-        .type(assetType)
-        .code(code)
-        .issuerAccount(issuer)
-        .build();
+      .type(assetType)
+      .code(code)
+      .issuerAccount(issuer)
+      .build();
   }
 
 }

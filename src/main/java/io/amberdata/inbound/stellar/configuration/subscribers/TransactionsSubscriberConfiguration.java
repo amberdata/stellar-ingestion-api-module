@@ -49,6 +49,17 @@ public class TransactionsSubscriberConfiguration {
   private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
+  /**
+   * Default constrcutor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param historicalManager the historical manager
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public TransactionsSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -67,16 +78,19 @@ public class TransactionsSubscriberConfiguration {
     this.errorsHandler     = errorsHandler;
   }
 
+  /**
+   * Creates the transactions pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar Transactions stream");
 
     Flux
         .<TransactionResponse>push(
-            sink -> subscribe(
-              sink::next,
-              SubscriberErrorsHandler::handleFatalApplicationError
-            )
+          sink -> subscribe(
+            sink::next,
+            SubscriberErrorsHandler::handleFatalApplicationError
+          )
         )
         .publishOn(Schedulers.newElastic("transactions-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
@@ -101,11 +115,14 @@ public class TransactionsSubscriberConfiguration {
       TransactionResponse transactionResponse
   ) {
     try {
-      return this.server.horizonServer()
+      return StellarSubscriberConfiguration.getObjects(
+        this.server,
+        this.server.horizonServer()
           .operations()
           .forTransaction(transactionResponse.getHash())
+          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
-          .getRecords();
+        );
     } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for transaction: "

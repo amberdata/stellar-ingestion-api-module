@@ -62,6 +62,16 @@ public class TradesSubscriberConfiguration {
   private final BatchSettings           batchSettings;
   private final SubscriberErrorsHandler errorsHandler;
 
+  /**
+   * Default constrcutor.
+   *
+   * @param stateStorage      the state storage
+   * @param apiClient         the client api
+   * @param modelMapper       the model mapper
+   * @param server            the Horizon server
+   * @param batchSettings     the batch settings
+   * @param errorsHandler     the error handler
+   */
   public TradesSubscriberConfiguration(
       ResourceStateStorage    stateStorage,
       InboundApiClient        apiClient,
@@ -78,16 +88,19 @@ public class TradesSubscriberConfiguration {
     this.errorsHandler = errorsHandler;
   }
 
+  /**
+   * Creates the trade pipeline.
+   */
   @PostConstruct
   public void createPipeline() {
     LOG.info("Going to subscribe on Stellar DEX Trades stream through Ledgers stream");
 
     Flux
         .<LedgerResponse>push(
-            sink -> subscribe(
-              sink::next,
-              SubscriberErrorsHandler::handleFatalApplicationError
-            )
+          sink -> subscribe(
+            sink::next,
+            SubscriberErrorsHandler::handleFatalApplicationError
+          )
         )
         .publishOn(Schedulers.newElastic("trades-subscriber-thread"))
         .timeout(this.errorsHandler.timeoutDuration())
@@ -96,20 +109,20 @@ public class TradesSubscriberConfiguration {
         .buffer(this.batchSettings.tradesInChunk())
         .retryWhen(errorsHandler::onError)
         .subscribe(
-            entities -> this.apiClient.publishWithState("/trades", entities),
-            SubscriberErrorsHandler::handleFatalApplicationError
+          entities -> this.apiClient.publishWithState("/trades", entities),
+          SubscriberErrorsHandler::handleFatalApplicationError
       );
   }
 
   private Stream<BlockchainEntityWithState<Trade>> toTradesStream() {
     return this.fetchTrades()
-        .stream()
-        .map(
-            trade -> BlockchainEntityWithState.from(
-              trade,
-              ResourceState.from(Trade.class.getSimpleName(), this.currentCursor)
-            )
-        );
+      .stream()
+      .map(
+        trade -> BlockchainEntityWithState.from(
+          trade,
+          ResourceState.from(Trade.class.getSimpleName(), this.currentCursor)
+        )
+      );
   }
 
   private void subscribe(Consumer<LedgerResponse>    responseConsumer,
@@ -167,9 +180,9 @@ public class TradesSubscriberConfiguration {
 
   private List<ExtendedTradeResponse> enrichRecords(List<TradeResponse> records) {
     return records
-        .stream()
-        .map(this::enrichRecord)
-        .collect(Collectors.toList());
+      .stream()
+      .map(this::enrichRecord)
+      .collect(Collectors.toList());
   }
 
   private ExtendedTradeResponse enrichRecord(TradeResponse tradeResponse) {

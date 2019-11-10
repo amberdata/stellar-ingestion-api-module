@@ -28,6 +28,11 @@ public class SubscriberErrorsHandler {
   private final Duration backoffTimeoutInitialDuration;
   private final Duration backoffTimeoutMaxDuration;
 
+  /**
+   * Default constructor.
+   *
+   * @param serverProperties the server properties
+   */
   public SubscriberErrorsHandler(HorizonServerProperties serverProperties) {
     this.retriesOnError = serverProperties.getRetriesOnError() > 0
         ? serverProperties.getRetriesOnError()
@@ -45,11 +50,18 @@ public class SubscriberErrorsHandler {
     );
   }
 
+  /**
+   * The error handler.
+   *
+   * @param companion the companion
+   *
+   * @return the next flux
+   */
   public Flux<Long> onError(Flux<Throwable> companion) {
     return companion
-        .doOnNext(throwable -> LOG.error("Subscriber error occurred. Going to retry", throwable))
-        .zipWith(Flux.range(1, Integer.MAX_VALUE), this::duration)
-        .flatMap(Mono::delay);
+      .doOnNext(throwable -> LOG.error("Subscriber error occurred. Going to retry", throwable))
+      .zipWith(Flux.range(1, Integer.MAX_VALUE), this::duration)
+      .flatMap(Mono::delay);
   }
 
   private Duration duration(Throwable error, Integer retryIndex) {
@@ -96,14 +108,24 @@ public class SubscriberErrorsHandler {
     }
   }
 
+  /**
+   * Returns the timeout duration.
+   *
+   * @return the timeout duration.
+   */
   public Duration timeoutDuration() {
     return this.backoffTimeoutMaxDuration.plus(
-        Duration.ofMillis((long) (
-            this.backoffTimeoutMaxDuration.toMillis() * this.idleTimeoutMultiplier
-        ))
+      Duration.ofMillis((long) (
+        this.backoffTimeoutMaxDuration.toMillis() * this.idleTimeoutMultiplier
+      ))
     );
   }
 
+  /**
+   * Handles the throwable.
+   *
+   * @param throwable the throwable to handle
+   */
   public static void handleFatalApplicationError(Throwable throwable) {
     LOG.error("Fatal error when calling API", throwable);
 

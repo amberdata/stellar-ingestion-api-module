@@ -44,6 +44,12 @@ public class OperationMapperManager {
   private final Map<Class<? extends OperationResponse>, OperationMapper> responsesMap;
   private final HorizonServer                                            server;
 
+  /**
+   * Default constructor.
+   *
+   * @param assetMapper the asset mapper
+   * @param server      the Horizon server
+   */
   @Autowired
   public OperationMapperManager(AssetMapper assetMapper, HorizonServer server) {
     this.responsesMap = new HashMap<>();
@@ -77,6 +83,15 @@ public class OperationMapperManager {
     this.server = server;
   }
 
+  /**
+   * Generates the hash of the operation.
+   *
+   * @param ledgerNumber     the ledger number
+   * @param transactionHash  the hash of the transaction
+   * @param transactionIndex the index of the transaction
+   *
+   * @return the hash of the operation.
+   */
   public String generateOperationHash(
       long   ledgerNumber,
       String transactionHash,
@@ -88,6 +103,15 @@ public class OperationMapperManager {
       + String.valueOf(transactionIndex);
   }
 
+  /**
+   * Extracts the function call from the specified operation.
+   *
+   * @param operationResponse the operation response
+   * @param ledger            the ledger number
+   * @param index             the index of the function call
+   *
+   * @return the function call.
+   */
   public FunctionCall map(OperationResponse operationResponse, Long ledger, Integer index) {
     OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
 
@@ -121,6 +145,14 @@ public class OperationMapperManager {
     return functionCall;
   }
 
+  /**
+   * Gets the assets associated to the specified operation.
+   *
+   * @param ledger            the ledger number
+   * @param operationResponse the operation response
+   *
+   * @return the list of assets for the specified operation.
+   */
   public List<Asset> mapAssets(long ledger, OperationResponse operationResponse) {
     OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
     if (operationMapper == null) {
@@ -143,13 +175,13 @@ public class OperationMapperManager {
   private List<String> fetchEffectsForOperation(OperationResponse operationResponse) {
     try {
       return server.horizonServer()
-          .effects()
-          .forOperation(operationResponse.getId())
-          .execute()
-          .getRecords()
-          .stream()
-          .map(EffectResponse::getType)
-          .collect(Collectors.toList());
+        .effects()
+        .forOperation(operationResponse.getId())
+        .execute()
+        .getRecords()
+        .stream()
+        .map(EffectResponse::getType)
+        .collect(Collectors.toList());
     } catch (IOException ioe) {
       return Collections.emptyList();
     }
