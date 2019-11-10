@@ -137,6 +137,7 @@ public class AssetSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forTransaction(transactionResponse.getHash())
+          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
       );
     } catch (IOException | FormatException e) {

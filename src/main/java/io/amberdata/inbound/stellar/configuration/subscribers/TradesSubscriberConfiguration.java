@@ -164,7 +164,10 @@ public class TradesSubscriberConfiguration {
         .limit(this.tradesLimit);
 
     try {
-      List<TradeResponse> records = requestBuilder.execute().getRecords();
+      List<TradeResponse> records = StellarSubscriberConfiguration.getObjects(
+        this.server,
+        requestBuilder.execute()
+      );
       if (records.isEmpty()) {
         return Collections.emptyList();
       }

@@ -62,6 +62,8 @@ import shadow.com.google.common.base.Optional;
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
 
+  /* package */ static final int DEFAULT_LIMIT = 10000;
+
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
 
   /* package */ static void subscribeToLedgers(HorizonServer               server,
@@ -125,13 +127,22 @@ public class StellarSubscriberConfiguration {
   }
 
   /* package */ static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
-    List<T> list = new ArrayList<>();
+    List<T> list     = new ArrayList<>();
+    String  previous = null;
+    String  current  = page.getLinks().getSelf().getHref();
 
     try {
       do {
+        if ( (current == null) || current.equals(previous) ) {
+          return list;
+        }
+
         list.addAll(page.getRecords());
         page = page.getNextPage(server.horizonServer().getHttpClient());
-      } while (page != null);
+
+        previous = current;
+        current  = page == null ? null : page.getLinks().getSelf().getHref();
+      } while ( page != null );
     } catch (IOException | URISyntaxException e) {
       throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
     }
@@ -262,6 +273,7 @@ public class StellarSubscriberConfiguration {
             this.server.horizonServer()
               .transactions()
               .forLedger(ledger)
+              .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
               .execute()
         );
         LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - timeTransactions) + " ms");
@@ -338,6 +350,7 @@ public class StellarSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forLedger(ledger)
+          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
       );
     } catch (IOException | FormatException e) {
