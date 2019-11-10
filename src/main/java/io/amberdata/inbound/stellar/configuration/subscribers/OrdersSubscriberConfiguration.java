@@ -151,7 +151,6 @@ public class OrdersSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forLedger(ledgerResponse.getSequence())
-          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
       );
     } catch (IOException | FormatException e) {
