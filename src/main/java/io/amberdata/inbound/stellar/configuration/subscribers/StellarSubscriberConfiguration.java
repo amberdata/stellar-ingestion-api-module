@@ -62,8 +62,6 @@ import shadow.com.google.common.base.Optional;
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
 
-  /* package */ static final int DEFAULT_LIMIT = 10000;
-
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
 
   /* package */ static void subscribeToLedgers(HorizonServer               server,
@@ -273,7 +271,6 @@ public class StellarSubscriberConfiguration {
             this.server.horizonServer()
               .transactions()
               .forLedger(ledger)
-              .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
               .execute()
         );
         LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - timeTransactions) + " ms");
@@ -350,7 +347,6 @@ public class StellarSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forLedger(ledger)
-          .limit(StellarSubscriberConfiguration.DEFAULT_LIMIT)
           .execute()
       );
     } catch (IOException | FormatException e) {
