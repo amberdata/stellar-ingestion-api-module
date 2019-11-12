@@ -45,13 +45,13 @@
         <dependency>
             <groupId>io.amberdata.inbound</groupId>
             <artifactId>inbound-domain-model</artifactId>
-            <version>0.1.21</version>
+            <version>0.1.22</version>
         </dependency>
 
         <dependency>
             <groupId>io.amberdata.inbound</groupId>
             <artifactId>inbound-core</artifactId>
-            <version>0.0.9</version>
+            <version>0.0.10</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.amberdata.inbound</groupId>

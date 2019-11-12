@@ -15,6 +15,7 @@ import io.amberdata.inbound.stellar.mapper.ModelMapper;
 
 import java.io.IOException;
 
+import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.time.Duration;
 
@@ -320,6 +321,8 @@ public class StellarSubscriberConfiguration {
         LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - timePublishTransactions) + " ms");
       }
 
+      this.enrichBlock(block, transactions);
+
       LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - timeLedger) + " ms");
     }
 
@@ -328,6 +331,18 @@ public class StellarSubscriberConfiguration {
     LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - timePublishLedgers) + " ms");
 
     LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - timeLedgers) + " ms");
+  }
+
+  private void enrichBlock(BlockchainEntityWithState<Block> block, List<Transaction> transactions) {
+    if (block.getEntity().getRewardFees() != null) {
+      return;
+    }
+
+    BigDecimal fees = BigDecimal.ZERO;
+    for (Transaction transaction : transactions) {
+      fees = fees.add(transaction.getFees());
+    }
+    block.getEntity().setRewardFees(fees);
   }
 
   private Transaction enrichTransaction(

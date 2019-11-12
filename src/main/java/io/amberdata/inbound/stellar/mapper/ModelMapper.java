@@ -70,17 +70,19 @@ public class ModelMapper {
    * @return the extracted ledger.
    */
   public Block mapLedger(LedgerResponse ledgerResponse) {
+    Integer numTransactions = Integer.valueOf(
+        ledgerResponse.getSuccessfulTransactionCount().intValue()
+        + ledgerResponse.getFailedTransactionCount().intValue()
+    );
+
     return new Block.Builder()
-      .number(BigInteger.valueOf(ledgerResponse.getSequence()))
-      .hash(ledgerResponse.getHash())
-      .parentHash(ledgerResponse.getPrevHash())
-      .gasUsed(new BigDecimal(ledgerResponse.getFeePool()))
-      .numTransactions(
-        ledgerResponse.getSuccessfulTransactionCount()
-        + ledgerResponse.getFailedTransactionCount()
-      )
-      .timestamp(Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
-      .meta(blockMetaProperties(ledgerResponse))
+      .number         (BigInteger.valueOf(ledgerResponse.getSequence()))
+      .hash           (ledgerResponse.getHash())
+      .parentHash     (ledgerResponse.getPrevHash())
+      .gasUsed        (new BigDecimal(ledgerResponse.getFeePool()))
+      .numTransactions(numTransactions)
+      .timestamp      (Instant.parse(ledgerResponse.getClosedAt()).toEpochMilli())
+      .meta           (this.blockMetaProperties(ledgerResponse))
       .build();
   }
 
@@ -114,31 +116,40 @@ public class ModelMapper {
         operationResponses,
         transactionResponse.getLedger()
     );
-    Set<String> tos = functionCalls.stream().map(FunctionCall::getTo).collect(Collectors.toSet());
+    Set<String> tos = functionCalls
+        .stream ()
+        .map    (FunctionCall::getTo)
+        .collect(Collectors.toSet());
 
     String to = "";
     if (tos.size() == 1) {
       to = tos.iterator().next();
-    }
-    if (tos.size() > 1) {
+    } else if (tos.size() > 1) {
       to = "_";
     }
 
+    Map<String, Object> meta = new HashMap<>();
+    meta.put("memo",            transactionResponse.getMemo());
+    meta.put("operation_count", transactionResponse.getOperationCount());
+
     return new Transaction.Builder()
-      .hash(transactionResponse.getHash())
+      .hash            (transactionResponse.getHash())
       .transactionIndex(transactionResponse.getSourceAccountSequence())
-      .nonce(BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
-      .blockNumber(BigInteger.valueOf(transactionResponse.getLedger()))
-      .from(transactionResponse.getSourceAccount())
-      .to(to)
-      .tos(new ArrayList<>(tos))
-      .gasUsed(BigInteger.valueOf(transactionResponse.getFeePaid()))
-      .numLogs(transactionResponse.getOperationCount())
-      .timestamp(Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
-      .functionCalls(functionCalls)
-      .status("0x1")
-      .value(BigDecimal.ZERO)
-      .build();
+      .nonce           (BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
+      .blockNumber     (BigInteger.valueOf(transactionResponse.getLedger()))
+      .blockHash       (transactionResponse.getHash())
+      .from            (transactionResponse.getSourceAccount())
+      .to              (to)
+      .tos             (new ArrayList<>(tos))
+      .fees            (BigDecimal.valueOf(transactionResponse.getFeePaid()))
+      .gasUsed         (BigInteger.valueOf(transactionResponse.getFeePaid()))
+      .numLogs         (transactionResponse.getOperationCount())
+      .timestamp       (Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
+      .functionCalls   (functionCalls)
+      .status          (transactionResponse.isSuccessful() ? "0x1" : "0x0")
+      .meta            (meta)
+      .value           (BigDecimal.ZERO)
+      .build           ();
   }
 
   /**
@@ -188,11 +199,12 @@ public class ModelMapper {
     List<Asset> allAssets = new ArrayList<>();
     for (int i = 0; i < operationResponses.size(); ++i) {
       OperationResponse operationResponse = operationResponses.get(i);
-      String transactionHash = operationResponse.getTransactionHash();
+      String            transactionHash   = operationResponse.getTransactionHash();
+
       List<Asset> assets = this.operationMapperManager.mapAssets(ledger, operationResponse);
       for (Asset asset : assets) {
-        asset.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
-        asset.setTransactionHash(transactionHash);
+        asset.setTimestamp       (Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
+        asset.setTransactionHash (transactionHash);
         asset.setFunctionCallHash(
             this.operationMapperManager.generateOperationHash(ledger, transactionHash, i)
         );
@@ -212,10 +224,10 @@ public class ModelMapper {
    */
   public Address mapAccount(AccountResponse accountResponse, Long timestamp) {
     return new Address.Builder()
-      .hash(accountResponse.getAccountId())
+      .hash     (accountResponse.getAccountId())
       .timestamp(timestamp)
-      .meta(addressMetaProperties(accountResponse))
-      .build();
+      .meta     (addressMetaProperties(accountResponse))
+      .build    ();
   }
 
   /**
@@ -267,35 +279,23 @@ public class ModelMapper {
         Asset buyingAsset  = this.assetMapper.map(response.getBuyingAsset());
 
         Order order = new Order.Builder()
-            .type(0)
-            .orderId(response.getOfferId().toString())
-            .blockNumber(ledger)
-            .transactionHash(response.getTransactionHash())
+            .type            (0)
+            .orderId         (response.getOfferId().toString())
+            .blockNumber     (ledger)
+            .transactionHash (response.getTransactionHash())
             .functionCallHash(
               String.valueOf(ledger) + "_"
               + operationResponse.getTransactionHash() + "_"
               + String.valueOf(i)
             )
-            .makerAddress(
-              response.getSourceAccount() != null
-                ? response.getSourceAccount()
-                : ""
-            )
-            .sellAsset(
-              sellingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-                ? "native"
-                : sellingAsset.getIssuerAccount() + "." + sellingAsset.getCode()
-            )
-            .buyAsset(
-              buyingAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-                ? "native"
-                : buyingAsset.getIssuerAccount() + "." + buyingAsset.getCode()
-            )
-            .buyAmount(BigDecimal.ZERO)
-            .sellAmount(new BigDecimal(response.getAmount()))
-            .timestamp(Instant.parse(response.getCreatedAt()).toEpochMilli())
-            .meta(Collections.singletonMap("buying_price", response.getPrice()))
-            .build();
+            .makerAddress(response.getSourceAccount() != null ? response.getSourceAccount() : "")
+            .sellAsset   (this.getAssetType(sellingAsset))
+            .buyAsset    (this.getAssetType(buyingAsset))
+            .buyAmount   (BigDecimal.ZERO)
+            .sellAmount  (new BigDecimal(response.getAmount()))
+            .timestamp   (Instant.parse(response.getCreatedAt()).toEpochMilli())
+            .meta        (Collections.singletonMap("buying_price", response.getPrice()))
+            .build       ();
 
         orders.add(order);
       }
@@ -312,50 +312,54 @@ public class ModelMapper {
    */
   public List<Trade> mapTrades(List<ExtendedTradeResponse> records) {
     return records
-      .stream()
-      .map(this::mapTrade)
+      .stream ()
+      .map    (this::mapTrade)
       .collect(Collectors.toList());
   }
 
   private Map<String, Object> blockMetaProperties(LedgerResponse ledgerResponse) {
-    Map<String, Object> metaProperties = new HashMap<>();
+    Map<String, Object> properties = new HashMap<>();
 
-    metaProperties.put("operation_count",         ledgerResponse.getOperationCount());
-    metaProperties.put("total_coins",             ledgerResponse.getTotalCoins());
-    metaProperties.put("base_fee_in_stroops",     ledgerResponse.getBaseFeeInStroops());
-    metaProperties.put("base_reserve_in_stroops", ledgerResponse.getBaseReserveInStroops());
-    metaProperties.put("max_tx_set_size",         ledgerResponse.getMaxTxSetSize());
-    metaProperties.put("sequence",                ledgerResponse.getSequence());
+    properties.put("successful_transaction_count", ledgerResponse.getSuccessfulTransactionCount());
+    properties.put("failed_transaction_count",     ledgerResponse.getFailedTransactionCount());
+    properties.put("operation_count",              ledgerResponse.getOperationCount());
+    properties.put("total_coins",                  ledgerResponse.getTotalCoins());
+    properties.put("base_fee_in_stroops",          ledgerResponse.getBaseFeeInStroops());
+    properties.put("base_reserve_in_stroops",      ledgerResponse.getBaseReserveInStroops());
+    properties.put("max_tx_set_size",              ledgerResponse.getMaxTxSetSize());
+    properties.put("protocol_version",             ledgerResponse.getProtocolVersion());
+    properties.put("sequence",                     ledgerResponse.getSequence());
 
-    return metaProperties;
+    return properties;
   }
 
+  @SuppressWarnings("checkstyle:MethodParamPad")
   private Map<String, Object> addressMetaProperties(AccountResponse accountResponse) {
-    Map<String, Object> metaProperties = new HashMap<>();
+    Map<String, Object> properties = new HashMap<>();
 
-    metaProperties.put("sequence",            accountResponse.getSequenceNumber());
-    metaProperties.put("subentry_count",      accountResponse.getSubentryCount());
-    metaProperties.put("threshold_low",       accountResponse.getThresholds().getLowThreshold());
-    metaProperties.put("threshold_med",       accountResponse.getThresholds().getMedThreshold());
-    metaProperties.put("threshold_high",      accountResponse.getThresholds().getHighThreshold());
-    metaProperties.put("flag_auth_required",  accountResponse.getFlags().getAuthRequired());
-    metaProperties.put("flag_auth_revocable", accountResponse.getFlags().getAuthRevocable());
-    metaProperties.put(
+    properties.put("sequence",            accountResponse.getSequenceNumber());
+    properties.put("subentry_count",      accountResponse.getSubentryCount());
+    properties.put("threshold_low",       accountResponse.getThresholds().getLowThreshold());
+    properties.put("threshold_med",       accountResponse.getThresholds().getMedThreshold());
+    properties.put("threshold_high",      accountResponse.getThresholds().getHighThreshold());
+    properties.put("flag_auth_required",  accountResponse.getFlags().getAuthRequired());
+    properties.put("flag_auth_revocable", accountResponse.getFlags().getAuthRevocable());
+    properties.put(
         "balances",
         Arrays
-          .stream(accountResponse.getBalances())
-          .map(this::balanceProperty)
+          .stream (accountResponse.getBalances())
+          .map    (this::balanceProperty)
           .collect(Collectors.toList())
     );
-    metaProperties.put(
+    properties.put(
         "signers",
         Arrays
-          .stream(accountResponse.getSigners())
-          .map(this::signerProperty)
+          .stream (accountResponse.getSigners())
+          .map    (this::signerProperty)
           .collect(Collectors.toList())
     );
 
-    return metaProperties;
+    return properties;
   }
 
   private Map<String, Object> balanceProperty(AccountResponse.Balance balance) {
@@ -364,6 +368,7 @@ public class ModelMapper {
     optionalProperties.put("balance",    balance.getBalance());
     optionalProperties.put("limit",      balance.getLimit());
     optionalProperties.put("asset_type", balance.getAssetType());
+
     if (!balance.getAssetType().equals("native")) {
       optionalProperties.put("asset_code", balance.getAssetCode());
       if (balance.getAssetIssuer() == null) {
@@ -395,17 +400,16 @@ public class ModelMapper {
         ? tradeResponse.getCounterAccount()
         : "";
 
-    Asset buyAsset = assetMapper.map(
+    Asset buyAsset = this.assetMapper.map(
         tradeResponse.isBaseSeller()
           ? tradeResponse.getCounterAsset()
           : tradeResponse.getBaseAsset()
     );
-    Asset sellAsset = assetMapper.map(
+    Asset sellAsset = this.assetMapper.map(
         tradeResponse.isBaseSeller()
           ? tradeResponse.getBaseAsset()
           : tradeResponse.getCounterAsset()
     );
-
     BigDecimal buyAmount = new BigDecimal(
         tradeResponse.isBaseSeller()
           ? tradeResponse.getCounterAmount()
@@ -418,29 +422,27 @@ public class ModelMapper {
     );
 
     return new Trade.Builder()
-      .tradeId(tradeResponse.getId())
-      .type(tradeResponse.isBaseSeller() ? 1 : 0)
-      .buyAddress(tradeResponse.isBaseSeller() ? counterAccount : baseAccount)
-      .sellAddress(tradeResponse.isBaseSeller() ? baseAccount : counterAccount)
-      .buyAsset(
-        buyAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-          ? "native"
-          : buyAsset.getIssuerAccount() + "." + buyAsset.getCode()
-      )
-      .sellAsset(
-        sellAsset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-          ? "native"
-          : sellAsset.getIssuerAccount() + "." + sellAsset.getCode()
-      )
-      .buyAmount(buyAmount)
-      .sellAmount(sellAmount)
-      .timestamp(Instant.parse(tradeResponse.getLedgerCloseTime()).toEpochMilli())
-      .orderId(tradeResponse.getOfferId())
-      .blockNumber(extendedTradeResponse.getLedger())
-      .transactionHash(extendedTradeResponse.getTransactionHash())
+      .tradeId         (tradeResponse.getId())
+      .type            (tradeResponse.isBaseSeller() ? 1 : 0)
+      .buyAddress      (tradeResponse.isBaseSeller() ? counterAccount : baseAccount)
+      .sellAddress     (tradeResponse.isBaseSeller() ? baseAccount : counterAccount)
+      .buyAsset        (this.getAssetType(buyAsset))
+      .sellAsset       (this.getAssetType(sellAsset))
+      .buyAmount       (buyAmount)
+      .sellAmount      (sellAmount)
+      .timestamp       (Instant.parse(tradeResponse.getLedgerCloseTime()).toEpochMilli())
+      .orderId         (tradeResponse.getOfferId())
+      .blockNumber     (extendedTradeResponse.getLedger())
+      .transactionHash (extendedTradeResponse.getTransactionHash())
       .functionCallHash(extendedTradeResponse.getOperationHash())
-      .meta(Collections.singletonMap("price", tradeResponse.getPrice()))
-      .build();
+      .meta            (Collections.singletonMap("price", tradeResponse.getPrice()))
+      .build           ();
   }
+
+    private String getAssetType (Asset asset) {
+      return asset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+          ? "native"
+          : asset.getIssuerAccount() + "." + asset.getCode();
+    }
 
 }
