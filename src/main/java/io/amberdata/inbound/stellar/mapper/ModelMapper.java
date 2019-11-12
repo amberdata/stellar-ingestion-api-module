@@ -129,7 +129,8 @@ public class ModelMapper {
     }
 
     Map<String, Object> meta = new HashMap<>();
-    meta.put("memo",            transactionResponse.getMemo());
+    // TODO: Memo is not serializable, will have to do it by hand
+    // meta.put("memo",            transactionResponse.getMemo());
     meta.put("operation_count", transactionResponse.getOperationCount());
 
     return new Transaction.Builder()
