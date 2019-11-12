@@ -32,7 +32,8 @@ public class HistoricalManager {
 
   private final boolean isActive;
   private final Server  horizonServer;
-  private final Long    ledgerSequenceNumber;
+  private final Long    ledgerSequenceNumberStart;
+  private final Long    ledgerSequenceNumberEnd;
 
   private String lastLedgerToken;
   private String lastTransactionToken;
@@ -40,22 +41,25 @@ public class HistoricalManager {
   /**
    * Default constructor.
    *
-   * @param ledgerSequenceNumber the ledger number to start the historicla manager from
-   * @param horizonServer        the Horizon server
-   * @param apiProperties        the API properties
+   * @param ledgerSequenceNumberStart the ledger number to start the historical manager from
+   * @param ledgerSequenceNumberEnd   the ledger number to end   the historical manager on
+   * @param horizonServer             the Horizon server
+   * @param apiProperties             the API properties
    */
   public HistoricalManager(
-      @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumber,
+      @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumberStart,
+      @Value("${stellar.state.end-all-from-ledger}")   Long ledgerSequenceNumberEnd,
       HorizonServer        horizonServer,
       InboundApiProperties apiProperties
   ) {
-    if (ledgerSequenceNumber != null && ledgerSequenceNumber > 0) {
+    if (ledgerSequenceNumberStart != null && ledgerSequenceNumberStart > 0) {
       this.isActive = true;
-      this.ledgerSequenceNumber = ledgerSequenceNumber;
+      this.ledgerSequenceNumberStart = ledgerSequenceNumberStart;
     } else {
       this.isActive = false;
-      this.ledgerSequenceNumber = this.getLedgerSequenceNumber(apiProperties);
+      this.ledgerSequenceNumberStart = this.getLedgerSequenceNumber(apiProperties);
     }
+    this.ledgerSequenceNumberEnd = ledgerSequenceNumberEnd;
 
     this.horizonServer = horizonServer.horizonServer();
   }
@@ -67,6 +71,10 @@ public class HistoricalManager {
    */
   public boolean disabled() {
     return !this.isActive;
+  }
+
+  public Long getLastLedger () {
+    return this.ledgerSequenceNumberEnd;
   }
 
   /**
@@ -83,12 +91,12 @@ public class HistoricalManager {
 
     LOG.info(
         "Going to request paging token for ledger with sequence number {}",
-        this.ledgerSequenceNumber
+        this.ledgerSequenceNumberStart
     );
 
     try {
       String token = this.horizonServer.ledgers()
-          .ledger(this.ledgerSequenceNumber)
+          .ledger(this.ledgerSequenceNumberStart)
           .getPagingToken();
 
       this.lastLedgerToken = token;
@@ -96,7 +104,7 @@ public class HistoricalManager {
       return token;
     } catch (Exception e) {
       throw new IllegalStateException(
-          "Error occurred, provided ledger sequence: " + this.ledgerSequenceNumber,
+          "Error occurred, provided ledger sequence: " + this.ledgerSequenceNumberStart,
           e
       );
     }
@@ -114,7 +122,7 @@ public class HistoricalManager {
       return this.lastTransactionToken;
     }
 
-    String token = this.transactionPagingToken(this.ledgerSequenceNumber);
+    String token = this.transactionPagingToken(this.ledgerSequenceNumberStart);
     this.lastTransactionToken = token;
 
     return token;
@@ -153,7 +161,7 @@ public class HistoricalManager {
     } catch (Exception e) {
       // This kind of exception will make the app to stop with fatal error
       throw new IllegalStateException(
-          "Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber,
+          "Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumberStart,
           e
       );
     }

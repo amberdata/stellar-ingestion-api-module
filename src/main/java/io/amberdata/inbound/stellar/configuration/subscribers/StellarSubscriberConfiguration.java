@@ -132,7 +132,7 @@ public class StellarSubscriberConfiguration {
 
     try {
       do {
-        if ( (current == null) || current.equals(previous) ) {
+        if ((current == null) || current.equals(previous)) {
           return list;
         }
 
@@ -141,7 +141,7 @@ public class StellarSubscriberConfiguration {
 
         previous = current;
         current  = page == null ? null : page.getLinks().getSelf().getHref();
-      } while ( page != null );
+      } while (page != null);
     } catch (IOException | URISyntaxException e) {
       throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
     }
@@ -255,11 +255,15 @@ public class StellarSubscriberConfiguration {
 
   private void processLedgers(List<BlockchainEntityWithState<Block>> blocks) {
     long timeLedgers = System.currentTimeMillis();
+    long maxSequence = 0;
 
     for (BlockchainEntityWithState<Block> block : blocks) {
       long timeLedger = System.currentTimeMillis();
 
       long ledger = block.getEntity().getNumber().longValue();
+      if (ledger > maxSequence) {
+        maxSequence = ledger;
+      }
 
       List<Transaction> transactions = new ArrayList<>();
       Set<Address>      addresses    = new HashSet<>();
@@ -331,6 +335,14 @@ public class StellarSubscriberConfiguration {
     LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - timePublishLedgers) + " ms");
 
     LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - timeLedgers) + " ms");
+
+    if ( this.historicalManager.getLastLedger() != null ) {
+      if (maxSequence > this.historicalManager.getLastLedger()) {
+        throw new HorizonServer.StellarException(
+            "Ending the collection since current ledger > " + this.historicalManager.getLastLedger() + "."
+        );
+      }
+    }
   }
 
   private void enrichBlock(BlockchainEntityWithState<Block> block, List<Transaction> transactions) {

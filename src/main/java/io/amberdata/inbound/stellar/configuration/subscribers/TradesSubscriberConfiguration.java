@@ -165,8 +165,8 @@ public class TradesSubscriberConfiguration {
 
     try {
       List<TradeResponse> records = StellarSubscriberConfiguration.getObjects(
-        this.server,
-        requestBuilder.execute()
+          this.server,
+          requestBuilder.execute()
       );
       if (records.isEmpty()) {
         return Collections.emptyList();
