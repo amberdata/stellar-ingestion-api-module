@@ -440,10 +440,10 @@ public class ModelMapper {
       .build           ();
   }
 
-    private String getAssetType (Asset asset) {
-      return asset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
-          ? "native"
-          : asset.getIssuerAccount() + "." + asset.getCode();
-    }
+  private String getAssetType (Asset asset) {
+    return asset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
+      ? "native"
+      : asset.getIssuerAccount() + "." + asset.getCode();
+  }
 
 }
