@@ -138,7 +138,7 @@ public class ModelMapper {
       .transactionIndex(transactionResponse.getSourceAccountSequence())
       .nonce           (BigInteger.valueOf(transactionResponse.getSourceAccountSequence()))
       .blockNumber     (BigInteger.valueOf(transactionResponse.getLedger()))
-      .blockHash       (transactionResponse.getHash())
+      // .blockHash       (transactionResponse.getHash())
       .from            (transactionResponse.getSourceAccount())
       .to              (to)
       .tos             (new ArrayList<>(tos))
