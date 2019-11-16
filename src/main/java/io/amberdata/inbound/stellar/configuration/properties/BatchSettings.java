@@ -98,4 +98,5 @@ public class BatchSettings {
         + ", tradesInChunk='" + tradesInChunk + '\''
         + '}';
   }
+
 }

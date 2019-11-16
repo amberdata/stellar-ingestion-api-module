@@ -5,6 +5,14 @@ import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.client.HorizonServer;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 
+import java.io.IOException;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,22 +25,16 @@ import org.stellar.sdk.responses.operations.AllowTrustOperationResponse;
 import org.stellar.sdk.responses.operations.BumpSequenceOperationResponse;
 import org.stellar.sdk.responses.operations.ChangeTrustOperationResponse;
 import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
-import org.stellar.sdk.responses.operations.CreatePassiveOfferOperationResponse;
+import org.stellar.sdk.responses.operations.CreatePassiveSellOfferOperationResponse;
 import org.stellar.sdk.responses.operations.InflationOperationResponse;
+import org.stellar.sdk.responses.operations.ManageBuyOfferOperationResponse;
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
-import org.stellar.sdk.responses.operations.ManageOfferOperationResponse;
+import org.stellar.sdk.responses.operations.ManageSellOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
+import org.stellar.sdk.responses.operations.PathPaymentStrictReceiveOperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
-
-import java.io.IOException;
-import java.time.Instant;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @Component
 public class OperationMapperManager {
@@ -40,43 +42,60 @@ public class OperationMapperManager {
   private static final Logger LOG = LoggerFactory.getLogger(OperationMapperManager.class);
 
   private final Map<Class<? extends OperationResponse>, OperationMapper> responsesMap;
-  private final HorizonServer server;
+  private final HorizonServer                                            server;
 
+  /**
+   * Default constructor.
+   *
+   * @param assetMapper the asset mapper
+   * @param server      the Horizon server
+   */
   @Autowired
   public OperationMapperManager(AssetMapper assetMapper, HorizonServer server) {
-    responsesMap = new HashMap<>();
-    responsesMap.put(CreateAccountOperationResponse.class, new CreateAccountOperationMapper());
-    responsesMap.put(PaymentOperationResponse.class, new PaymentOperationMapper(assetMapper));
-    responsesMap.put(
+    this.responsesMap = new HashMap<>();
+    this.add(AccountMergeOperationResponse.class,  new AccountMergeOperationMapper());
+    this.add(AllowTrustOperationResponse.class,    new AllowTrustOperationMapper(assetMapper));
+    this.add(BumpSequenceOperationResponse.class,  new BumpSequenceOperationMapper());
+    this.add(ChangeTrustOperationResponse.class,   new ChangeTrustOperationMapper(assetMapper));
+    this.add(CreateAccountOperationResponse.class, new CreateAccountOperationMapper());
+    this.add(
+        CreatePassiveSellOfferOperationResponse.class,
+        new CreatePassiveOfferOperationMapper(assetMapper)
+    );
+    this.add(InflationOperationResponse.class,      new InflationOperationMapper());
+    this.add(ManageBuyOfferOperationResponse.class, new ManageBuyOfferOperationMapper(assetMapper));
+    this.add(ManageDataOperationResponse.class,     new ManageDataOperationMapper());
+    this.add(
+        ManageSellOfferOperationResponse.class,
+        new ManageSellOfferOperationMapper(assetMapper)
+    );
+    this.add(
         PathPaymentOperationResponse.class,
         new PathPaymentOperationMapper(assetMapper)
     );
-    responsesMap.put(
-        ManageOfferOperationResponse.class,
-        new ManageOfferOperationMapper(assetMapper)
+    this.add(
+        PathPaymentStrictReceiveOperationResponse.class,
+        new PathPaymentStrictReceiveOperationMapper(assetMapper)
     );
-    responsesMap.put(
-        CreatePassiveOfferOperationResponse.class,
-        new CreatePassiveOfferOperationMapper(assetMapper)
-    );
-    responsesMap.put(SetOptionsOperationResponse.class, new SetOptionsOperationMapper());
-    responsesMap.put(
-        ChangeTrustOperationResponse.class,
-        new ChangeTrustOperationMapper(assetMapper)
-    );
-    responsesMap.put(AllowTrustOperationResponse.class, new AllowTrustOperationMapper(assetMapper));
-    responsesMap.put(AccountMergeOperationResponse.class, new AccountMergeOperationMapper());
-    responsesMap.put(InflationOperationResponse.class, new InflationOperationMapper());
-    responsesMap.put(ManageDataOperationResponse.class, new ManageDataOperationMapper());
-    responsesMap.put(BumpSequenceOperationResponse.class, new BumpSequenceOperationMapper());
+    this.add(PaymentOperationResponse.class,    new PaymentOperationMapper(assetMapper));
+    this.add(SetOptionsOperationResponse.class, new SetOptionsOperationMapper());
 
     this.server = server;
   }
 
+  /**
+   * Generates the hash of the operation.
+   *
+   * @param ledgerNumber     the ledger number
+   * @param transactionHash  the hash of the transaction
+   * @param transactionIndex the index of the transaction
+   *
+   * @return the hash of the operation.
+   */
   public String generateOperationHash(
-      long ledgerNumber,
+      long   ledgerNumber,
       String transactionHash,
-      int transactionIndex
+      int    transactionIndex
   ) {
     return
       String.valueOf(ledgerNumber) + "_"
@@ -84,10 +103,17 @@ public class OperationMapperManager {
       + String.valueOf(transactionIndex);
   }
 
+  /**
+   * Extracts the function call from the specified operation.
+   *
+   * @param operationResponse the operation response
+   * @param ledger            the ledger number
+   * @param index             the index of the function call
+   *
+   * @return the function call.
+   */
   public FunctionCall map(OperationResponse operationResponse, Long ledger, Integer index) {
-    OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
-
-    List<String> effects = fetchEffectsForOperation(operationResponse);
+    OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
 
     String transactionHash = operationResponse.getTransactionHash();
 
@@ -106,6 +132,8 @@ public class OperationMapperManager {
       functionCall = operationMapper.map(operationResponse);
     }
 
+    List<String> effects = this.fetchEffectsForOperation(operationResponse);
+
     functionCall.setBlockNumber(ledger);
     functionCall.setTransactionHash(transactionHash);
     functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
@@ -117,8 +145,16 @@ public class OperationMapperManager {
     return functionCall;
   }
 
+  /**
+   * Gets the assets associated to the specified operation.
+   *
+   * @param ledger            the ledger number
+   * @param operationResponse the operation response
+   *
+   * @return the list of assets for the specified operation.
+   */
   public List<Asset> mapAssets(long ledger, OperationResponse operationResponse) {
-    OperationMapper operationMapper = responsesMap.get(operationResponse.getClass());
+    OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
     if (operationMapper == null) {
       LOG.warn(
           "An unknown operation for ledger " + ledger + " and transaction "
@@ -132,18 +168,23 @@ public class OperationMapperManager {
     return operationMapper.getAssets(operationResponse);
   }
 
+  private void add(Class<? extends OperationResponse> type, OperationMapper mapper) {
+    this.responsesMap.put(type, mapper);
+  }
+
   private List<String> fetchEffectsForOperation(OperationResponse operationResponse) {
     try {
       return server.horizonServer()
-          .effects()
-          .forOperation(operationResponse.getId())
-          .execute()
-          .getRecords()
-          .stream()
-          .map(EffectResponse::getType)
-          .collect(Collectors.toList());
-    } catch (IOException ex) {
+        .effects()
+        .forOperation(operationResponse.getId())
+        .execute()
+        .getRecords()
+        .stream()
+        .map(EffectResponse::getType)
+        .collect(Collectors.toList());
+    } catch (IOException ioe) {
       return Collections.emptyList();
     }
   }
+
 }

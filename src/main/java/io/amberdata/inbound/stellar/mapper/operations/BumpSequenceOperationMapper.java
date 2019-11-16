@@ -3,14 +3,14 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
-import org.stellar.sdk.BumpSequenceOperation;
-import org.stellar.sdk.responses.operations.BumpSequenceOperationResponse;
-import org.stellar.sdk.responses.operations.OperationResponse;
-
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import org.stellar.sdk.BumpSequenceOperation;
+import org.stellar.sdk.responses.operations.BumpSequenceOperationResponse;
+import org.stellar.sdk.responses.operations.OperationResponse;
 
 public class BumpSequenceOperationMapper implements OperationMapper {
 
@@ -19,7 +19,7 @@ public class BumpSequenceOperationMapper implements OperationMapper {
     BumpSequenceOperationResponse response = (BumpSequenceOperationResponse) operationResponse;
 
     return new FunctionCall.Builder()
-        .from(fetchAccountId(response))
+        .from(this.fetchAccountId(response))
         .type(BumpSequenceOperation.class.getSimpleName())
         .meta(getOptionalProperties(response))
         .signature("bump_sequence(sequence_number)")
@@ -40,7 +40,7 @@ public class BumpSequenceOperationMapper implements OperationMapper {
   }
 
   private String fetchAccountId(BumpSequenceOperationResponse response) {
-    return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
+    return response.getSourceAccount() != null ? response.getSourceAccount() : "";
   }
 
   private Map<String, Object> getOptionalProperties(BumpSequenceOperationResponse response) {
@@ -51,4 +51,5 @@ public class BumpSequenceOperationMapper implements OperationMapper {
     );
     return optionalProperties;
   }
+
 }

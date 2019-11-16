@@ -3,20 +3,19 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.stellar.sdk.KeyPair;
-import org.stellar.sdk.SetOptionsOperation;
-import org.stellar.sdk.responses.operations.OperationResponse;
-import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
-
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.stellar.sdk.SetOptionsOperation;
+import org.stellar.sdk.responses.operations.OperationResponse;
+import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
 public class SetOptionsOperationMapper implements OperationMapper {
 
@@ -35,8 +34,8 @@ public class SetOptionsOperationMapper implements OperationMapper {
     }
 
     return new FunctionCall.Builder()
-        .from(fetchAccountId(response.getSourceAccount()))
-        .to(fetchAccountId(response.getInflationDestination()))
+        .from(this.fetchAccountId(response.getSourceAccount()))
+        .to(this.fetchAccountId(response.getInflationDestination()))
         .type(SetOptionsOperation.class.getSimpleName())
         .meta(getOptionalProperties(response))
         .signature(
@@ -47,7 +46,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
             Arrays.asList(
                 FunctionCall.Argument.from(
                     "inflation_destination",
-                    fetchAccountId(response.getInflationDestination())
+                    this.fetchAccountId(response.getInflationDestination())
                 ),
 
                 FunctionCall.Argument.from(
@@ -96,16 +95,17 @@ public class SetOptionsOperationMapper implements OperationMapper {
       optionalProperties.put("setFlags", String.join("-", response.getSetFlags()));
     }
     optionalProperties.put("masterKeyWeight", response.getMasterKeyWeight());
-    optionalProperties.put("lowThreshold", response.getLowThreshold());
-    optionalProperties.put("medThreshold", response.getMedThreshold());
-    optionalProperties.put("highThreshold", response.getHighThreshold());
-    optionalProperties.put("homeDomain", response.getHomeDomain());
-    optionalProperties.put("signer", response.getSignerKey());
-    optionalProperties.put("signerWeight", response.getSignerWeight());
+    optionalProperties.put("lowThreshold",    response.getLowThreshold());
+    optionalProperties.put("medThreshold",    response.getMedThreshold());
+    optionalProperties.put("highThreshold",   response.getHighThreshold());
+    optionalProperties.put("homeDomain",      response.getHomeDomain());
+    optionalProperties.put("signer",          response.getSignerKey());
+    optionalProperties.put("signerWeight",    response.getSignerWeight());
     return optionalProperties;
   }
 
-  private String fetchAccountId(KeyPair sourceAccount) {
-    return sourceAccount != null ? sourceAccount.getAccountId() : "";
+  private String fetchAccountId(String sourceAccount) {
+    return sourceAccount != null ? sourceAccount : "";
   }
+
 }

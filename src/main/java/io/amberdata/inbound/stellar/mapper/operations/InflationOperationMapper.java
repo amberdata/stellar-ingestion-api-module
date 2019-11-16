@@ -3,15 +3,15 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
+import java.util.Collections;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.stellar.sdk.InflationOperation;
 import org.stellar.sdk.responses.operations.InflationOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
-
-import java.util.Collections;
-import java.util.List;
 
 public class InflationOperationMapper implements OperationMapper {
   private static final Logger LOG = LoggerFactory.getLogger(InflationOperationMapper.class);
@@ -25,7 +25,7 @@ public class InflationOperationMapper implements OperationMapper {
     }
 
     return new FunctionCall.Builder()
-        .from(fetchAccountId(response))
+        .from(this.fetchAccountId(response))
         .type(InflationOperation.class.getSimpleName())
         .signature("inflation()")
         .arguments(Collections.emptyList())
@@ -33,11 +33,12 @@ public class InflationOperationMapper implements OperationMapper {
   }
 
   private String fetchAccountId(InflationOperationResponse response) {
-    return response.getSourceAccount() != null ? response.getSourceAccount().getAccountId() : "";
+    return response.getSourceAccount() != null ? response.getSourceAccount() : "";
   }
 
   @Override
   public List<Asset> getAssets(OperationResponse operationResponse) {
     return Collections.emptyList();
   }
+
 }

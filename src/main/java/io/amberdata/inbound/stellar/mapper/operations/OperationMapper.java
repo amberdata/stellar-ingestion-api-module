@@ -3,9 +3,9 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
-import org.stellar.sdk.responses.operations.OperationResponse;
-
 import java.util.List;
+
+import org.stellar.sdk.responses.operations.OperationResponse;
 
 public interface OperationMapper {
 

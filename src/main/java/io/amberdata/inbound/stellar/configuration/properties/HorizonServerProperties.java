@@ -1,11 +1,11 @@
 package io.amberdata.inbound.stellar.configuration.properties;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
+
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.convert.DurationUnit;
 import org.springframework.context.annotation.Configuration;
-
-import java.time.Duration;
-import java.time.temporal.ChronoUnit;
 
 @Configuration
 @ConfigurationProperties("stellar.horizon")
@@ -61,5 +61,6 @@ public class HorizonServerProperties {
   public void setIdleTimeoutMultiplier(Double idleTimeoutMultiplier) {
     this.idleTimeoutMultiplier = idleTimeoutMultiplier;
   }
+
 }
 
