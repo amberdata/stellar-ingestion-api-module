@@ -3,6 +3,10 @@ package io.amberdata.inbound.stellar.configuration.subscribers;
 import io.amberdata.inbound.stellar.StellarInboundApplication;
 import io.amberdata.inbound.stellar.configuration.properties.HorizonServerProperties;
 
+import java.time.Duration;
+
+import java.util.concurrent.TimeoutException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,27 +18,28 @@ import reactor.core.Exceptions;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
-
-import java.util.concurrent.TimeoutException;
-
 @Component
 public class SubscriberErrorsHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(SubscriberErrorsHandler.class);
 
-  private final int retriesOnError;
-  private final double idleTimeoutMultiplier;
+  private final int      retriesOnError;
+  private final double   idleTimeoutMultiplier;
   private final Duration backoffTimeoutInitialDuration;
   private final Duration backoffTimeoutMaxDuration;
 
+  /**
+   * Default constructor.
+   *
+   * @param serverProperties the server properties
+   */
   public SubscriberErrorsHandler(HorizonServerProperties serverProperties) {
     this.retriesOnError = serverProperties.getRetriesOnError() > 0
         ? serverProperties.getRetriesOnError()
         : Integer.MAX_VALUE;
     this.backoffTimeoutInitialDuration = serverProperties.getBackOffTimeoutInitial();
-    this.backoffTimeoutMaxDuration = serverProperties.getBackOffTimeoutMax();
-    this.idleTimeoutMultiplier = serverProperties.getIdleTimeoutMultiplier();
+    this.backoffTimeoutMaxDuration     = serverProperties.getBackOffTimeoutMax();
+    this.idleTimeoutMultiplier         = serverProperties.getIdleTimeoutMultiplier();
 
     LOG.info(
         "Configuring Subscriber errors handler with re-tries: {}, "
@@ -45,15 +50,22 @@ public class SubscriberErrorsHandler {
     );
   }
 
+  /**
+   * The error handler.
+   *
+   * @param companion the companion
+   *
+   * @return the next flux
+   */
   public Flux<Long> onError(Flux<Throwable> companion) {
     return companion
-        .doOnNext(throwable -> LOG.error("Subscriber error occurred. Going to retry", throwable))
-        .zipWith(Flux.range(1, Integer.MAX_VALUE), this::duration)
-        .flatMap(Mono::delay);
+      .doOnNext(throwable -> LOG.error("Subscriber error occurred. Going to retry", throwable))
+      .zipWith(Flux.range(1, Integer.MAX_VALUE), this::duration)
+      .flatMap(Mono::delay);
   }
 
   private Duration duration(Throwable error, Integer retryIndex) {
-    ensureErrorIsNotFatal(error);
+    this.ensureErrorIsNotFatal(error);
 
     if (error instanceof TooManyRequestsException) {
       int secondsToWait = ((TooManyRequestsException) error).getRetryAfter();
@@ -68,19 +80,19 @@ public class SubscriberErrorsHandler {
       LOG.info(
           "{}. Going to wait {}ms before re-subscribe",
           error.getMessage(),
-          backoffTimeoutInitialDuration.toMillis()
+          this.backoffTimeoutInitialDuration.toMillis()
       );
-      return backoffTimeoutInitialDuration;
+      return this.backoffTimeoutInitialDuration;
     }
 
     LOG.info("Trying to recover after {}: {} times", error.getMessage(), retryIndex);
 
-    if (retryIndex <= retriesOnError) {
+    if (retryIndex <= this.retriesOnError) {
       int multiplier = (int) Math.pow(2, retryIndex);
 
-      Duration delay = backoffTimeoutInitialDuration.multipliedBy(multiplier);
-      if (delay.compareTo(backoffTimeoutMaxDuration) > 0) {
-        delay = backoffTimeoutMaxDuration;
+      Duration delay = this.backoffTimeoutInitialDuration.multipliedBy(multiplier);
+      if (delay.compareTo(this.backoffTimeoutMaxDuration) > 0) {
+        delay = this.backoffTimeoutMaxDuration;
       }
       LOG.info("Back-off delay {}ms", delay.toMillis());
 
@@ -96,15 +108,28 @@ public class SubscriberErrorsHandler {
     }
   }
 
+  /**
+   * Returns the timeout duration.
+   *
+   * @return the timeout duration.
+   */
   public Duration timeoutDuration() {
-    return backoffTimeoutMaxDuration.plus(
-        Duration.ofMillis((long) (backoffTimeoutMaxDuration.toMillis() * idleTimeoutMultiplier))
+    return this.backoffTimeoutMaxDuration.plus(
+      Duration.ofMillis((long) (
+        this.backoffTimeoutMaxDuration.toMillis() * this.idleTimeoutMultiplier
+      ))
     );
   }
 
+  /**
+   * Handles the throwable.
+   *
+   * @param throwable the throwable to handle
+   */
   public static void handleFatalApplicationError(Throwable throwable) {
     LOG.error("Fatal error when calling API", throwable);
 
     StellarInboundApplication.shutdown();
   }
+
 }

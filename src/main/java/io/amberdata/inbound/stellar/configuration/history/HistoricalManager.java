@@ -5,6 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.amberdata.inbound.core.configuration.InboundApiProperties;
 import io.amberdata.inbound.stellar.client.HorizonServer;
 
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,45 +25,65 @@ import org.stellar.sdk.requests.TooManyRequestsException;
 import org.stellar.sdk.responses.Page;
 import org.stellar.sdk.responses.TransactionResponse;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
 @Component
 public class HistoricalManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(HistoricalManager.class);
 
   private final boolean isActive;
-  private final Server horizonServer;
-  private final Long ledgerSequenceNumber;
+  private final Server  horizonServer;
+  private final Long    ledgerSequenceNumberStart;
+  private final Long    ledgerSequenceNumberEnd;
 
   private String lastLedgerToken;
   private String lastTransactionToken;
 
+  /**
+   * Default constructor.
+   *
+   * @param ledgerSequenceNumberStart the ledger number to start the historical manager from
+   * @param ledgerSequenceNumberEnd   the ledger number to end   the historical manager on
+   * @param horizonServer             the Horizon server
+   * @param apiProperties             the API properties
+   */
   public HistoricalManager(
-      @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumber,
-      HorizonServer horizonServer,
+      @Value("${stellar.state.start-all-from-ledger}") Long ledgerSequenceNumberStart,
+      @Value("${stellar.state.end-all-from-ledger}")   Long ledgerSequenceNumberEnd,
+      HorizonServer        horizonServer,
       InboundApiProperties apiProperties
   ) {
-    if (ledgerSequenceNumber != null && ledgerSequenceNumber > 0) {
+    if (ledgerSequenceNumberStart != null && ledgerSequenceNumberStart > 0) {
       this.isActive = true;
-      this.ledgerSequenceNumber = ledgerSequenceNumber;
+      this.ledgerSequenceNumberStart = ledgerSequenceNumberStart;
     } else {
       this.isActive = false;
-      this.ledgerSequenceNumber = this.getLedgerSequenceNumber(apiProperties);
+      this.ledgerSequenceNumberStart = this.getLedgerSequenceNumber(apiProperties);
     }
+    this.ledgerSequenceNumberEnd = ledgerSequenceNumberEnd;
 
     this.horizonServer = horizonServer.horizonServer();
   }
 
+  /**
+   * Returns true if the historical manager is not enabled.
+   *
+   * @return True if the historical manager is disabled.
+   */
   public boolean disabled() {
     return !this.isActive;
   }
 
+  public Long getLastLedger() {
+    return this.ledgerSequenceNumberEnd;
+  }
+
+  /**
+   * Returns the token to paginate ledgers.
+   *
+   * @return The token to paginate ledgers.
+   */
   public synchronized String ledgerPagingToken() {
-    ensureIsActive();
+    this.ensureIsActive();
 
     if (this.lastLedgerToken != null) {
       return this.lastLedgerToken;
@@ -66,25 +91,30 @@ public class HistoricalManager {
 
     LOG.info(
         "Going to request paging token for ledger with sequence number {}",
-        this.ledgerSequenceNumber
+        this.ledgerSequenceNumberStart
     );
 
     try {
       String token = this.horizonServer.ledgers()
-          .ledger(this.ledgerSequenceNumber)
+          .ledger(this.ledgerSequenceNumberStart)
           .getPagingToken();
 
       this.lastLedgerToken = token;
 
       return token;
-    } catch (Exception ex) {
+    } catch (Exception e) {
       throw new IllegalStateException(
-          "Error occurred, provided ledger sequence: " + this.ledgerSequenceNumber,
-          ex
+          "Error occurred, provided ledger sequence: " + this.ledgerSequenceNumberStart,
+          e
       );
     }
   }
 
+  /**
+   * Returns the token to paginate transactions.
+   *
+   * @return the token to paginate transactions.
+   */
   public synchronized String transactionPagingToken() {
     this.ensureIsActive();
 
@@ -92,7 +122,7 @@ public class HistoricalManager {
       return this.lastTransactionToken;
     }
 
-    String token = transactionPagingToken(this.ledgerSequenceNumber);
+    String token = this.transactionPagingToken(this.ledgerSequenceNumberStart);
     this.lastTransactionToken = token;
 
     return token;
@@ -120,7 +150,7 @@ public class HistoricalManager {
               "There are no transactions in ledger with sequence number {} \n"
               + " going to check the next ledger in sequence", seqNumber
           );
-          waitBeforeNextLedgerProcessing();
+          this.waitBeforeNextLedgerProcessing();
         }
 
         ++seqNumber;
@@ -128,18 +158,18 @@ public class HistoricalManager {
       return transactions.get(0).getPagingToken();
     } catch (TooManyRequestsException tmre) {
       throw tmre;
-    } catch (Exception ex) {
-      // this kind of exception will make the app to stop with fatal error
+    } catch (Exception e) {
+      // This kind of exception will make the app to stop with fatal error
       throw new IllegalStateException(
-          "Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumber,
-          ex
+          "Error occurred, provided ledger sequence number: " + this.ledgerSequenceNumberStart,
+          e
       );
     }
   }
 
   private void defaultHttpHeaders(InboundApiProperties apiProperties, HttpHeaders httpHeaders) {
     httpHeaders.add("x-amberdata-blockchain-id", apiProperties.getBlockchainId());
-    httpHeaders.add("x-amberdata-api-key", apiProperties.getApiKey());
+    httpHeaders.add("x-amberdata-api-key",       apiProperties.getApiKey());
     httpHeaders.setContentType(MediaType.APPLICATION_JSON);
   }
 
@@ -165,7 +195,7 @@ public class HistoricalManager {
       return payload == null
           ? Long.valueOf(0L)
           : Long.parseLong((String) payload.get("number"));
-    } catch (Exception ex) {
+    } catch (Exception e) {
       return Long.valueOf(0L);
     }
   }
@@ -187,4 +217,5 @@ public class HistoricalManager {
       );
     }
   }
+
 }
