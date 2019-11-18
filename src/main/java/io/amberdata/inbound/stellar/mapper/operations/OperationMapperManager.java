@@ -72,7 +72,7 @@ public class OperationMapperManager {
     );
     this.add(
         PathPaymentOperationResponse.class,
-        new PaymentOperationMapper(assetMapper)
+        new PathPaymentOperationMapper(assetMapper)
     );
     this.add(
         PathPaymentStrictReceiveOperationResponse.class,
