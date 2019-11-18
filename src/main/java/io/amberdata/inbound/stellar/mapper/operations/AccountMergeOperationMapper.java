@@ -53,9 +53,9 @@ public class AccountMergeOperationMapper implements OperationMapper {
           lumensTransferred = lumensTransferred.add(new BigDecimal(balance.getBalance()));
         }
       }
-    } catch (IOException ioe) {
-      // throw new HorizonServer.StellarException(ioe.getMessage(), ioe);
-      LOG.warn(ioe.getMessage(), ioe);
+    } catch (Exception e) {
+      // throw new HorizonServer.StellarException(e.getMessage(), e);
+      LOG.warn(e.getMessage(), e);
       lumensTransferred = BigDecimal.ZERO;
     }
 
