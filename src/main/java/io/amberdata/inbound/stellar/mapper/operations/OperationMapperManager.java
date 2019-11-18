@@ -33,6 +33,7 @@ import org.stellar.sdk.responses.operations.ManageSellOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentStrictReceiveOperationResponse;
+import org.stellar.sdk.responses.operations.PathPaymentStrictSendOperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
 import org.stellar.sdk.responses.operations.SetOptionsOperationResponse;
 
@@ -53,7 +54,7 @@ public class OperationMapperManager {
   @Autowired
   public OperationMapperManager(AssetMapper assetMapper, HorizonServer server) {
     this.responsesMap = new HashMap<>();
-    this.add(AccountMergeOperationResponse.class,  new AccountMergeOperationMapper());
+    this.add(AccountMergeOperationResponse.class,  new AccountMergeOperationMapper(server));
     this.add(AllowTrustOperationResponse.class,    new AllowTrustOperationMapper(assetMapper));
     this.add(BumpSequenceOperationResponse.class,  new BumpSequenceOperationMapper());
     this.add(ChangeTrustOperationResponse.class,   new ChangeTrustOperationMapper(assetMapper));
@@ -71,11 +72,15 @@ public class OperationMapperManager {
     );
     this.add(
         PathPaymentOperationResponse.class,
-        new PathPaymentOperationMapper(assetMapper)
+        new PaymentOperationMapper(assetMapper)
     );
     this.add(
         PathPaymentStrictReceiveOperationResponse.class,
         new PathPaymentStrictReceiveOperationMapper(assetMapper)
+    );
+    this.add(
+        PathPaymentStrictSendOperationResponse.class,
+        new PathPaymentStrictSendOperationMapper(assetMapper)
     );
     this.add(PaymentOperationResponse.class,    new PaymentOperationMapper(assetMapper));
     this.add(SetOptionsOperationResponse.class, new SetOptionsOperationMapper());
@@ -112,6 +117,7 @@ public class OperationMapperManager {
    *
    * @return the function call.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse, Long ledger, Integer index) {
     OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
 
@@ -125,7 +131,7 @@ public class OperationMapperManager {
           + operationResponse.getClass().getSimpleName()
       );
       functionCall = new FunctionCall();
-      functionCall.setName("unknown");
+      functionCall.setName     ("unknown");
       functionCall.setSignature("unknown_operation");
       functionCall.setArguments(Collections.emptyList());
     } else {
@@ -134,13 +140,13 @@ public class OperationMapperManager {
 
     List<String> effects = this.fetchEffectsForOperation(operationResponse);
 
-    functionCall.setBlockNumber(ledger);
+    functionCall.setBlockNumber    (ledger);
     functionCall.setTransactionHash(transactionHash);
-    functionCall.setTimestamp(Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
-    functionCall.setDepth(0);
-    functionCall.setIndex(index);
-    functionCall.setHash(this.generateOperationHash(ledger, transactionHash, index));
-    functionCall.setResult(String.join(",", effects));
+    functionCall.setTimestamp      (Instant.parse(operationResponse.getCreatedAt()).toEpochMilli());
+    functionCall.setDepth          (0);
+    functionCall.setIndex          (index);
+    functionCall.setHash           (this.generateOperationHash(ledger, transactionHash, index));
+    functionCall.setResult         (String.join(",", effects));
 
     return functionCall;
   }
@@ -172,16 +178,17 @@ public class OperationMapperManager {
     this.responsesMap.put(type, mapper);
   }
 
+  @SuppressWarnings("checkstyle:MethodParamPad")
   private List<String> fetchEffectsForOperation(OperationResponse operationResponse) {
     try {
-      return server.horizonServer()
-        .effects()
+      return this.server.horizonServer()
+        .effects     ()
         .forOperation(operationResponse.getId())
-        .execute()
-        .getRecords()
-        .stream()
-        .map(EffectResponse::getType)
-        .collect(Collectors.toList());
+        .execute     ()
+        .getRecords  ()
+        .stream      ()
+        .map         (EffectResponse::getType)
+        .collect     (Collectors.toList());
     } catch (IOException ioe) {
       return Collections.emptyList();
     }

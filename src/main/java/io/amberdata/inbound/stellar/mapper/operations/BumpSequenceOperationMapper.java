@@ -3,6 +3,8 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
+import java.math.BigDecimal;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -15,15 +17,17 @@ import org.stellar.sdk.responses.operations.OperationResponse;
 public class BumpSequenceOperationMapper implements OperationMapper {
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     BumpSequenceOperationResponse response = (BumpSequenceOperationResponse) operationResponse;
 
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response))
-        .type(BumpSequenceOperation.class.getSimpleName())
-        .meta(getOptionalProperties(response))
-        .signature("bump_sequence(sequence_number)")
-        .arguments(
+        .from             (this.fetchAccountId(response))
+        .type             (BumpSequenceOperation.class.getSimpleName())
+        .meta             (this.getOptionalProperties(response))
+        .lumensTransferred(BigDecimal.ZERO)
+        .signature        ("bump_sequence(sequence_number)")
+        .arguments        (
             Collections.singletonList(
                 FunctionCall.Argument.from(
                     "bump_to",

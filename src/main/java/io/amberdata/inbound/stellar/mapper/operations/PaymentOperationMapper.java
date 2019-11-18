@@ -4,6 +4,8 @@ import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 
+import java.math.BigDecimal;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +30,7 @@ public class PaymentOperationMapper implements OperationMapper {
   }
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     PaymentOperationResponse response = (PaymentOperationResponse) operationResponse;
 
@@ -45,15 +48,20 @@ public class PaymentOperationMapper implements OperationMapper {
 
     Asset asset = this.assetMapper.map(response.getAsset());
 
+    BigDecimal lumensTransferred = "native".equals(response.getAsset().getType())
+        ? new BigDecimal(response.getAmount())
+        : BigDecimal.ZERO;
+
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response.getFrom()))
-        .to(this.fetchAccountId(response.getTo()))
-        .type(PaymentOperation.class.getSimpleName())
-        .assetType(asset.getCode())
-        .value(response.getAmount())
-        .meta(this.getOptionalProperties(asset))
-        .signature("payment(account_id, asset, integer)")
-        .arguments(
+        .from             (this.fetchAccountId(response.getFrom()))
+        .to               (this.fetchAccountId(response.getTo()))
+        .type             (PaymentOperation.class.getSimpleName())
+        .assetType        (asset.getCode())
+        .value            (response.getAmount())
+        .lumensTransferred(lumensTransferred)
+        .meta             (this.getOptionalProperties(asset))
+        .signature        ("payment(account_id, asset, integer)")
+        .arguments        (
             Arrays.asList(
                 FunctionCall.Argument.from("destination", this.fetchAccountId(response.getTo())),
                 FunctionCall.Argument.from("asset",       asset.getCode()),
@@ -72,6 +80,7 @@ public class PaymentOperationMapper implements OperationMapper {
     PaymentOperationResponse response = (PaymentOperationResponse) operationResponse;
 
     Asset asset = this.assetMapper.map(response.getAsset());
+
     return Collections.singletonList(asset);
   }
 

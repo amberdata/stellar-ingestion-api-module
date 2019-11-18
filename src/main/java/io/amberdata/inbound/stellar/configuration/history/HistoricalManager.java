@@ -73,7 +73,7 @@ public class HistoricalManager {
     return !this.isActive;
   }
 
-  public Long getLastLedger () {
+  public Long getLastLedger() {
     return this.ledgerSequenceNumberEnd;
   }
 

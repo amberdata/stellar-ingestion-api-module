@@ -15,6 +15,7 @@ public class AssetMapper {
    *
    * @return the converted asset.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public Asset map(org.stellar.sdk.Asset asset) {
     final Asset.AssetType assetType;
     final String          code;
@@ -47,10 +48,10 @@ public class AssetMapper {
     }
 
     return new Asset.Builder()
-      .type(assetType)
-      .code(code)
+      .type         (assetType)
+      .code         (code)
       .issuerAccount(issuer)
-      .build();
+      .build        ();
   }
 
 }

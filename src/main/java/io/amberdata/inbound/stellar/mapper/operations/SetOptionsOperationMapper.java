@@ -3,6 +3,8 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
+import java.math.BigDecimal;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -22,6 +24,7 @@ public class SetOptionsOperationMapper implements OperationMapper {
   private static final Logger LOG = LoggerFactory.getLogger(SetOptionsOperationMapper.class);
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     SetOptionsOperationResponse response = (SetOptionsOperationResponse) operationResponse;
 
@@ -34,15 +37,16 @@ public class SetOptionsOperationMapper implements OperationMapper {
     }
 
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response.getSourceAccount()))
-        .to(this.fetchAccountId(response.getInflationDestination()))
-        .type(SetOptionsOperation.class.getSimpleName())
-        .meta(getOptionalProperties(response))
-        .signature(
+        .from             (this.fetchAccountId(response.getSourceAccount()))
+        .to               (this.fetchAccountId(response.getInflationDestination()))
+        .type             (SetOptionsOperation.class.getSimpleName())
+        .lumensTransferred(BigDecimal.ZERO)
+        .meta             (this.getOptionalProperties(response))
+        .signature        (
             "set_options(account_id, integer, integer, integer, integer,"
             + "integer, integer, string, {public_key, weight})"
         )
-        .arguments(
+        .arguments        (
             Arrays.asList(
                 FunctionCall.Argument.from(
                     "inflation_destination",
@@ -63,14 +67,22 @@ public class SetOptionsOperationMapper implements OperationMapper {
                         : ""
                 ),
 
-                FunctionCall.Argument
-                    .from("master_weight", Objects.toString(response.getMasterKeyWeight(), "")),
-                FunctionCall.Argument
-                    .from("low_threshold", Objects.toString(response.getLowThreshold(), "")),
-                FunctionCall.Argument
-                    .from("medium_threshold", Objects.toString(response.getMedThreshold(), "")),
-                FunctionCall.Argument
-                    .from("high_threshold", Objects.toString(response.getHighThreshold(), "")),
+                FunctionCall.Argument.from(
+                    "master_weight",
+                    Objects.toString(response.getMasterKeyWeight(), "")
+                ),
+                FunctionCall.Argument.from(
+                    "low_threshold",
+                    Objects.toString(response.getLowThreshold(), "")
+                ),
+                FunctionCall.Argument.from(
+                    "medium_threshold",
+                    Objects.toString(response.getMedThreshold(), "")
+                ),
+                FunctionCall.Argument.from(
+                    "high_threshold",
+                    Objects.toString(response.getHighThreshold(), "")
+                ),
                 FunctionCall.Argument.from("home_domain", response.getHomeDomain()),
                 FunctionCall.Argument.from(
                     "signer",

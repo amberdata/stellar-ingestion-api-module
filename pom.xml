@@ -45,13 +45,13 @@
         <dependency>
             <groupId>io.amberdata.inbound</groupId>
             <artifactId>inbound-domain-model</artifactId>
-            <version>0.1.22</version>
+            <version>0.1.23</version>
         </dependency>
 
         <dependency>
             <groupId>io.amberdata.inbound</groupId>
             <artifactId>inbound-core</artifactId>
-            <version>0.0.10</version>
+            <version>0.0.11</version>
             <exclusions>
                 <exclusion>
                     <groupId>io.amberdata.inbound</groupId>
@@ -146,12 +146,25 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-checkstyle-plugin</artifactId>
                 <version>3.1.0</version>
+                <dependencies>
+                    <dependency>
+                        <groupId>com.puppycrawl.tools</groupId>
+                        <artifactId>checkstyle</artifactId>
+                        <version>8.26</version>
+                    </dependency>
+                </dependencies>
                 <executions>
                     <execution>
                         <id>validate</id>
                         <phase>validate</phase>
                         <configuration>
-                            <configLocation>google_checks.xml</configLocation>
+                            <!--
+                                A custom version is used here to allow for the use of the annotation @SuppressWarnings.
+                                This file is a copy of the Google published style guide with the addition of modules:
+                                  - SuppressWarningsFilter
+                                  - SuppressWarningsHolder
+                            -->
+                            <configLocation>src/main/resources/google_checks.xml</configLocation>
                             <encoding>UTF-8</encoding>
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>

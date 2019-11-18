@@ -254,10 +254,12 @@ public class StellarSubscriberConfiguration {
   }
 
   private void processLedgers(List<BlockchainEntityWithState<Block>> blocks) {
+    @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
     long timeLedgers = System.currentTimeMillis();
     long maxSequence = 0;
 
     for (BlockchainEntityWithState<Block> block : blocks) {
+      @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
       long timeLedger = System.currentTimeMillis();
 
       long ledger = block.getEntity().getNumber().longValue();
@@ -278,30 +280,34 @@ public class StellarSubscriberConfiguration {
               .forLedger(ledger)
               .execute()
         );
-        LOG.info("[PERFORMANCE] getTransactions (" + transactionResponses.size() + "): " + (System.currentTimeMillis() - timeTransactions) + " ms");
+        this.logPerformance("getTransactions", transactionResponses, timeTransactions);
 
         long timeOperations = System.currentTimeMillis();
         List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
-        LOG.info("[PERFORMANCE] getOperations (" + operationResponses.size() + "): " + (System.currentTimeMillis() - timeOperations) + " ms");
+        this.logPerformance("getOperations", operationResponses, timeOperations);
 
         Map<String, List<OperationResponse>> operations = new HashMap<>();
         for (OperationResponse operationResponse : operationResponses) {
           String transactionHash = operationResponse.getTransactionHash();
-          List<OperationResponse> ops = operations.computeIfAbsent(transactionHash, k -> new ArrayList<>());
-          ops.add(operationResponse);
+          operations
+              .computeIfAbsent(transactionHash, k -> new ArrayList<>())
+              .add(operationResponse);
         }
 
         for (TransactionResponse transactionResponse : transactionResponses) {
-          Transaction transaction = this.enrichTransaction(transactionResponse, operations.getOrDefault(transactionResponse.getHash(), Collections.emptyList()));
+          Transaction transaction = this.enrichTransaction(
+              transactionResponse,
+              operations.getOrDefault(transactionResponse.getHash(), Collections.emptyList())
+          );
           transactions.add(transaction);
 
           long timeAddresses = System.currentTimeMillis();
           addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
-          LOG.info("[PERFORMANCE] getAddresses: " + (System.currentTimeMillis() - timeAddresses) + " ms");
+          this.logPerformance("getAddresses", addresses, timeAddresses);
 
           long timeAssets = System.currentTimeMillis();
           assets.addAll(this.collectAssets(operationResponses, ledger));
-          LOG.info("[PERFORMANCE] getAssets: " + (System.currentTimeMillis() - timeAssets) + " ms");
+          this.logPerformance("getAssets", assets, timeAssets);
         }
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
@@ -310,36 +316,36 @@ public class StellarSubscriberConfiguration {
       if (!addresses.isEmpty()) {
         long timePublishAddresses = System.currentTimeMillis();
         this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-        LOG.info("[PERFORMANCE] publishAddresses (" + addresses.size() + "): " + (System.currentTimeMillis() - timePublishAddresses) + " ms");
+        this.logPerformance("publishAddresses", addresses, timePublishAddresses);
       }
 
       if (!assets.isEmpty()) {
         long timePublishAssets = System.currentTimeMillis();
         this.apiClient.publish("/assets", new ArrayList<>(assets));
-        LOG.info("[PERFORMANCE] publishAssets (" + assets.size() + "): " + (System.currentTimeMillis() - timePublishAssets) + " ms");
+        this.logPerformance("publishAssets", assets, timePublishAssets);
       }
 
       if (!transactions.isEmpty()) {
         long timePublishTransactions = System.currentTimeMillis();
         this.apiClient.publish("/transactions", transactions);
-        LOG.info("[PERFORMANCE] publishTransactions (" + transactions.size() + "): " + (System.currentTimeMillis() - timePublishTransactions) + " ms");
+        this.logPerformance("publishTransactions", transactions, timePublishTransactions);
       }
 
       this.enrichBlock(block, transactions);
 
-      LOG.info("[PERFORMANCE] ledger: " + (System.currentTimeMillis() - timeLedger) + " ms");
+      this.logPerformance("ledger", blocks, timeLedger);
     }
 
     long timePublishLedgers = System.currentTimeMillis();
     this.apiClient.publishWithState("/blocks", blocks);
-    LOG.info("[PERFORMANCE] publishLedgers (" + blocks.size() + "): " + (System.currentTimeMillis() - timePublishLedgers) + " ms");
+    this.logPerformance("publishLedgers", blocks, timePublishLedgers);
 
-    LOG.info("[PERFORMANCE] ledgers: " + (System.currentTimeMillis() - timeLedgers) + " ms");
+    this.logPerformance("ledgers", blocks, timeLedgers);
 
-    if ( this.historicalManager.getLastLedger() != null ) {
+    if (this.historicalManager.getLastLedger() != null) {
       if (maxSequence > this.historicalManager.getLastLedger()) {
         throw new HorizonServer.StellarException(
-            "Ending the collection since current ledger > " + this.historicalManager.getLastLedger() + "."
+            "Ending collection, current ledger > " + this.historicalManager.getLastLedger() + "."
         );
       }
     }
@@ -435,11 +441,11 @@ public class StellarSubscriberConfiguration {
     return this.modelMapper.mapAssets(operationResponses, ledger)
       .stream()
       .distinct()
-      .map(this::enrichAsset)
+      .map(this::enrichCachedAsset)
       .collect(Collectors.toList());
   }
 
-  private Asset enrichAsset(Asset asset) {
+  private Asset enrichCachedAsset(Asset asset) {
     String assetHash = asset.getType() + "_" + asset.getCode() + "_" + asset.getIssuerAccount();
     if (this.cache.containsKey(assetHash)) {
       return this.cache.get(assetHash);
@@ -460,4 +466,10 @@ public class StellarSubscriberConfiguration {
     }
   }
 
+  private <T> void logPerformance(String message, Collection<T> collection, long startTime) {
+    LOG.info(
+        "[PERFORMANCE] " + message + " (" + collection.size() + "): "
+        + (System.currentTimeMillis() - startTime) + " ms"
+    );
+  }
 }

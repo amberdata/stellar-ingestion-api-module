@@ -69,6 +69,7 @@ public class ModelMapper {
    *
    * @return the extracted ledger.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public Block mapLedger(LedgerResponse ledgerResponse) {
     Integer numTransactions = Integer.valueOf(
         ledgerResponse.getSuccessfulTransactionCount().intValue()
@@ -108,6 +109,7 @@ public class ModelMapper {
    *
    * @return the extracted transaction.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public Transaction mapTransaction(
       TransactionResponse     transactionResponse,
       List<OperationResponse> operationResponses
@@ -126,6 +128,11 @@ public class ModelMapper {
       to = tos.iterator().next();
     } else if (tos.size() > 1) {
       to = "_";
+    }
+
+    BigDecimal value = BigDecimal.ZERO;
+    for (FunctionCall functionCall : functionCalls) {
+      value = value.add(functionCall.getLumensTransferred());
     }
 
     Map<String, Object> meta = new HashMap<>();
@@ -149,7 +156,7 @@ public class ModelMapper {
       .functionCalls   (functionCalls)
       .status          (transactionResponse.isSuccessful() ? "0x1" : "0x0")
       .meta            (meta)
-      .value           (BigDecimal.ZERO)
+      .value           (value)
       .build           ();
   }
 
@@ -196,6 +203,7 @@ public class ModelMapper {
    *
    * @return the extracted assets.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public List<Asset> mapAssets(List<OperationResponse> operationResponses, Long ledger) {
     List<Asset> allAssets = new ArrayList<>();
     for (int i = 0; i < operationResponses.size(); ++i) {
@@ -223,6 +231,7 @@ public class ModelMapper {
    *
    * @return the extracted account.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public Address mapAccount(AccountResponse accountResponse, Long timestamp) {
     return new Address.Builder()
       .hash     (accountResponse.getAccountId())
@@ -259,6 +268,7 @@ public class ModelMapper {
    *
    * @return the extracted orders.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public List<Order> mapOrders(List<OperationResponse> operationResponses, Long ledger) {
     List<Order> orders = new ArrayList<>();
     for (int i = 0; i < operationResponses.size(); ++i) {
@@ -311,6 +321,7 @@ public class ModelMapper {
    *
    * @return the extracted trades.
    */
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public List<Trade> mapTrades(List<ExtendedTradeResponse> records) {
     return records
       .stream ()
@@ -391,6 +402,7 @@ public class ModelMapper {
     return optionalProperties;
   }
 
+  @SuppressWarnings("checkstyle:MethodParamPad")
   private Trade mapTrade(ExtendedTradeResponse extendedTradeResponse) {
     TradeResponse tradeResponse = extendedTradeResponse.getTradeResponse();
 
@@ -440,7 +452,7 @@ public class ModelMapper {
       .build           ();
   }
 
-  private String getAssetType (Asset asset) {
+  private String getAssetType(Asset asset) {
     return asset.getType() == Asset.AssetType.ASSET_TYPE_NATIVE
       ? "native"
       : asset.getIssuerAccount() + "." + asset.getCode();

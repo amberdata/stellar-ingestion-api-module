@@ -4,6 +4,8 @@ import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 
+import java.math.BigDecimal;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +30,7 @@ public class ChangeTrustOperationMapper implements OperationMapper {
   }
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     ChangeTrustOperationResponse response = (ChangeTrustOperationResponse) operationResponse;
 
@@ -46,13 +49,14 @@ public class ChangeTrustOperationMapper implements OperationMapper {
     Asset asset = this.assetMapper.map(response.getAsset());
 
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response.getTrustor()))
-        .to(this.fetchAccountId(response.getTrustee()))
-        .type(ChangeTrustOperation.class.getSimpleName())
-        .assetType(asset.getCode())
-        .meta(getOptionalProperties(response, asset))
-        .signature("change_trust(asset, integer)")
-        .arguments(
+        .from             (this.fetchAccountId(response.getTrustor()))
+        .to               (this.fetchAccountId(response.getTrustee()))
+        .type             (ChangeTrustOperation.class.getSimpleName())
+        .assetType        (asset.getCode())
+        .lumensTransferred(BigDecimal.ZERO)
+        .meta             (this.getOptionalProperties(response, asset))
+        .signature        ("change_trust(asset, integer)")
+        .arguments        (
             Arrays.asList(
                 FunctionCall.Argument.from("line",  asset.getCode()),
                 FunctionCall.Argument.from("limit", response.getLimit())

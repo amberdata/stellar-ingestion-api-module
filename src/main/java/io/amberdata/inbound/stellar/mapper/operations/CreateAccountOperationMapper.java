@@ -3,6 +3,8 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 
+import java.math.BigDecimal;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -19,6 +21,7 @@ public class CreateAccountOperationMapper implements OperationMapper {
   private static final Logger LOG = LoggerFactory.getLogger(CreateAccountOperationMapper.class);
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     CreateAccountOperationResponse response = (CreateAccountOperationResponse) operationResponse;
 
@@ -33,12 +36,13 @@ public class CreateAccountOperationMapper implements OperationMapper {
     String to = this.fetchAccountId(response.getAccount());
 
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response.getFunder()))
-        .to(to)
-        .type(CreateAccountOperation.class.getSimpleName())
-        .value(response.getStartingBalance())
-        .signature("create_account(account_id, integer)")
-        .arguments(
+        .from             (this.fetchAccountId(response.getFunder()))
+        .to               (to)
+        .type             (CreateAccountOperation.class.getSimpleName())
+        .value            (response.getStartingBalance())
+        .lumensTransferred(new BigDecimal(response.getStartingBalance()))
+        .signature        ("create_account(account_id, integer)")
+        .arguments        (
             Arrays.asList(
                 FunctionCall.Argument.from("destination",      to),
                 FunctionCall.Argument.from("starting_balance", response.getStartingBalance())

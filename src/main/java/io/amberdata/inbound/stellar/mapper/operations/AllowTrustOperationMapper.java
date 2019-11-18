@@ -4,6 +4,8 @@ import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 
+import java.math.BigDecimal;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -28,6 +30,7 @@ public class AllowTrustOperationMapper implements OperationMapper {
   }
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     AllowTrustOperationResponse response = (AllowTrustOperationResponse) operationResponse;
 
@@ -46,13 +49,14 @@ public class AllowTrustOperationMapper implements OperationMapper {
     Asset asset = this.assetMapper.map(response.getAsset());
 
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response.getTrustee()))
-        .to(this.fetchAccountId(response.getTrustor()))
-        .type(AllowTrustOperation.class.getSimpleName())
-        .assetType(asset.getCode())
-        .meta(getOptionalProperties(response, asset))
-        .signature("allow_trust(account_id, asset, boolean)")
-        .arguments(
+        .from             (this.fetchAccountId(response.getTrustee()))
+        .to               (this.fetchAccountId(response.getTrustor()))
+        .type             (AllowTrustOperation.class.getSimpleName())
+        .assetType        (asset.getCode())
+        .meta             (this.getOptionalProperties(response, asset))
+        .lumensTransferred(BigDecimal.ZERO)
+        .signature        ("allow_trust(account_id, asset, boolean)")
+        .arguments        (
             Arrays.asList(
                 FunctionCall.Argument.from("trustor",   this.fetchAccountId(response.getTrustor())),
                 FunctionCall.Argument.from("type",      asset.getCode()),

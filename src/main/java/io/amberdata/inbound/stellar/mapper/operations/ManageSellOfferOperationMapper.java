@@ -4,6 +4,8 @@ import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 
+import java.math.BigDecimal;
+
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +29,7 @@ public class ManageSellOfferOperationMapper implements OperationMapper {
   }
 
   @Override
+  @SuppressWarnings("checkstyle:MethodParamPad")
   public FunctionCall map(OperationResponse operationResponse) {
     ManageSellOfferOperationResponse response =
         (ManageSellOfferOperationResponse) operationResponse;
@@ -41,14 +44,15 @@ public class ManageSellOfferOperationMapper implements OperationMapper {
     String offerId = response.getOfferId().toString();
 
     return new FunctionCall.Builder()
-        .from(this.fetchAccountId(response))
-        .type(ManageSellOfferOperation.class.getSimpleName())
-        .value(response.getAmount())
-        .meta(this.getOptionalProperties(response, selling, buying))
-        .signature(
+        .from             (this.fetchAccountId(response))
+        .type             (ManageSellOfferOperation.class.getSimpleName())
+        .value            (response.getAmount())
+        .lumensTransferred(BigDecimal.ZERO)
+        .meta             (this.getOptionalProperties(response, selling, buying))
+        .signature        (
             "manage_offer(asset, asset, integer, {numerator, denominator}, unsigned_integer)"
         )
-        .arguments(
+        .arguments        (
             Arrays.asList(
                 FunctionCall.Argument.from("selling",  selling.getCode()),
                 FunctionCall.Argument.from("buying",   buying.getCode()),
