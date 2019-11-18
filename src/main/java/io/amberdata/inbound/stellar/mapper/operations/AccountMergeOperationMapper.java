@@ -43,26 +43,31 @@ public class AccountMergeOperationMapper implements OperationMapper {
     }
 
     BigDecimal lumensTransferred = BigDecimal.ZERO;
-    try {
-      AccountResponse accountResponse = this.server.horizonServer()
-          .accounts()
-          .account(response.getAccount());
-
-      for (AccountResponse.Balance balance : accountResponse.getBalances()) {
-        if ("native".equals(balance.getAssetType())) {
-          lumensTransferred = lumensTransferred.add(new BigDecimal(balance.getBalance()));
-        }
-      }
-    } catch (Exception e) {
-      // throw new HorizonServer.StellarException(e.getMessage(), e);
-      LOG.warn(e.getMessage(), e);
-      lumensTransferred = BigDecimal.ZERO;
-    }
+    //
+    // Disabled this piece of code, as there is no way to enforce getting the balance at a specific
+    // ledger, meaning it returns the balance at the current time, not at the time of the operation!
+    //
+    // try {
+    //   AccountResponse accountResponse = this.server.horizonServer()
+    //       .accounts()
+    //       .account(response.getAccount());
+    //
+    //   for (AccountResponse.Balance balance : accountResponse.getBalances()) {
+    //     if ("native".equals(balance.getAssetType())) {
+    //       lumensTransferred = lumensTransferred.add(new BigDecimal(balance.getBalance()));
+    //     }
+    //   }
+    // } catch (Exception e) {
+    //   // throw new HorizonServer.StellarException(e.getMessage(), e);
+    //   LOG.warn(e.getMessage(), e);
+    //   lumensTransferred = BigDecimal.ZERO;
+    // }
 
     return new FunctionCall.Builder()
       .from             (this.fetchAccountId(response.getAccount()))
       .to               (this.fetchAccountId(response.getInto()))
       .type             (AccountMergeOperation.class.getSimpleName())
+      .value            (lumensTransferred.toString())
       .lumensTransferred(lumensTransferred)
       .signature        ("account_merge(account_id)")
       .arguments        (
