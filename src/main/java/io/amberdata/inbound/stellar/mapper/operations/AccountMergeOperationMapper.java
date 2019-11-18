@@ -3,11 +3,11 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.client.HorizonServer;
-
-import java.io.IOException;
+import io.amberdata.inbound.stellar.configuration.subscribers.StellarSubscriberConfiguration;
 
 import java.math.BigDecimal;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -15,7 +15,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.stellar.sdk.AccountMergeOperation;
-import org.stellar.sdk.responses.AccountResponse;
+import org.stellar.sdk.responses.effects.AccountCreditedEffectResponse;
+import org.stellar.sdk.responses.effects.AccountDebitedEffectResponse;
+import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
@@ -42,37 +44,58 @@ public class AccountMergeOperationMapper implements OperationMapper {
       LOG.warn("Destination account in AccountMergeOperationResponse is null");
     }
 
-    BigDecimal lumensTransferred = BigDecimal.ZERO;
-    //
-    // Disabled this piece of code, as there is no way to enforce getting the balance at a specific
-    // ledger, meaning it returns the balance at the current time, not at the time of the operation!
-    //
-    // try {
-    //   AccountResponse accountResponse = this.server.horizonServer()
-    //       .accounts()
-    //       .account(response.getAccount());
-    //
-    //   for (AccountResponse.Balance balance : accountResponse.getBalances()) {
-    //     if ("native".equals(balance.getAssetType())) {
-    //       lumensTransferred = lumensTransferred.add(new BigDecimal(balance.getBalance()));
-    //     }
-    //   }
-    // } catch (Exception e) {
-    //   // throw new HorizonServer.StellarException(e.getMessage(), e);
-    //   LOG.warn(e.getMessage(), e);
-    //   lumensTransferred = BigDecimal.ZERO;
-    // }
+    BigDecimal debited = BigDecimal.ZERO;
+
+    try {
+      BigDecimal credited = BigDecimal.ZERO;
+
+      List<EffectResponse> effects = StellarSubscriberConfiguration.getObjects(
+          this.server,
+          this.server.horizonServer()
+              .effects()
+              .forOperation(response.getId().longValue())
+              .execute()
+      );
+
+      for (EffectResponse effect : effects) {
+        String effectType = effect.getType();
+        if ("account_debited".equals(effectType)) {
+          AccountDebitedEffectResponse effectResponse = (AccountDebitedEffectResponse) effect;
+          if ("native".equals(effectResponse.getAsset().getType())) {
+            debited = debited.add(new BigDecimal(effectResponse.getAmount()));
+          }
+        } else if ("account_credited".equals(effectType)) {
+          AccountCreditedEffectResponse effectResponse = (AccountCreditedEffectResponse) effect;
+          if ("native".equals(effectResponse.getAsset().getType())) {
+            credited = credited.add(new BigDecimal(effectResponse.getAmount()));
+          }
+        }
+      }
+
+      if (!debited.equals(credited)) {
+        throw new HorizonServer.StellarException(
+            "Effect '" + response.getId() + "' total debited and total credited do not match: "
+            + debited + " vs " + credited + "."
+        );
+      }
+    } catch (Exception e) {
+      // throw new HorizonServer.StellarException(e.getMessage(), e);
+      LOG.warn(e.getMessage(), e);
+      debited = BigDecimal.ZERO;
+    }
 
     return new FunctionCall.Builder()
       .from             (this.fetchAccountId(response.getAccount()))
       .to               (this.fetchAccountId(response.getInto()))
       .type             (AccountMergeOperation.class.getSimpleName())
-      .value            (lumensTransferred.toString())
-      .lumensTransferred(lumensTransferred)
-      .signature        ("account_merge(account_id)")
+      .value            (debited.toString())
+      .lumensTransferred(debited)
+      .signature        ("account_merge(source, destination, amount)")
       .arguments        (
-        Collections.singletonList(
-          FunctionCall.Argument.from("destination", this.fetchAccountId(response.getInto()))
+        Arrays.asList(
+          FunctionCall.Argument.from("source",      this.fetchAccountId(response.getAccount())),
+          FunctionCall.Argument.from("destination", this.fetchAccountId(response.getInto())),
+          FunctionCall.Argument.from("amount",      debited.toString())
         )
       )
       .build();

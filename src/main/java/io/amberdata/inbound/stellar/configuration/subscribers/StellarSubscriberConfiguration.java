@@ -63,6 +63,39 @@ import shadow.com.google.common.base.Optional;
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
 
+  /**
+   * Collect objects through all the available pages.
+   *
+   * @param server  the Horizon server
+   * @param page    the current page
+   * @param <T>     the type of objects to collect
+   *
+   * @return an exhaustive list of all the objects
+   */
+  public static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
+    List<T> list     = new ArrayList<>();
+    String  previous = null;
+    String  current  = page.getLinks().getSelf().getHref();
+
+    try {
+      do {
+        if ((current == null) || current.equals(previous)) {
+          return list;
+        }
+
+        list.addAll(page.getRecords());
+        page = page.getNextPage(server.horizonServer().getHttpClient());
+
+        previous = current;
+        current  = page == null ? null : page.getLinks().getSelf().getHref();
+      } while (page != null);
+    } catch (IOException | URISyntaxException e) {
+      throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
+    }
+
+    return list;
+  }
+
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
 
   /* package */ static void subscribeToLedgers(HorizonServer               server,
@@ -94,6 +127,7 @@ public class StellarSubscriberConfiguration {
         });
   }
 
+  @SuppressWarnings("checkstyle:MethodParamPad")
   /* package */ static Asset enrichAsset(HorizonServer server, Asset asset) {
     try {
       List<AssetResponse> records = StellarSubscriberConfiguration.getObjects(
@@ -108,11 +142,13 @@ public class StellarSubscriberConfiguration {
 
       if (records.size() > 0) {
         AssetResponse assetResponse = records.get(0);
-        asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
-        asset.setCode(assetResponse.getAssetCode());
+        asset.setType         (Asset.AssetType.fromName(assetResponse.getAssetType()));
+        asset.setCode         (assetResponse.getAssetCode());
         asset.setIssuerAccount(assetResponse.getAssetIssuer());
-        asset.setAmount(assetResponse.getAmount());
-        asset.setMeta(StellarSubscriberConfiguration.assetOptionalProperties(assetResponse));
+        asset.setAmount       (assetResponse.getAmount());
+        asset.setMeta         (
+            StellarSubscriberConfiguration.assetOptionalProperties(assetResponse)
+        );
       }
     } catch (Exception e) {
       LOG.error("Error during fetching an asset: " + asset.getCode(), e);
@@ -123,30 +159,6 @@ public class StellarSubscriberConfiguration {
     }
 
     return asset;
-  }
-
-  /* package */ static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
-    List<T> list     = new ArrayList<>();
-    String  previous = null;
-    String  current  = page.getLinks().getSelf().getHref();
-
-    try {
-      do {
-        if ((current == null) || current.equals(previous)) {
-          return list;
-        }
-
-        list.addAll(page.getRecords());
-        page = page.getNextPage(server.horizonServer().getHttpClient());
-
-        previous = current;
-        current  = page == null ? null : page.getLinks().getSelf().getHref();
-      } while (page != null);
-    } catch (IOException | URISyntaxException e) {
-      throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
-    }
-
-    return list;
   }
 
   private static Map<String, Object> assetOptionalProperties(AssetResponse assetResponse) {
