@@ -49,7 +49,7 @@ public class StellarValueFixerConfiguration {
    * @param modelMapper the model mapper
    * @param server      the Horizon server
    */
-  public StellarValueFixerConfiguration (
+  public StellarValueFixerConfiguration(
       @Value("${stellar.fix.value.ledger.start}") Long startLedger,
       @Value("${stellar.fix.value.ledger.end}")   Long endLedger,
       InboundApiClient apiClient,
@@ -70,7 +70,8 @@ public class StellarValueFixerConfiguration {
 
     AssetMapper assetMapper = new AssetMapper();
 
-    for (long number=26261000; number<26261001; ++number) {
+    for (long number = 26261000; number < 26261001; ++ number) {
+      long timeGetTransactions = System.currentTimeMillis();
       List<TransactionResponse> transactions = StellarSubscriberConfiguration.getObjects(
           this.server,
           this.server.horizonServer()
@@ -78,9 +79,15 @@ public class StellarValueFixerConfiguration {
               .forLedger(number)
               .execute()
       );
+      StellarSubscriberConfiguration.logPerformance(
+          "getTransactions",
+          transactions,
+          timeGetTransactions
+      );
       System.out.println("Ledger: " + number + ", # transactions: " + transactions.size());
 
       for (TransactionResponse transaction : transactions) {
+        long timeGetOperations = System.currentTimeMillis();
         List<OperationResponse> operationResponses = StellarSubscriberConfiguration.getObjects(
             this.server,
             this.server.horizonServer()
@@ -88,7 +95,11 @@ public class StellarValueFixerConfiguration {
                 .forTransaction(transaction.getHash())
                 .execute()
         );
-        System.out.println("Ledger: " + number + ", transaction: " + transaction.getHash() + ", # operations: " + operationResponses.size());
+        StellarSubscriberConfiguration.logPerformance(
+            "getOperations",
+            operationResponses,
+            timeGetOperations
+        );
 
         List<OperationResponse> operations = new ArrayList<>();
         for (OperationResponse operationResponse : operationResponses) {
@@ -103,10 +114,14 @@ public class StellarValueFixerConfiguration {
             operations.add(operationResponse);
           }
         }
-        System.out.println("Ledger: " + number + ", transaction: " + transaction.getHash() + ", # operations: " + operations.size());
+        System.out.println(
+            "Ledger: " + number
+            + ", transaction: " + transaction.getHash()
+            + ", # operations: " + operations.size()
+        );
 
-        if ( ! operations.isEmpty() ) {
-          List<FunctionCall> functionCalls = this.modelMapper.mapOperations(operations, Long.valueOf(number));
+        if (! operations.isEmpty()) {
+          List<FunctionCall> functionCalls = this.modelMapper.mapOperations(operations, number);
           BigDecimal         lumens        = BigDecimal.ZERO;
           for (FunctionCall functionCall : functionCalls) {
             lumens = lumens.add(functionCall.getLumensTransferred());
@@ -121,14 +136,14 @@ public class StellarValueFixerConfiguration {
           );
 
           System.out.println(transaction.getHash() + " -- " + lumens);
-//          Transaction tx = this.modelMapper.mapTransaction(transaction, operations);
-//          long timePublishTransactions = System.currentTimeMillis();
-//          this.apiClient.publish("/transactions", tx);
-//          StellarSubscriberConfiguration.logPerformance(
-//              "publishTransaction",
-//              transactions,
-//              timePublishTransactions
-//          );
+          // Transaction tx = this.modelMapper.mapTransaction(transaction, operations);
+          // long timePublishTransactions = System.currentTimeMillis();
+          // this.apiClient.publish("/transactions", tx);
+          // StellarSubscriberConfiguration.logPerformance(
+          //     "publishTransaction",
+          //     transactions,
+          //     timePublishTransactions
+          // );
         }
       }
     }

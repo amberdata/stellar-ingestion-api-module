@@ -138,6 +138,9 @@ public class OperationMapperManager {
       functionCall = operationMapper.map(operationResponse);
     }
 
+    Map<String, Object> metadata = new HashMap<>();
+    metadata.put("id", operationResponse.getId().toString());
+
     List<String> effects = this.fetchEffectsForOperation(operationResponse);
 
     functionCall.setBlockNumber    (ledger);
@@ -147,6 +150,7 @@ public class OperationMapperManager {
     functionCall.setIndex          (index);
     functionCall.setHash           (this.generateOperationHash(ledger, transactionHash, index));
     functionCall.setResult         (String.join(",", effects));
+    functionCall.setMeta           (metadata);
 
     return functionCall;
   }

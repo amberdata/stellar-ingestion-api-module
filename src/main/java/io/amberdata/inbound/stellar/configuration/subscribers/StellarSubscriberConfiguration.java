@@ -98,6 +98,14 @@ public class StellarSubscriberConfiguration {
     return list;
   }
 
+  /**
+   * Log performance timer.
+   *
+   * @param message    the message to log
+   * @param collection the collection of objects which have been handled so far
+   * @param startTime  the start time of this operation
+   * @param <T>        the type of objects that were performed on
+   */
   public static <T> void logPerformance(String message, Collection<T> collection, long startTime) {
     LOG.info(
         "[PERFORMANCE] " + message + " (" + collection.size() + "): "
