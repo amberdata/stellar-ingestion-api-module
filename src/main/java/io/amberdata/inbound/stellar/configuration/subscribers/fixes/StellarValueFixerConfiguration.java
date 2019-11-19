@@ -113,7 +113,7 @@ public class StellarValueFixerConfiguration {
             operations.add(operationResponse);
           }
         }
-        LOG.info("[LOCATION] " + number + "/" + transaction.getHash() + " : " + operations.size() + " operations");
+        // LOG.info("[LOCATION] " + number + "/" + transaction.getHash() + " : " + operations.size() + " operations");
 
         if (! operations.isEmpty()) {
           List<FunctionCall> functionCalls = this.modelMapper.mapOperations(operations, number);
@@ -130,7 +130,7 @@ public class StellarValueFixerConfiguration {
               timePublishFunctions
           );
 
-          LOG.info("[LUMENS] " + transaction.getHash() + " -- " + lumens);
+          LOG.info("[LUMENS] " + number + " / " + transaction.getHash() + " : " + lumens);
           // Transaction tx = this.modelMapper.mapTransaction(transaction, operations);
           // long timePublishTransactions = System.currentTimeMillis();
           // this.apiClient.publish("/transactions", tx);
