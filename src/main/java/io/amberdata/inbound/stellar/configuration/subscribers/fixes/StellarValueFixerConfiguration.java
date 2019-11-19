@@ -84,7 +84,7 @@ public class StellarValueFixerConfiguration {
           transactions,
           timeGetTransactions
       );
-      System.out.println("Ledger: " + number + ", # transactions: " + transactions.size());
+      LOG.info("[" + number + "] " + transactions.size() + " transactions");
 
       for (TransactionResponse transaction : transactions) {
         long timeGetOperations = System.currentTimeMillis();
@@ -114,11 +114,7 @@ public class StellarValueFixerConfiguration {
             operations.add(operationResponse);
           }
         }
-        System.out.println(
-            "Ledger: " + number
-            + ", transaction: " + transaction.getHash()
-            + ", # operations: " + operations.size()
-        );
+        LOG.info("[" + number + "/" + transaction.getHash() + "] " + operations.size() + " operations");
 
         if (! operations.isEmpty()) {
           List<FunctionCall> functionCalls = this.modelMapper.mapOperations(operations, number);
@@ -135,7 +131,7 @@ public class StellarValueFixerConfiguration {
               timePublishFunctions
           );
 
-          System.out.println(transaction.getHash() + " -- " + lumens);
+          LOG.info("[LUMENS] " + transaction.getHash() + " -- " + lumens);
           // Transaction tx = this.modelMapper.mapTransaction(transaction, operations);
           // long timePublishTransactions = System.currentTimeMillis();
           // this.apiClient.publish("/transactions", tx);
