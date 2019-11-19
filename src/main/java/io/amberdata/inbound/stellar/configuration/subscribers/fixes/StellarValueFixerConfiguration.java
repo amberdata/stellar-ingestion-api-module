@@ -2,7 +2,6 @@ package io.amberdata.inbound.stellar.configuration.subscribers.fixes;
 
 import io.amberdata.inbound.core.client.InboundApiClient;
 import io.amberdata.inbound.domain.FunctionCall;
-import io.amberdata.inbound.domain.Transaction;
 import io.amberdata.inbound.stellar.client.HorizonServer;
 import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.configuration.subscribers.StellarSubscriberConfiguration;
@@ -32,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
+
 import org.stellar.sdk.responses.TransactionResponse;
 import org.stellar.sdk.responses.operations.AccountMergeOperationResponse;
 import org.stellar.sdk.responses.operations.CreateAccountOperationResponse;
@@ -141,14 +141,15 @@ public class StellarValueFixerConfiguration {
               timePublishFunctions
           );
 
-          Transaction tx = this.modelMapper.mapTransaction(transaction, operations);
-          long timePublishTransactions = System.currentTimeMillis();
-          this.apiClient.publish("/transactions", tx);
-          StellarSubscriberConfiguration.logPerformance(
-              "publishTransaction",
-              transactions,
-              timePublishTransactions
-          );
+          System.out.println(transaction.getHash() + " -- " + lumens);
+//          Transaction tx = this.modelMapper.mapTransaction(transaction, operations);
+//          long timePublishTransactions = System.currentTimeMillis();
+//          this.apiClient.publish("/transactions", tx);
+//          StellarSubscriberConfiguration.logPerformance(
+//              "publishTransaction",
+//              transactions,
+//              timePublishTransactions
+//          );
         }
       }
     }
