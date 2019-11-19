@@ -84,7 +84,6 @@ public class StellarValueFixerConfiguration {
           transactions,
           timeGetTransactions
       );
-      LOG.info("[" + number + "] " + transactions.size() + " transactions");
 
       for (TransactionResponse transaction : transactions) {
         long timeGetOperations = System.currentTimeMillis();
@@ -114,7 +113,7 @@ public class StellarValueFixerConfiguration {
             operations.add(operationResponse);
           }
         }
-        LOG.info("[" + number + "/" + transaction.getHash() + "] " + operations.size() + " operations");
+        LOG.info("[LOCATION] " + number + "/" + transaction.getHash() + " : " + operations.size() + " operations");
 
         if (! operations.isEmpty()) {
           List<FunctionCall> functionCalls = this.modelMapper.mapOperations(operations, number);
