@@ -63,6 +63,8 @@ import shadow.com.google.common.base.Optional;
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
 
+  private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
+
   /**
    * Collect objects through all the available pages.
    *
@@ -96,7 +98,12 @@ public class StellarSubscriberConfiguration {
     return list;
   }
 
-  private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
+  public static <T> void logPerformance(String message, Collection<T> collection, long startTime) {
+    LOG.info(
+        "[PERFORMANCE] " + message + " (" + collection.size() + "): "
+        + (System.currentTimeMillis() - startTime) + " ms"
+    );
+  }
 
   /* package */ static void subscribeToLedgers(HorizonServer               server,
                                                String                      cursorPointer,
@@ -292,11 +299,11 @@ public class StellarSubscriberConfiguration {
               .forLedger(ledger)
               .execute()
         );
-        this.logPerformance("getTransactions", transactionResponses, timeTransactions);
+        logPerformance("getTransactions", transactionResponses, timeTransactions);
 
         long timeOperations = System.currentTimeMillis();
         List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
-        this.logPerformance("getOperations", operationResponses, timeOperations);
+        logPerformance("getOperations", operationResponses, timeOperations);
 
         Map<String, List<OperationResponse>> operations = new HashMap<>();
         for (OperationResponse operationResponse : operationResponses) {
@@ -315,11 +322,11 @@ public class StellarSubscriberConfiguration {
 
           long timeAddresses = System.currentTimeMillis();
           addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
-          this.logPerformance("getAddresses", addresses, timeAddresses);
+          logPerformance("getAddresses", addresses, timeAddresses);
 
           long timeAssets = System.currentTimeMillis();
           assets.addAll(this.collectAssets(operationResponses, ledger));
-          this.logPerformance("getAssets", assets, timeAssets);
+          logPerformance("getAssets", assets, timeAssets);
         }
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
@@ -328,31 +335,31 @@ public class StellarSubscriberConfiguration {
       if (!addresses.isEmpty()) {
         long timePublishAddresses = System.currentTimeMillis();
         this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-        this.logPerformance("publishAddresses", addresses, timePublishAddresses);
+        logPerformance("publishAddresses", addresses, timePublishAddresses);
       }
 
       if (!assets.isEmpty()) {
         long timePublishAssets = System.currentTimeMillis();
         this.apiClient.publish("/assets", new ArrayList<>(assets));
-        this.logPerformance("publishAssets", assets, timePublishAssets);
+        logPerformance("publishAssets", assets, timePublishAssets);
       }
 
       if (!transactions.isEmpty()) {
         long timePublishTransactions = System.currentTimeMillis();
         this.apiClient.publish("/transactions", transactions);
-        this.logPerformance("publishTransactions", transactions, timePublishTransactions);
+        logPerformance("publishTransactions", transactions, timePublishTransactions);
       }
 
       this.enrichBlock(block, transactions);
 
-      this.logPerformance("ledger", blocks, timeLedger);
+      logPerformance("ledger", blocks, timeLedger);
     }
 
     long timePublishLedgers = System.currentTimeMillis();
     this.apiClient.publishWithState("/blocks", blocks);
-    this.logPerformance("publishLedgers", blocks, timePublishLedgers);
+    logPerformance("publishLedgers", blocks, timePublishLedgers);
 
-    this.logPerformance("ledgers", blocks, timeLedgers);
+    logPerformance("ledgers", blocks, timeLedgers);
 
     if (this.historicalManager.getLastLedger() != null) {
       if (maxSequence > this.historicalManager.getLastLedger()) {
@@ -478,10 +485,4 @@ public class StellarSubscriberConfiguration {
     }
   }
 
-  private <T> void logPerformance(String message, Collection<T> collection, long startTime) {
-    LOG.info(
-        "[PERFORMANCE] " + message + " (" + collection.size() + "): "
-        + (System.currentTimeMillis() - startTime) + " ms"
-    );
-  }
 }
