@@ -3,18 +3,9 @@ package io.amberdata.inbound.stellar.configuration.subscribers.fixes;
 import io.amberdata.inbound.core.client.InboundApiClient;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.client.HorizonServer;
-import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.configuration.subscribers.StellarSubscriberConfiguration;
-import io.amberdata.inbound.stellar.configuration.subscribers.SubscriberErrorsHandler;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 import io.amberdata.inbound.stellar.mapper.ModelMapper;
-import io.amberdata.inbound.stellar.mapper.operations.AccountMergeOperationMapper;
-import io.amberdata.inbound.stellar.mapper.operations.CreateAccountOperationMapper;
-import io.amberdata.inbound.stellar.mapper.operations.InflationOperationMapper;
-import io.amberdata.inbound.stellar.mapper.operations.OperationMapper;
-import io.amberdata.inbound.stellar.mapper.operations.PathPaymentStrictReceiveOperationMapper;
-import io.amberdata.inbound.stellar.mapper.operations.PathPaymentStrictSendOperationMapper;
-import io.amberdata.inbound.stellar.mapper.operations.PaymentOperationMapper;
 
 import java.io.IOException;
 
@@ -50,32 +41,24 @@ public class StellarValueFixerConfiguration {
   private final InboundApiClient        apiClient;
   private final ModelMapper             modelMapper;
   private final HorizonServer           server;
-  private final BatchSettings           batchSettings;
-  private final SubscriberErrorsHandler errorsHandler;
 
   /**
    * Default constructor.
    *
-   * @param apiClient         the client api
-   * @param modelMapper       the model mapper
-   * @param server            the Horizon server
-   * @param batchSettings     the batch settings
-   * @param errorsHandler     the error handler
+   * @param apiClient   the client api
+   * @param modelMapper the model mapper
+   * @param server      the Horizon server
    */
   public StellarValueFixerConfiguration (
       @Value("${stellar.fix.value.ledger.start}") Long startLedger,
       @Value("${stellar.fix.value.ledger.end}")   Long endLedger,
-      InboundApiClient        apiClient,
-      ModelMapper             modelMapper,
-      HorizonServer           server,
-      BatchSettings           batchSettings,
-      SubscriberErrorsHandler errorsHandler
+      InboundApiClient apiClient,
+      ModelMapper      modelMapper,
+      HorizonServer    server
   ) {
-    this.apiClient         = apiClient;
-    this.modelMapper       = modelMapper;
-    this.server            = server;
-    this.batchSettings     = batchSettings;
-    this.errorsHandler     = errorsHandler;
+    this.apiClient   = apiClient;
+    this.modelMapper = modelMapper;
+    this.server      = server;
   }
 
   /**
@@ -95,44 +78,40 @@ public class StellarValueFixerConfiguration {
               .forLedger(number)
               .execute()
       );
+      System.out.println("Ledger: " + number + ", # transactions: " + transactions.size());
 
       for (TransactionResponse transaction : transactions) {
-        List<OperationResponse> operations = StellarSubscriberConfiguration.getObjects(
+        List<OperationResponse> operationResponses = StellarSubscriberConfiguration.getObjects(
             this.server,
             this.server.horizonServer()
                 .operations()
                 .forTransaction(transaction.getHash())
                 .execute()
         );
+        System.out.println("Ledger: " + number + ", transaction: " + transaction.getHash() + ", # operations: " + operationResponses.size());
 
-        List<FunctionCall> functionCalls = new ArrayList<>();
-
-        BigDecimal lumens = BigDecimal.ZERO;
-        for (OperationResponse operation : operations) {
-          OperationMapper mapper = null;
-
-          if (operation instanceof AccountMergeOperationResponse ) {
-            mapper = new AccountMergeOperationMapper(this.server);
-          } else if (operation instanceof CreateAccountOperationResponse ) {
-            mapper = new CreateAccountOperationMapper();
-          } else if (operation instanceof InflationOperationResponse ) {
-            mapper = new InflationOperationMapper();
-          } else if (operation instanceof PathPaymentStrictReceiveOperationResponse ) {
-            mapper = new PathPaymentStrictReceiveOperationMapper(assetMapper);
-          } else if (operation instanceof PathPaymentStrictSendOperationResponse ) {
-            mapper = new PathPaymentStrictSendOperationMapper(assetMapper);
-          } else if (operation instanceof PaymentOperationResponse ) {
-            mapper = new PaymentOperationMapper(assetMapper);
-          }
-
-          if (mapper != null) {
-            FunctionCall functionCall = mapper.map(operation);
-            functionCalls.add(functionCall);
-            lumens = lumens.add(functionCall.getLumensTransferred());
+        List<OperationResponse> operations = new ArrayList<>();
+        for (OperationResponse operationResponse : operationResponses) {
+          if (
+              operationResponse instanceof AccountMergeOperationResponse
+              || operationResponse instanceof CreateAccountOperationResponse
+              || operationResponse instanceof InflationOperationResponse
+              || operationResponse instanceof PathPaymentStrictReceiveOperationResponse
+              || operationResponse instanceof PathPaymentStrictSendOperationResponse
+              || operationResponse instanceof PaymentOperationResponse
+          ) {
+            operations.add(operationResponse);
           }
         }
+        System.out.println("Ledger: " + number + ", transaction: " + transaction.getHash() + ", # operations: " + operations.size());
 
-        if ( ! functionCalls.isEmpty() ) {
+        if ( ! operations.isEmpty() ) {
+          List<FunctionCall> functionCalls = this.modelMapper.mapOperations(operations, Long.valueOf(number));
+          BigDecimal         lumens        = BigDecimal.ZERO;
+          for (FunctionCall functionCall : functionCalls) {
+            lumens = lumens.add(functionCall.getLumensTransferred());
+          }
+
           long timePublishFunctions = System.currentTimeMillis();
           this.apiClient.publish("/functions", functionCalls);
           StellarSubscriberConfiguration.logPerformance(
