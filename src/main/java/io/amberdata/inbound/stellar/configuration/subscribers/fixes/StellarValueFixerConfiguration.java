@@ -38,9 +38,11 @@ public class StellarValueFixerConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(StellarValueFixerConfiguration.class);
 
-  private final InboundApiClient        apiClient;
-  private final ModelMapper             modelMapper;
-  private final HorizonServer           server;
+  private final InboundApiClient apiClient;
+  private final ModelMapper      modelMapper;
+  private final HorizonServer    server;
+  private final long             startLedger;
+  private final long             endLedger;
 
   /**
    * Default constructor.
@@ -59,6 +61,8 @@ public class StellarValueFixerConfiguration {
     this.apiClient   = apiClient;
     this.modelMapper = modelMapper;
     this.server      = server;
+    this.startLedger = startLedger;
+    this.endLedger   = endLedger;
   }
 
   /**
@@ -70,7 +74,7 @@ public class StellarValueFixerConfiguration {
 
     AssetMapper assetMapper = new AssetMapper();
 
-    for (long number = 26261000; number < 26261001; ++ number) {
+    for (long number = this.startLedger; number < this.endLedger; ++number) {
       long timeGetTransactions = System.currentTimeMillis();
       List<TransactionResponse> transactions = StellarSubscriberConfiguration.getObjects(
           this.server,
