@@ -130,9 +130,15 @@ public class ModelMapper {
       to = "_";
     }
 
-    BigDecimal value = BigDecimal.ZERO;
+    // 10,000,000 stroops = 1         XLM
+    //          1 stroop  = 0.0000001 XML
+    // The scale used here is 1-0, which should be more than enough for a max precision of 10^7.
+    BigDecimal value        = BigDecimal.ZERO;
+    BigDecimal multiplicand = BigDecimal.valueOf(10000000);
     for (FunctionCall functionCall : functionCalls) {
-      value = value.add(functionCall.getLumensTransferred());
+      value = value.add(
+          functionCall.getLumensTransferred().multiply(multiplicand)
+      );
     }
 
     Map<String, Object> meta = new HashMap<>();

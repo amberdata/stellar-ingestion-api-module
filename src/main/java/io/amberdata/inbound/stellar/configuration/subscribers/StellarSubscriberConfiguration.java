@@ -65,6 +65,54 @@ public class StellarSubscriberConfiguration {
 
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
 
+  /**
+   * Collect objects through all the available pages.
+   *
+   * @param server  the Horizon server
+   * @param page    the current page
+   * @param <T>     the type of objects to collect
+   *
+   * @return an exhaustive list of all the objects
+   */
+  public static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
+    List<T> list     = new ArrayList<>();
+    String  previous = null;
+    String  current  = page.getLinks().getSelf().getHref();
+
+    try {
+      do {
+        if ((current == null) || current.equals(previous)) {
+          return list;
+        }
+
+        list.addAll(page.getRecords());
+        page = page.getNextPage(server.horizonServer().getHttpClient());
+
+        previous = current;
+        current  = page == null ? null : page.getLinks().getSelf().getHref();
+      } while (page != null);
+    } catch (IOException | URISyntaxException e) {
+      throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
+    }
+
+    return list;
+  }
+
+  /**
+   * Log performance timer.
+   *
+   * @param message    the message to log
+   * @param collection the collection of objects which have been handled so far
+   * @param startTime  the start time of this operation
+   * @param <T>        the type of objects that were performed on
+   */
+  public static <T> void logPerformance(String message, Collection<T> collection, long startTime) {
+    LOG.info(
+        "[PERFORMANCE] " + message + " (" + collection.size() + "): "
+        + (System.currentTimeMillis() - startTime) + " ms"
+    );
+  }
+
   /* package */ static void subscribeToLedgers(HorizonServer               server,
                                                String                      cursorPointer,
                                                Consumer<LedgerResponse>    responseConsumer,
@@ -94,6 +142,7 @@ public class StellarSubscriberConfiguration {
         });
   }
 
+  @SuppressWarnings("checkstyle:MethodParamPad")
   /* package */ static Asset enrichAsset(HorizonServer server, Asset asset) {
     try {
       List<AssetResponse> records = StellarSubscriberConfiguration.getObjects(
@@ -108,11 +157,13 @@ public class StellarSubscriberConfiguration {
 
       if (records.size() > 0) {
         AssetResponse assetResponse = records.get(0);
-        asset.setType(Asset.AssetType.fromName(assetResponse.getAssetType()));
-        asset.setCode(assetResponse.getAssetCode());
+        asset.setType         (Asset.AssetType.fromName(assetResponse.getAssetType()));
+        asset.setCode         (assetResponse.getAssetCode());
         asset.setIssuerAccount(assetResponse.getAssetIssuer());
-        asset.setAmount(assetResponse.getAmount());
-        asset.setMeta(StellarSubscriberConfiguration.assetOptionalProperties(assetResponse));
+        asset.setAmount       (assetResponse.getAmount());
+        asset.setMeta         (
+            StellarSubscriberConfiguration.assetOptionalProperties(assetResponse)
+        );
       }
     } catch (Exception e) {
       LOG.error("Error during fetching an asset: " + asset.getCode(), e);
@@ -123,30 +174,6 @@ public class StellarSubscriberConfiguration {
     }
 
     return asset;
-  }
-
-  /* package */ static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
-    List<T> list     = new ArrayList<>();
-    String  previous = null;
-    String  current  = page.getLinks().getSelf().getHref();
-
-    try {
-      do {
-        if ((current == null) || current.equals(previous)) {
-          return list;
-        }
-
-        list.addAll(page.getRecords());
-        page = page.getNextPage(server.horizonServer().getHttpClient());
-
-        previous = current;
-        current  = page == null ? null : page.getLinks().getSelf().getHref();
-      } while (page != null);
-    } catch (IOException | URISyntaxException e) {
-      throw new HorizonServer.StellarException(e.getMessage(), e.getCause());
-    }
-
-    return list;
   }
 
   private static Map<String, Object> assetOptionalProperties(AssetResponse assetResponse) {
@@ -280,11 +307,11 @@ public class StellarSubscriberConfiguration {
               .forLedger(ledger)
               .execute()
         );
-        this.logPerformance("getTransactions", transactionResponses, timeTransactions);
+        logPerformance("getTransactions", transactionResponses, timeTransactions);
 
         long timeOperations = System.currentTimeMillis();
         List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
-        this.logPerformance("getOperations", operationResponses, timeOperations);
+        logPerformance("getOperations", operationResponses, timeOperations);
 
         Map<String, List<OperationResponse>> operations = new HashMap<>();
         for (OperationResponse operationResponse : operationResponses) {
@@ -303,11 +330,11 @@ public class StellarSubscriberConfiguration {
 
           long timeAddresses = System.currentTimeMillis();
           addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
-          this.logPerformance("getAddresses", addresses, timeAddresses);
+          logPerformance("getAddresses", addresses, timeAddresses);
 
           long timeAssets = System.currentTimeMillis();
           assets.addAll(this.collectAssets(operationResponses, ledger));
-          this.logPerformance("getAssets", assets, timeAssets);
+          logPerformance("getAssets", assets, timeAssets);
         }
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
@@ -316,31 +343,31 @@ public class StellarSubscriberConfiguration {
       if (!addresses.isEmpty()) {
         long timePublishAddresses = System.currentTimeMillis();
         this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-        this.logPerformance("publishAddresses", addresses, timePublishAddresses);
+        logPerformance("publishAddresses", addresses, timePublishAddresses);
       }
 
       if (!assets.isEmpty()) {
         long timePublishAssets = System.currentTimeMillis();
         this.apiClient.publish("/assets", new ArrayList<>(assets));
-        this.logPerformance("publishAssets", assets, timePublishAssets);
+        logPerformance("publishAssets", assets, timePublishAssets);
       }
 
       if (!transactions.isEmpty()) {
         long timePublishTransactions = System.currentTimeMillis();
         this.apiClient.publish("/transactions", transactions);
-        this.logPerformance("publishTransactions", transactions, timePublishTransactions);
+        logPerformance("publishTransactions", transactions, timePublishTransactions);
       }
 
       this.enrichBlock(block, transactions);
 
-      this.logPerformance("ledger", blocks, timeLedger);
+      logPerformance("ledger", blocks, timeLedger);
     }
 
     long timePublishLedgers = System.currentTimeMillis();
     this.apiClient.publishWithState("/blocks", blocks);
-    this.logPerformance("publishLedgers", blocks, timePublishLedgers);
+    logPerformance("publishLedgers", blocks, timePublishLedgers);
 
-    this.logPerformance("ledgers", blocks, timeLedgers);
+    logPerformance("ledgers", blocks, timeLedgers);
 
     if (this.historicalManager.getLastLedger() != null) {
       if (maxSequence > this.historicalManager.getLastLedger()) {
@@ -466,10 +493,4 @@ public class StellarSubscriberConfiguration {
     }
   }
 
-  private <T> void logPerformance(String message, Collection<T> collection, long startTime) {
-    LOG.info(
-        "[PERFORMANCE] " + message + " (" + collection.size() + "): "
-        + (System.currentTimeMillis() - startTime) + " ms"
-    );
-  }
 }
