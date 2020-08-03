@@ -18,7 +18,7 @@ Documentation:
 | ManageBuyOfferOperationMapper           | ManageBuyOfferOperationResponse           | Operation.manageBuyOffer           | MANAGE_BUY_OFFER          | 12 |          |
 | ManageDataOperationMapper               | ManageDataOperationResponse               | Operation.manageData               | MANAGE_DATA               | 10 |          |
 | ManageSellOfferOperationMapper          | ManageSellOfferOperationResponse          | Operation.manageSellOffer          | MANAGE_SELL_OFFER         |  3 |          |
-| PathPaymentOperationMapper              | PathPaymentOperationResponse              | Operation.pathPaymentStrictReceive | PATH_PAYMENT              |  2 |   True   |
+| PathPaymentOperationMapper              | PathPaymentStrictReceiveOperationResponse              | Operation.pathPaymentStrictReceive | PATH_PAYMENT              |  2 |   True   |
 | PathPaymentStrictReceiveOperationMapper | PathPaymentStrictReceiveOperationResponse | Operation.pathPaymentStrictReceive | PATH_PAYMENT              |  2 |   True   |
 | PathPaymentStrictSendOperationMapper    | PathPaymentStrictSendOperationResponse    | Operation.pathPaymentStrictSend    | PATH_PAYMENT              |  2 |   True   |
 | PaymentOperationMapper                  | PaymentOperationResponse                  | Operation.payment                  | PAYMENT                   |  1 |   True   |
