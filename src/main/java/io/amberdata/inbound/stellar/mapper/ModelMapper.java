@@ -139,6 +139,7 @@ public class ModelMapper {
     // TODO: Memo is not serializable, will have to do it by hand
     // meta.put("memo",            transactionResponse.getMemo());
     meta.put("operation_count", transactionResponse.getOperationCount());
+    meta.put("max_fees", transactionResponse.getMaxFee());
 
     return new Transaction.Builder()
       .hash            (transactionResponse.getHash())
