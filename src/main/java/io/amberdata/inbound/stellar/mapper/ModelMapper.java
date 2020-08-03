@@ -139,7 +139,6 @@ public class ModelMapper {
     // TODO: Memo is not serializable, will have to do it by hand
     // meta.put("memo",            transactionResponse.getMemo());
     meta.put("operation_count", transactionResponse.getOperationCount());
-    meta.put("max_fees", transactionResponse.getMaxFee());
 
     return new Transaction.Builder()
       .hash            (transactionResponse.getHash())
@@ -151,6 +150,7 @@ public class ModelMapper {
       .to              (to)
       .tos             (new ArrayList<>(tos))
       .fees            (BigDecimal.valueOf(transactionResponse.getFeeCharged()))
+      .gas             (BigInteger.valueOf(transactionResponse.getMaxFee()))
       .gasUsed         (BigInteger.valueOf(transactionResponse.getFeeCharged()))
       .numLogs         (transactionResponse.getOperationCount())
       .timestamp       (Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
