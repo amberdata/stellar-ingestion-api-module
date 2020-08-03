@@ -135,6 +135,7 @@ public class TradesSubscriberConfiguration {
     this.server.horizonServer()
         .ledgers()
         .cursor(NOW_CURSOR_POINTER)
+        .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
         .stream(new EventListener<LedgerResponse>() {
           @Override
           public void onEvent(LedgerResponse ledgerResponse) {
@@ -166,7 +167,8 @@ public class TradesSubscriberConfiguration {
     try {
       List<TradeResponse> records = StellarSubscriberConfiguration.getObjects(
           this.server,
-          requestBuilder.execute()
+          requestBuilder.execute(),
+          "trades"
       );
       if (records.isEmpty()) {
         return Collections.emptyList();

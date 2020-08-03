@@ -3,6 +3,7 @@ package io.amberdata.inbound.stellar.mapper.operations;
 import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.client.HorizonServer;
+import io.amberdata.inbound.stellar.client.Metrics;
 import io.amberdata.inbound.stellar.mapper.AssetMapper;
 
 import java.io.IOException;
@@ -31,7 +32,6 @@ import org.stellar.sdk.responses.operations.ManageBuyOfferOperationResponse;
 import org.stellar.sdk.responses.operations.ManageDataOperationResponse;
 import org.stellar.sdk.responses.operations.ManageSellOfferOperationResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
-import org.stellar.sdk.responses.operations.PathPaymentOperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentStrictReceiveOperationResponse;
 import org.stellar.sdk.responses.operations.PathPaymentStrictSendOperationResponse;
 import org.stellar.sdk.responses.operations.PaymentOperationResponse;
@@ -71,7 +71,7 @@ public class OperationMapperManager {
         new ManageSellOfferOperationMapper(assetMapper)
     );
     this.add(
-        PathPaymentOperationResponse.class,
+        PathPaymentStrictReceiveOperationResponse.class,
         new PathPaymentOperationMapper(assetMapper)
     );
     this.add(
@@ -112,16 +112,21 @@ public class OperationMapperManager {
    * Extracts the function call from the specified operation.
    *
    * @param operationResponse the operation response
+   * @param effectLookup      a pre-computed mapping of operation IDs to their effects
    * @param ledger            the ledger number
    * @param index             the index of the function call
    *
    * @return the function call.
    */
   @SuppressWarnings("checkstyle:MethodParamPad")
-  public FunctionCall map(OperationResponse operationResponse, Long ledger, Integer index) {
-    OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
-
-    String transactionHash = operationResponse.getTransactionHash();
+  public FunctionCall map(
+      OperationResponse operationResponse,
+      Map<Long, String> effectLookup,
+      Long ledger,
+      Integer index
+  ) {
+    final OperationMapper operationMapper = this.responsesMap.get(operationResponse.getClass());
+    final String transactionHash = operationResponse.getTransactionHash();
 
     FunctionCall functionCall;
     if (operationMapper == null) {
@@ -138,7 +143,16 @@ public class OperationMapperManager {
       functionCall = operationMapper.map(operationResponse);
     }
 
-    List<String> effects = this.fetchEffectsForOperation(operationResponse);
+    final Long id = operationResponse.getId();
+    String effects = "";
+
+    if (effectLookup != null) {
+      // effectLookup will be authoritative for the effects of a ledger's operations.
+      // If an id is not present in the map then there was no effect of that operation.
+      effects = effectLookup.getOrDefault(id, "");
+    } else {
+      effects = String.join(",", this.fetchEffectsForOperation(operationResponse));
+    }
 
     functionCall.setBlockNumber    (ledger);
     functionCall.setTransactionHash(transactionHash);
@@ -146,7 +160,7 @@ public class OperationMapperManager {
     functionCall.setDepth          (0);
     functionCall.setIndex          (index);
     functionCall.setHash           (this.generateOperationHash(ledger, transactionHash, index));
-    functionCall.setResult         (String.join(",", effects));
+    functionCall.setResult         (effects);
 
     return functionCall;
   }

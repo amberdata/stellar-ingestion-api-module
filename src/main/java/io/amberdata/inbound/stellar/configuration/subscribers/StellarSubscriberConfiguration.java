@@ -9,6 +9,7 @@ import io.amberdata.inbound.domain.Block;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.domain.Transaction;
 import io.amberdata.inbound.stellar.client.HorizonServer;
+import io.amberdata.inbound.stellar.client.Metrics;
 import io.amberdata.inbound.stellar.configuration.history.HistoricalManager;
 import io.amberdata.inbound.stellar.configuration.properties.BatchSettings;
 import io.amberdata.inbound.stellar.mapper.ModelMapper;
@@ -46,12 +47,14 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Configuration;
 
 import org.stellar.sdk.FormatException;
+import org.stellar.sdk.requests.AssetsRequestBuilder;
 import org.stellar.sdk.requests.EventListener;
 import org.stellar.sdk.responses.AccountResponse;
 import org.stellar.sdk.responses.AssetResponse;
 import org.stellar.sdk.responses.LedgerResponse;
 import org.stellar.sdk.responses.Page;
 import org.stellar.sdk.responses.TransactionResponse;
+import org.stellar.sdk.responses.effects.EffectResponse;
 import org.stellar.sdk.responses.operations.OperationResponse;
 
 import reactor.core.publisher.Flux;
@@ -62,7 +65,6 @@ import shadow.com.google.common.base.Optional;
 @Configuration
 @ConditionalOnProperty(prefix = "stellar", name = "subscribe-on-all")
 public class StellarSubscriberConfiguration {
-
   private static final Logger LOG = LoggerFactory.getLogger(StellarSubscriberConfiguration.class);
 
   /* package */ static void subscribeToLedgers(HorizonServer               server,
@@ -79,6 +81,7 @@ public class StellarSubscriberConfiguration {
     server.horizonServer()
         .ledgers()
         .cursor(cursorPointer)
+        .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
         .stream(new EventListener<LedgerResponse>() {
           @Override
           public void onEvent(LedgerResponse ledgerResponse) {
@@ -96,14 +99,19 @@ public class StellarSubscriberConfiguration {
 
   /* package */ static Asset enrichAsset(HorizonServer server, Asset asset) {
     try {
-      List<AssetResponse> records = StellarSubscriberConfiguration.getObjects(
-          server,
-          server
+      final AssetsRequestBuilder builder = server
               .horizonServer()
               .assets()
               .assetCode(asset.getCode())
-              .assetIssuer(asset.getIssuerAccount())
-              .execute()
+              .assetIssuer(asset.getIssuerAccount());
+
+      // limit() modifies the builder in-place. OK to discard the return value here.
+      builder.limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT);
+
+      List<AssetResponse> records = StellarSubscriberConfiguration.getObjects(
+          server,
+          builder.execute(),
+          "assets"
       );
 
       if (records.size() > 0) {
@@ -116,16 +124,22 @@ public class StellarSubscriberConfiguration {
       }
     } catch (Exception e) {
       LOG.error("Error during fetching an asset: " + asset.getCode(), e);
+      Metrics.count("assets.errors.fetch", 1);
     }
 
     if (asset.getAmount() == null || !StellarSubscriberConfiguration.isNumeric(asset.getAmount())) {
       asset.setAmount("0");
+      Metrics.count("assets.errors.zeroamount", 1);
     }
 
     return asset;
   }
 
-  /* package */ static <T> List<T> getObjects(HorizonServer server, Page<T> page) {
+  /* package */ static <T> List<T> getObjects(
+      final HorizonServer server,
+      Page<T> page,
+      final String metricsKey
+  ) {
     List<T> list     = new ArrayList<>();
     String  previous = null;
     String  current  = page.getLinks().getSelf().getHref();
@@ -133,9 +147,12 @@ public class StellarSubscriberConfiguration {
     try {
       do {
         if ((current == null) || current.equals(previous)) {
-          return list;
+          break;
         }
 
+        if (!metricsKey.isEmpty()) {
+          Metrics.count(metricsKey, page.getRecords().size());
+        }
         list.addAll(page.getRecords());
         page = page.getNextPage(server.horizonServer().getHttpClient());
 
@@ -259,6 +276,8 @@ public class StellarSubscriberConfiguration {
     long maxSequence = 0;
 
     for (BlockchainEntityWithState<Block> block : blocks) {
+      Metrics.count("blocks", 1);
+
       @SuppressWarnings("checkstyle:VariableDeclarationUsageDistance")
       long timeLedger = System.currentTimeMillis();
 
@@ -273,74 +292,73 @@ public class StellarSubscriberConfiguration {
 
       try {
         long timeTransactions = System.currentTimeMillis();
-        List<TransactionResponse> transactionResponses = StellarSubscriberConfiguration.getObjects(
+        final List<TransactionResponse> responses = StellarSubscriberConfiguration.getObjects(
             this.server,
             this.server.horizonServer()
               .transactions()
               .forLedger(ledger)
-              .execute()
+              .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
+              .execute(),
+            "ledger.transactions"
         );
-        this.logPerformance("getTransactions", transactionResponses, timeTransactions);
+        this.logPerformance("getTransactions", timeTransactions);
 
-        long timeOperations = System.currentTimeMillis();
-        List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
-        this.logPerformance("getOperations", operationResponses, timeOperations);
+        final long timeEffects = System.currentTimeMillis();
+        final Map<Long, String> effectLookup = this.fetchEffectsForLedger(ledger);
+        this.logPerformance("getEffects", timeEffects);
 
-        Map<String, List<OperationResponse>> operations = new HashMap<>();
-        for (OperationResponse operationResponse : operationResponses) {
+        final long timeOperations = System.currentTimeMillis();
+        final List<OperationResponse> operationResponses = this.fetchOperationsForLedger(ledger);
+        this.logPerformance("getOperations", timeOperations);
+
+        final Map<String, List<OperationResponse>> operations = new HashMap<>();
+        for (final OperationResponse operationResponse : operationResponses) {
           String transactionHash = operationResponse.getTransactionHash();
           operations
               .computeIfAbsent(transactionHash, k -> new ArrayList<>())
               .add(operationResponse);
         }
 
-        for (TransactionResponse transactionResponse : transactionResponses) {
-          Transaction transaction = this.enrichTransaction(
+        final long timeEnrichTransactions = System.currentTimeMillis();
+        for (final TransactionResponse transactionResponse : responses) {
+          final Transaction transaction = this.enrichTransaction(
               transactionResponse,
+              effectLookup,
               operations.getOrDefault(transactionResponse.getHash(), Collections.emptyList())
           );
           transactions.add(transaction);
-
-          long timeAddresses = System.currentTimeMillis();
           addresses.addAll(this.collectAddresses(transaction.getFunctionCalls()));
-          this.logPerformance("getAddresses", addresses, timeAddresses);
-
-          long timeAssets = System.currentTimeMillis();
-          assets.addAll(this.collectAssets(operationResponses, ledger));
-          this.logPerformance("getAssets", assets, timeAssets);
         }
+        assets.addAll(this.collectAssets(operationResponses, ledger));
+        this.logPerformance("enrichTransactions", timeEnrichTransactions);
       } catch (IOException ioe) {
         LOG.error("Unable to fetch information about transactions for ledger " + ledger, ioe);
+        Metrics.count("ledger.errors", 1);
       }
 
+      final long timePublish = System.currentTimeMillis();
       if (!addresses.isEmpty()) {
-        long timePublishAddresses = System.currentTimeMillis();
         this.apiClient.publish("/addresses", new ArrayList<>(addresses));
-        this.logPerformance("publishAddresses", addresses, timePublishAddresses);
       }
 
       if (!assets.isEmpty()) {
-        long timePublishAssets = System.currentTimeMillis();
         this.apiClient.publish("/assets", new ArrayList<>(assets));
-        this.logPerformance("publishAssets", assets, timePublishAssets);
       }
 
       if (!transactions.isEmpty()) {
-        long timePublishTransactions = System.currentTimeMillis();
         this.apiClient.publish("/transactions", transactions);
-        this.logPerformance("publishTransactions", transactions, timePublishTransactions);
       }
+      this.logPerformance("publish", timePublish);
 
       this.enrichBlock(block, transactions);
-
-      this.logPerformance("ledger", blocks, timeLedger);
+      this.logPerformance("ledger", timeLedger);
     }
 
     long timePublishLedgers = System.currentTimeMillis();
     this.apiClient.publishWithState("/blocks", blocks);
-    this.logPerformance("publishLedgers", blocks, timePublishLedgers);
+    this.logPerformance("publishLedgers", timePublishLedgers);
 
-    this.logPerformance("ledgers", blocks, timeLedgers);
+    this.logPerformance("ledgers", timeLedgers);
 
     if (this.historicalManager.getLastLedger() != null) {
       if (maxSequence > this.historicalManager.getLastLedger()) {
@@ -365,10 +383,12 @@ public class StellarSubscriberConfiguration {
 
   private Transaction enrichTransaction(
       TransactionResponse     transactionResponse,
+      Map<Long, String>       effectLookup,
       List<OperationResponse> operationResponses
   ) {
     return this.modelMapper.mapTransaction(
       transactionResponse,
+      effectLookup,
       operationResponses
     );
   }
@@ -380,13 +400,16 @@ public class StellarSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forLedger(ledger)
-          .execute()
+          .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
+          .execute(),
+        "ledger.operations"
       );
     } catch (IOException | FormatException e) {
       LOG.error(
           "Unable to fetch information about operations for ledger " + ledger,
           e
       );
+      Metrics.count("ledger.operations.errors", 1);
       return Collections.emptyList();
     }
   }
@@ -397,44 +420,27 @@ public class StellarSubscriberConfiguration {
     // TODO: report account balances properly to the inbound API
 
     for (FunctionCall functionCall : functionCalls) {
-      if (
-          functionCall.getFrom() != null
-          && !addresses.containsKey(functionCall.getFrom())
-      ) {
-        AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getFrom());
+      final String from = functionCall.getFrom();
+      final String to = functionCall.getTo();
+
+      if (from != null && !from.isEmpty() && !addresses.containsKey(from)) {
+        AccountResponse accountResponse = this.server.fetchAccountDetails(from);
         if (accountResponse != null) {
           addresses.put(
-              functionCall.getFrom(),
-              this.modelMapper.mapAccount(accountResponse, functionCall.getTimestamp())
-          );
+              from, this.modelMapper.mapAccount(accountResponse, functionCall.getTimestamp()));
         }
       }
-      if (
-          functionCall.getTo() != null
-          && !addresses.containsKey(functionCall.getTo())
-      ) {
-        AccountResponse accountResponse = this.fetchAccountDetails(functionCall.getTo());
+
+      if (to != null && !to.isEmpty() && !addresses.containsKey(to)) {
+        AccountResponse accountResponse = this.server.fetchAccountDetails(to);
         if (accountResponse != null) {
           addresses.put(
-              functionCall.getTo(),
-              this.modelMapper.mapAccount(accountResponse, functionCall.getTimestamp())
-          );
+              to, this.modelMapper.mapAccount(accountResponse, functionCall.getTimestamp()));
         }
       }
     }
 
     return addresses.values();
-  }
-
-  private AccountResponse fetchAccountDetails(String accountId) {
-    try {
-      return this.server.horizonServer()
-        .accounts()
-        .account(accountId);
-    } catch (Exception e) {
-      LOG.error("Unable to get details for account " + accountId, e);
-      return null;
-    }
   }
 
   private List<Asset> collectAssets(List<OperationResponse> operationResponses, Long ledger) {
@@ -466,10 +472,43 @@ public class StellarSubscriberConfiguration {
     }
   }
 
-  private <T> void logPerformance(String message, Collection<T> collection, long startTime) {
-    LOG.info(
-        "[PERFORMANCE] " + message + " (" + collection.size() + "): "
-        + (System.currentTimeMillis() - startTime) + " ms"
+  private <T> void logPerformance(String metric, long startTime) {
+    final long duration = System.currentTimeMillis() - startTime;
+    LOG.debug("[PERFORMANCE] " + metric + " took " + duration + " ms");
+    Metrics.mean("performance." + metric.toLowerCase(), duration);
+  }
+
+  private Map<Long, String> fetchEffectsForLedger(Long ledger) throws IOException {
+    List<EffectResponse> effects = StellarSubscriberConfiguration.getObjects(
+        this.server,
+        this.server.horizonServer()
+          .effects()
+          .forLedger(ledger)
+          .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
+          .execute(),
+        "ledger.operations.effects"
     );
+
+    Map<Long, String> effectLookup = new HashMap<>();
+    for (EffectResponse effect : effects) {
+      final String operationUri = effect.getLinks().getOperation().getHref();
+      final String[] fields = operationUri.split("/");
+
+      if (fields.length < 2 || !fields[fields.length - 2].equals("operations")) {
+        LOG.error("unexpected operation href: {} fields: {} length: {} element: {}", operationUri, (Object)fields, fields.length, fields[fields.length - 2]);
+        throw new RuntimeException("die");
+      }
+
+      final Long operationId = Long.parseLong(fields[fields.length - 1]);
+      String effectContents = effectLookup.getOrDefault(operationId, "");
+
+      if (!effectContents.isEmpty()) {
+        effectContents += ",";
+      }
+      effectContents += effect.getType();
+      effectLookup.put(operationId, effectContents);
+    }
+
+    return effectLookup;
   }
 }

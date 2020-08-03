@@ -105,6 +105,7 @@ public class ModelMapper {
    * Extracts transaction from the server response.
    *
    * @param transactionResponse the record from the server
+   * @param effectLookup       a pre-computed mapping of operation IDs to their effects
    * @param operationResponses  the operations associated to the transaction
    *
    * @return the extracted transaction.
@@ -112,10 +113,12 @@ public class ModelMapper {
   @SuppressWarnings("checkstyle:MethodParamPad")
   public Transaction mapTransaction(
       TransactionResponse     transactionResponse,
+      Map<Long, String>       effectLookup,
       List<OperationResponse> operationResponses
   ) {
     List<FunctionCall> functionCalls = this.mapOperations(
         operationResponses,
+        effectLookup,
         transactionResponse.getLedger()
     );
     Set<String> tos = functionCalls
@@ -149,8 +152,9 @@ public class ModelMapper {
       .from            (transactionResponse.getSourceAccount())
       .to              (to)
       .tos             (new ArrayList<>(tos))
-      .fees            (BigDecimal.valueOf(transactionResponse.getFeePaid()))
-      .gasUsed         (BigInteger.valueOf(transactionResponse.getFeePaid()))
+      .fees            (BigDecimal.valueOf(transactionResponse.getFeeCharged()))
+      .gas             (BigInteger.valueOf(transactionResponse.getMaxFee()))
+      .gasUsed         (BigInteger.valueOf(transactionResponse.getFeeCharged()))
       .numLogs         (transactionResponse.getOperationCount())
       .timestamp       (Instant.parse(transactionResponse.getCreatedAt()).toEpochMilli())
       .functionCalls   (functionCalls)
@@ -173,7 +177,7 @@ public class ModelMapper {
       List<OperationResponse> operationResponses
   ) {
     return BlockchainEntityWithState.from(
-      this.mapTransaction(transactionResponse, operationResponses),
+      this.mapTransaction(transactionResponse, null, operationResponses),
       ResourceState.from(Transaction.class.getSimpleName(), transactionResponse.getPagingToken())
     );
   }
@@ -182,15 +186,21 @@ public class ModelMapper {
    * Extracts operations from the server response.
    *
    * @param operationResponses the records from the server
+   * @param effectLookup       a pre-computed mapping of operation IDs to their effects
    * @param ledger             the ledger number
    *
    * @return the extracted operations.
    */
-  public List<FunctionCall> mapOperations(List<OperationResponse> operationResponses, Long ledger) {
+  public List<FunctionCall> mapOperations(
+      List<OperationResponse> operationResponses,
+      Map<Long, String> effectLookup,
+      Long ledger
+  ) {
     return IntStream
       .range(0, operationResponses.size())
       .mapToObj(
-        index -> this.operationMapperManager.map(operationResponses.get(index), ledger, index)
+        index -> this.operationMapperManager.map(
+          operationResponses.get(index), effectLookup, ledger, index)
       )
       .collect(Collectors.toList());
   }

@@ -115,7 +115,7 @@ public class AccountSubscriberConfiguration {
       List<OperationResponse> operationResponses,
       TransactionResponse     transactionResponse
   ) {
-    return this.modelMapper.mapOperations(operationResponses, null)
+    return this.modelMapper.mapOperations(operationResponses, null, null)
       .stream()
       .flatMap(
         functionCall -> {
@@ -162,6 +162,7 @@ public class AccountSubscriberConfiguration {
     this.server.horizonServer()
         .transactions()
         .cursor(cursorPointer)
+        .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
         .stream(new EventListener<TransactionResponse>() {
           @Override
           public void onEvent(TransactionResponse transactionResponse) {
@@ -194,7 +195,9 @@ public class AccountSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forTransaction(transactionResponse.getHash())
-          .execute()
+          .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
+          .execute(),
+        "transaction.operations"
       );
     } catch (IOException | FormatException e) {
       LOG.error(
