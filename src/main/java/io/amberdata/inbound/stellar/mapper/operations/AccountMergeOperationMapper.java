@@ -33,12 +33,12 @@ public class AccountMergeOperationMapper implements OperationMapper {
     AccountMergeOperationResponse response = (AccountMergeOperationResponse) operationResponse;
 
     final String from = response.getAccount();
-    if (from == null || from == "") {
+    if (from == null || from.isEmpty()) {
       LOG.warn("Source account in AccountMergeOperationResponse is null or empty");
     }
 
     final String into = response.getInto();
-    if (into == null || into == "") {
+    if (into == null || into.isEmpty()) {
       LOG.warn("Destination account in AccountMergeOperationResponse is null or empty");
     }
 
