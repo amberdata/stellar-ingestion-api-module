@@ -18,6 +18,7 @@ import java.io.IOException;
 
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.time.Duration;
 
 import java.util.ArrayList;
@@ -491,12 +492,12 @@ public class StellarSubscriberConfiguration {
 
     Map<Long, String> effectLookup = new HashMap<>();
     for (EffectResponse effect : effects) {
-      final String operationUri = effect.getLinks().getOperation().getHref();
-      final String[] fields = operationUri.split("/");
+      final URL operationUri = new URL(effect.getLinks().getOperation().getHref());
+      final String[] fields = operationUri.getPath().split("/");
 
       if (fields.length < 2 || !fields[fields.length - 2].equals("operations")) {
         LOG.error("unexpected operation href: {} fields: {} length: {} element: {}", operationUri, (Object)fields, fields.length, fields[fields.length - 2]);
-        throw new RuntimeException("die");
+        throw new RuntimeException("assertion failed for operation id extraction");
       }
 
       final Long operationId = Long.parseLong(fields[fields.length - 1]);
