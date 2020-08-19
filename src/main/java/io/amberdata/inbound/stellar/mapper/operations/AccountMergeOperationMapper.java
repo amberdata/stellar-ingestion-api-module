@@ -4,8 +4,6 @@ import io.amberdata.inbound.domain.Asset;
 import io.amberdata.inbound.domain.FunctionCall;
 import io.amberdata.inbound.stellar.client.HorizonServer;
 
-import java.io.IOException;
-
 import java.math.BigDecimal;
 
 import java.util.Collections;
@@ -34,40 +32,36 @@ public class AccountMergeOperationMapper implements OperationMapper {
   public FunctionCall map(OperationResponse operationResponse) {
     AccountMergeOperationResponse response = (AccountMergeOperationResponse) operationResponse;
 
-    if (response.getAccount() == null) {
-      LOG.warn("Source account in AccountMergeOperationResponse is null");
+    final String from = response.getAccount();
+    if (from == null || from.isEmpty()) {
+      LOG.warn("Source account in AccountMergeOperationResponse is null or empty");
     }
 
-    if (response.getInto() == null) {
-      LOG.warn("Destination account in AccountMergeOperationResponse is null");
+    final String into = response.getInto();
+    if (into == null || into.isEmpty()) {
+      LOG.warn("Destination account in AccountMergeOperationResponse is null or empty");
     }
 
     BigDecimal lumensTransferred = BigDecimal.ZERO;
-    try {
-      AccountResponse accountResponse = this.server.horizonServer()
-          .accounts()
-          .account(response.getAccount());
+    final AccountResponse accountResponse = this.server.fetchAccountDetails(from);
 
+    if (accountResponse != null) {
       for (AccountResponse.Balance balance : accountResponse.getBalances()) {
         if ("native".equals(balance.getAssetType())) {
           lumensTransferred = lumensTransferred.add(new BigDecimal(balance.getBalance()));
         }
       }
-    } catch (Exception e) {
-      // throw new HorizonServer.StellarException(e.getMessage(), e);
-      LOG.warn(e.getMessage(), e);
-      lumensTransferred = BigDecimal.ZERO;
     }
 
     return new FunctionCall.Builder()
-      .from             (this.fetchAccountId(response.getAccount()))
-      .to               (this.fetchAccountId(response.getInto()))
+      .from             (this.fetchAccountId(from))
+      .to               (this.fetchAccountId(into))
       .type             (AccountMergeOperation.class.getSimpleName())
       .lumensTransferred(lumensTransferred)
       .signature        ("account_merge(account_id)")
       .arguments        (
         Collections.singletonList(
-          FunctionCall.Argument.from("destination", this.fetchAccountId(response.getInto()))
+          FunctionCall.Argument.from("destination", this.fetchAccountId(into))
         )
       )
       .build();

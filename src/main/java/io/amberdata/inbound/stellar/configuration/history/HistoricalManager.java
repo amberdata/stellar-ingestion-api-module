@@ -141,6 +141,7 @@ public class HistoricalManager {
         Page<TransactionResponse> transactionsPage = this.horizonServer.transactions()
             .forLedger(seqNumber)
             .order(RequestBuilder.Order.ASC)
+            .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
             .execute();
 
         transactions = transactionsPage.getRecords();

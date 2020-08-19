@@ -129,6 +129,7 @@ public class OrdersSubscriberConfiguration {
     this.server.horizonServer()
         .ledgers()
         .cursor(cursorPointer)
+        .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
         .stream(new EventListener<LedgerResponse>() {
           @Override
           public void onEvent(LedgerResponse ledgerResponse) {
@@ -151,7 +152,9 @@ public class OrdersSubscriberConfiguration {
         this.server.horizonServer()
           .operations()
           .forLedger(ledgerResponse.getSequence())
-          .execute()
+          .limit(HorizonServer.HORIZON_PER_REQUEST_LIMIT)
+          .execute(),
+        "ledger.operations"
       );
     } catch (IOException | FormatException e) {
       LOG.error(
